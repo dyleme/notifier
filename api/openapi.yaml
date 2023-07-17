@@ -55,7 +55,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Tokens'
-                required: true
         '405':
           description: Invalid input
   /auth/login:
@@ -342,10 +341,8 @@ components:
       properties:
         accessToken:
           $ref: '#/components/schemas/Token'
-          required: true
         refreshToken:
           $ref: '#/components/schemas/Token'
-          required: true
 
     Token:
       type: string

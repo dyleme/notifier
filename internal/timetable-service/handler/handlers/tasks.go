@@ -25,7 +25,7 @@ func (t TimetableHandler) ListTasks(w http.ResponseWriter, r *http.Request) {
 		responses.Error(w, http.StatusInternalServerError, err)
 		return
 	}
-	apiTasks := mapApiTasks(tasks)
+	apiTasks := mapAPITasks(tasks)
 
 	responses.JSON(w, http.StatusOK, apiTasks)
 }
@@ -88,7 +88,7 @@ func mapAPITask(task models.Task) timetableapi.Task {
 	}
 }
 
-func mapApiTasks(tasks []models.Task) []timetableapi.Task {
+func mapAPITasks(tasks []models.Task) []timetableapi.Task {
 	apiTasks := make([]timetableapi.Task, 0, len(tasks))
 	for _, t := range tasks {
 		apiTasks = append(apiTasks, mapAPITask(t))
