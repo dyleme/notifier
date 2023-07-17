@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -18,6 +17,7 @@ import (
 	"github.com/Dyleme/Notifier/internal/authorization/jwt"
 	authRepository "github.com/Dyleme/Notifier/internal/authorization/repository"
 	authenticationService "github.com/Dyleme/Notifier/internal/authorization/service"
+	"github.com/Dyleme/Notifier/internal/config"
 	"github.com/Dyleme/Notifier/internal/lib/sqldatabase"
 	timetableHandler "github.com/Dyleme/Notifier/internal/timetable-service/handler/handlers"
 	"github.com/Dyleme/Notifier/internal/timetable-service/handler/timetableapi"
@@ -26,8 +26,9 @@ import (
 )
 
 func main() {
+	cfg := config.Load()
 	ctx := context.Background()
-	db, err := sqldatabase.NewPGX(ctx, "postgres://user:1234@localhost:5432/timetable")
+	db, err := sqldatabase.NewPGX(ctx, cfg.Database.ConnectionString())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -36,13 +37,10 @@ func main() {
 	serv := timetableService.New(timetableRepo)
 	timeTableHandler := timetableHandler.New(serv)
 
-	jwtGen := jwt.NewJwtGen(&jwt.Config{
-		SignedKey: "1239054",
-		TTL:       time.Hour,
-	})
+	jwtGen := jwt.NewJwtGen(cfg.JWT)
 
 	jwtMiddleware := authmiddleware.NewJWT(jwtGen)
-	apiTokenMiddleware := authmiddleware.NewAPIToken("1234")
+	apiTokenMiddleware := authmiddleware.NewAPIToken(cfg.APIKey)
 	authRepo := authRepository.New(db)
 	authService := authenticationService.NewAuth(authRepo, &authenticationService.HashGen{}, jwtGen)
 	authHandler := authHandlerrs.New(authService)
@@ -64,7 +62,8 @@ func main() {
 	authapi.HandlerFromMux(authHandler, apiKeyRouter)
 	timetableapi.HandlerFromMux(timeTableHandler, bearerTokenRouter)
 
-	err = http.ListenAndServe("localhost:8080", router) //nolint:gosec // TODO:add custom client
+	addr := fmt.Sprintf("localhost:%d", cfg.AppPort)
+	err = http.ListenAndServe(addr, router) //nolint:gosec // TODO:add custom client
 	if err != nil {
 		log.Fatal(err)
 	}
