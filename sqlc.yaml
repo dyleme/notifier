@@ -1,0 +1,27 @@
+version: "2"
+sql:
+    - schema: "database-migrations"
+      queries: "internal/authorization/repository/queries/sql"
+      engine: "postgresql"
+      gen:
+        go:
+          package: "queries"
+          sql_package: "pgx/v5"
+          out: "internal/authorization/repository/queries"
+#          emit_methods_with_db_argument: true
+
+    - schema: "database-migrations"
+      queries: "internal/timetable-service/repository/queries/sql"
+      engine: "postgresql"
+      gen:
+        go:
+          package: "queries"
+          out: "internal/timetable-service/repository/queries"
+          sql_package: "pgx/v5"
+#          overrides:
+#            - db_type: "pg_catalog.interval"
+#              engine: "postgresql"
+#              go_type:
+#                import: "time"
+#                type: "Duration"
+#          emit_methods_with_db_argument: true

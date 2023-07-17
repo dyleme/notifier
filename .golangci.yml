@@ -1,0 +1,73 @@
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+  goconst:
+    min-len: 2
+    min-occurrences: 3
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+    settings:
+      hugeParam:
+        sizeThreshold: 256
+  govet:
+    check-shadowing: true
+  nolintlint:
+    require-explanation: true
+    require-specific: true
+
+linters:
+  disable-all: true
+  enable:
+    - asciicheck
+    - bodyclose
+    - cyclop
+#    - deadcode
+#    - depguard
+    - dogsled
+    - dupl
+    - errcheck
+    - errname
+    - errorlint
+    - exportloopref
+    - exhaustive
+    - exhaustruct
+    - goconst
+    - gocritic
+    - gofmt
+    - goimports
+    - gomnd
+    - gocyclo
+    - gocognit
+    - godot
+    - gosec
+    - gosimple
+    - govet
+#    - ifshort
+    - ineffassign
+#    - lll
+    - misspell
+    - nolintlint
+    - nakedret
+    - prealloc
+    - predeclared
+    - revive
+    - staticcheck
+#    - structcheck
+    - stylecheck
+    - thelper
+    - tparallel
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+#    - varcheck
+    - whitespace
+#    - wsl
+
+run:
+  issues-exit-code: 1

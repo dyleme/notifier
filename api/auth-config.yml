@@ -1,0 +1,8 @@
+package: authapi
+generate:
+  chi-server: true
+  models: true
+output: ./internal/authorization/handler/authapi/authapi.gen.go
+output-options:
+  include-tags:
+    - Authentication

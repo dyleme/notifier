@@ -1,0 +1,502 @@
+openapi: 3.0.3
+info:
+  title: Swagger Petstore - OpenAPI 3.0
+  description: |-
+    This is a sample Pet Store Server based on the OpenAPI 3.0 specification.  You can find out more about
+    Swagger at [https://swagger.io](https://swagger.io). In the third iteration of the pet store, we've switched to the design first approach!
+    You can now help us improve the API whether it's by making changes to the definition itself or to the code.
+    That way, with time, we can improve the API in general, and expose some of the new features in OAS3.
+
+    _If you're looking for the Swagger 2.0/OAS 2.0 version of Petstore, then click [here](https://editor.swagger.io/?url=https://petstore.swagger.io/v2/swagger.yaml). Alternatively, you can load via the `Edit > Load Petstore OAS 2.0` menu option!_
+    
+    Some useful links:
+    - [The Pet Store repository](https://github.com/swagger-api/swagger-petstore)
+    - [The source API definition for the Pet Store](https://github.com/swagger-api/swagger-petstore/blob/master/src/main/resources/openapi.yaml)
+  termsOfService: http://swagger.io/terms/
+  contact:
+    email: apiteam@swagger.io
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  version: 1.0.11
+externalDocs:
+  description: Find out more about Swagger
+  url: http://swagger.io
+servers:
+  - url: http://localhost:8080
+tags:
+  - name: Authentication
+    description: Authentication
+  - name: Tasks
+    description: Create and manage your tasks
+  - name: Timetable
+    description: Create and manafe your timetable
+paths:
+  /auth/register:
+    post:
+      summary: Register new user
+      tags:
+        - Authentication
+      security:
+        - apiKeyAuth: []
+      description: Register new user
+      operationId: registration
+      requestBody:
+        description: Registration body
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistrationBody'
+        required: true
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tokens'
+                required: true
+        '405':
+          description: Invalid input
+  /auth/login:
+    post:
+      summary: Login user
+      tags:
+        - Authentication
+      security:
+        - apiKeyAuth: []
+      description: Login user and get token
+      operationId: login
+      requestBody:
+        description: Login body
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginBody'
+        required: true
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tokens'
+        '405':
+          description: Invalid input
+  /task:
+    post:
+      summary: Add a new task
+      tags:
+        - Tasks
+      security:
+        - bearerAuth: []
+      description: Add a task
+      operationId: addTask
+      requestBody:
+        description: Create a new task
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskReqBody'
+        required: true
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '405':
+          description: Invalid input
+    get:
+      summary: List user tasks
+      tags:
+        - Tasks
+      security:
+        - bearerAuth: []
+      description: List tasks
+      operationId: listTasks
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+        '405':
+          description: Invalid input
+  /task/{taskID}:
+    get:
+      summary: Get task
+      tags:
+        - Tasks
+      security:
+        - bearerAuth: []
+      description: Get task
+      operationId: getTask
+      parameters:
+        - in: path
+          name: taskID
+          schema:
+            type: integer
+          required: true
+          description: Task id
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '405':
+          description: Invalid input
+    put:
+      summary: Add a new task
+      tags:
+        - Tasks
+      security:
+        - bearerAuth: []
+      description: UpdateTask
+      operationId: updateTask
+      parameters:
+        - in: path
+          name: taskID
+          schema:
+            type: integer
+          required: true
+          description: Task id
+      requestBody:
+        description: Task object
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskReqBody'
+        required: true
+      responses:
+        '200':
+          description: Successful operation
+        '405':
+          description: Invalid input
+
+  /timetable/set/{taskID}:
+    post:
+      summary: Add a new timetable
+      tags:
+        - Timetable
+      security:
+        - bearerAuth: []
+      description: Add a task
+      parameters:
+         - in: path
+           name: taskID
+           schema:
+             type: integer
+           required: true
+           description: Task id
+      requestBody:
+        description: Set timetable task
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetTimetableTaskReqBody'
+        required: true
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimetableTask'
+        '405':
+          description: Invalid input
+
+  /timetable:
+    get:
+      summary: List timetable tasks
+      tags:
+        - Timetable
+      security:
+        - bearerAuth: []
+      description: List timetable tasks
+      operationId: listTimetableTasks
+      parameters:
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TimetableTask'
+        '405':
+          description: Invalid input
+
+  /timetable/{timetableTaskID}:
+    get:
+      summary: Get timetable task
+      tags:
+        - Timetable
+      security:
+        - bearerAuth: []
+      description: Get timetable task
+      operationId: getTimetableTask
+      parameters:
+        - in: path
+          name: timetableTaskID
+          schema:
+            type: integer
+          required: true
+          description: Timetable task id
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimetableTask'
+        '405':
+          description: Invalid input
+
+    put:
+      summary: Update timetable task
+      tags:
+        - Timetable
+      security:
+        - bearerAuth: []
+      description: List timetable tasks
+      operationId: updateTimetableTask
+      parameters:
+        - in: path
+          name: timetableTaskID
+          schema:
+            type: integer
+          required: true
+          description: Timetable task id
+      requestBody:
+        description: Update timetable task
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTimetableReqBody'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimetableTask'
+        '405':
+          description: Invalid input
+
+components:
+  schemas:
+    RegistrationBody:
+      required:
+        - email
+        - nickname
+        - password
+      type: object
+      properties:
+        email:
+          type: string
+          example: email@example.com
+          format: email
+        nickname:
+          type: string
+          example: Nagibator228
+        password:
+          type: string
+          description: Password
+          format: password
+
+    LoginBody:
+      required:
+        - loginString
+        - password
+      type: object
+      properties:
+        loginString:
+          type: string
+          description: nickname or email of user
+          example: Nagibator228
+        password:
+          type: string
+          description: Password
+          format: password
+
+    Tokens:
+      type: object
+      properties:
+        accessToken:
+          $ref: '#/components/schemas/Token'
+          required: true
+        refreshToken:
+          $ref: '#/components/schemas/Token'
+          required: true
+
+    Token:
+      type: string
+      description: Jwt token
+#      format: byte
+      example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2dnZWRJbkFzIjoiYWRtaW4iLCJpYXQiOjE0MjI3Nzk2Mzh9.gzSraSYS8EXBxLN_oWnFSRgCzcmJmMjLiuyu5CSpyHI
+#      required: true
+
+    CreateTaskReqBody:
+      required:
+        - message
+        - requiredTime
+        - periodic
+      type: object
+      properties:
+        message:
+          type: string
+          example: Task text
+        requiredTime:
+          type: integer
+          description: Required time for task in minutes
+          minimum: 1
+        periodic:
+          type: boolean
+
+
+    UpdateTaskReqBody:
+      required:
+        - message
+        - requiredTime
+        - periodic
+        - done
+        - archived
+      type: object
+      properties:
+        message:
+          type: string
+          example: Task text
+        requiredTime:
+          type: integer
+          description: Required time for task in minutes
+          minimum: 1
+        periodic:
+          type: boolean
+        done:
+          type: boolean
+        archived:
+          type: boolean
+
+
+    SetTimetableTaskReqBody:
+      required:
+        - start
+        - done
+      type: object
+      properties:
+        description:
+          type: string
+          example: Task description
+        start:
+          type: string
+          format: date-time
+
+
+    UpdateTimetableReqBody:
+      required:
+        - finish
+        - start
+        - done
+      type: object
+      properties:
+        description:
+          type: string
+          example: Task description
+        start:
+          type: string
+          format: date-time
+        done:
+          type: boolean
+
+    Task:
+      required:
+        - id
+        - message
+        - requiredTime
+        - periodic
+        - done
+        - archived
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 12542
+        message:
+          type: string
+          example: Task text
+        periodic:
+          type: boolean
+        done:
+          type: boolean
+        archived:
+          type: boolean
+        requiredTime:
+          type: integer
+          description: Required time for task in minutes
+          minimum: 1
+          example: 5
+
+
+    TimetableTask:
+      required:
+        - id
+        - text
+        - start
+        - finish
+        - done
+        - task_id
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 12542
+        text:
+          type: string
+          example: Task text
+        description:
+          type: string
+          example: Task description
+        start:
+          type: string
+          format: date-time
+        finish:
+          type: string
+          format: date-time
+        done:
+          type: boolean
+        task_id:
+          type: integer
+          example: 1234
+  #        done:
+#          type: boolean
+#          description: is task already done
+#          example: false
+
+  securitySchemes:
+    bearerAuth: # arbitrary name for the security scheme
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    apiKeyAuth:
+      type: apiKey
+      name: api_key
+      in: header
+
