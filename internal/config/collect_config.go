@@ -11,11 +11,15 @@ type collectableConfig struct {
 	Database databaseConfig
 	JWT      jwtConfig
 	APIKey   apiKeyConfig
-	App      appConfig
+	Server   serverConfig
 }
 
-type appConfig struct {
-	Port int `env:"DB_PORT" env-required:"true"`
+type serverConfig struct {
+	Port                    int           `env:"APP_PORT" env-required:"true"`
+	MaxHeaderBytes          int           `env:"MAX_HEADER" env-required:"true"`
+	ReadTimeout             time.Duration `env:"READ_TIMEOUT" env-required:"true"`
+	WriteTimeout            time.Duration `env:"WRITE_TIMEOUT" env-required:"true"`
+	TimeForGracefulShutdown time.Duration `env:"GRACEFUL_SHUTDOWN_TIME" env-required:"true"`
 }
 
 type databaseConfig struct {

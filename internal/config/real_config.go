@@ -3,13 +3,14 @@ package config
 import (
 	"github.com/Dyleme/Notifier/internal/authorization/jwt"
 	"github.com/Dyleme/Notifier/internal/lib/sqldatabase"
+	"github.com/Dyleme/Notifier/internal/server"
 )
 
 type Config struct {
 	Database *sqldatabase.Config
 	JWT      *jwt.Config
 	APIKey   string
-	AppPort  int
+	Server   *server.Config
 }
 
 func mapConfig(collConf *collectableConfig) Config {
@@ -26,7 +27,13 @@ func mapConfig(collConf *collectableConfig) Config {
 			SignedKey: collConf.JWT.SignedKey,
 			TTL:       collConf.JWT.TokenTTL,
 		},
-		APIKey:  collConf.APIKey.Key,
-		AppPort: collConf.App.Port,
+		APIKey: collConf.APIKey.Key,
+		Server: &server.Config{
+			Port:                    collConf.Server.Port,
+			MaxHeaderBytes:          collConf.Server.MaxHeaderBytes,
+			ReadTimeout:             collConf.Server.ReadTimeout,
+			WriteTimeout:            collConf.Server.WriteTimeout,
+			TimeForGracefulShutdown: collConf.Server.TimeForGracefulShutdown,
+		},
 	}
 }
