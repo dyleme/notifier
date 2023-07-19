@@ -5,8 +5,6 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/go-chi/cors"
 
 	"github.com/Dyleme/Notifier/internal/authorization/handler/authapi"
 	"github.com/Dyleme/Notifier/internal/timetable-service/handler/timetableapi"
@@ -17,17 +15,12 @@ func Route(
 	authHandler authapi.ServerInterface,
 	jwtMiddleware func(handler http.Handler) http.Handler,
 	apiKeyMiddleware func(handler http.Handler) http.Handler,
+	middlewares []func(handler http.Handler) http.Handler,
 ) *chi.Mux {
 	router := chi.NewRouter()
-	router.Use(
-		middleware.RequestLogger(&middleware.DefaultLogFormatter{
-			Logger:  &DefLogger{},
-			NoColor: true,
-		}),
-		middleware.DefaultLogger,
-		cors.AllowAll().Handler,
-		middleware.Recoverer,
-	)
+	for _, m := range middlewares {
+		router.Use(m)
+	}
 	bearerTokenRouter := router.With(jwtMiddleware)
 	apiKeyRouter := router.With(apiKeyMiddleware)
 

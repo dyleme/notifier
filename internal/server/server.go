@@ -9,6 +9,10 @@ import (
 	"os/signal"
 	"strconv"
 	"time"
+
+	"golang.org/x/exp/slog"
+
+	"github.com/Dyleme/Notifier/internal/lib/log"
 )
 
 // Server is a struct which handles the requests.
@@ -59,6 +63,7 @@ func (s *Server) Run(ctx context.Context) error {
 	servError := make(chan error, 1)
 
 	go func() {
+		log.Ctx(ctx).Info("start server")
 		if err := s.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			servError <- fmt.Errorf("listen: %w", err)
 		}
@@ -68,12 +73,16 @@ func (s *Server) Run(ctx context.Context) error {
 	case err := <-servError:
 		return err
 	case <-ctx.Done():
+		gsStart := time.Now()
+		log.Ctx(ctx).Info("starting graceful shutdown")
 		ctxShutDown, cancel := context.WithTimeout(context.Background(), s.gracefulShutdownTime)
 		defer cancel()
 
 		if err := s.server.Shutdown(ctxShutDown); err != nil { // nolint: contextcheck // create new context for graceful shutdown
 			return fmt.Errorf("shutdown: %w", err)
 		}
+
+		log.Ctx(ctx).Info("end graceful shutdown", slog.Duration("shutdown_dur", time.Since(gsStart)))
 	}
 
 	return nil

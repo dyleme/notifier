@@ -7,33 +7,35 @@ import (
 )
 
 type Config struct {
+	Env      string
 	Database *sqldatabase.Config
 	JWT      *jwt.Config
 	APIKey   string
 	Server   *server.Config
 }
 
-func mapConfig(collConf *collectableConfig) Config {
+func mapConfig(cc *collectableConfig) Config {
 	return Config{
+		Env: cc.Env,
 		Database: &sqldatabase.Config{
-			Port:     collConf.Database.Port,
-			Host:     collConf.Database.Host,
-			SSLMode:  collConf.Database.SSLMode,
-			User:     collConf.Database.User,
-			Database: collConf.Database.Database,
-			Password: collConf.Database.Password,
+			Port:     cc.Database.Port,
+			Host:     cc.Database.Host,
+			SSLMode:  cc.Database.SSLMode,
+			User:     cc.Database.User,
+			Database: cc.Database.Database,
+			Password: cc.Database.Password,
 		},
 		JWT: &jwt.Config{
-			SignedKey: collConf.JWT.SignedKey,
-			TTL:       collConf.JWT.TokenTTL,
+			SignedKey: cc.JWT.SignedKey,
+			TTL:       cc.JWT.TokenTTL,
 		},
-		APIKey: collConf.APIKey.Key,
+		APIKey: cc.APIKey.Key,
 		Server: &server.Config{
-			Port:                    collConf.Server.Port,
-			MaxHeaderBytes:          collConf.Server.MaxHeaderBytes,
-			ReadTimeout:             collConf.Server.ReadTimeout,
-			WriteTimeout:            collConf.Server.WriteTimeout,
-			TimeForGracefulShutdown: collConf.Server.TimeForGracefulShutdown,
+			Port:                    cc.Server.Port,
+			MaxHeaderBytes:          cc.Server.MaxHeaderBytes,
+			ReadTimeout:             cc.Server.ReadTimeout,
+			WriteTimeout:            cc.Server.WriteTimeout,
+			TimeForGracefulShutdown: cc.Server.TimeForGracefulShutdown,
 		},
 	}
 }
