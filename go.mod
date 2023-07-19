@@ -4,12 +4,14 @@ go 1.20
 
 require (
 	github.com/deepmap/oapi-codegen v1.13.0
+	github.com/fatih/color v1.15.0
 	github.com/go-chi/chi/v5 v5.0.8
 	github.com/go-chi/cors v1.2.1
 	github.com/golang-jwt/jwt v3.2.2+incompatible
+	github.com/ilyakaznacheev/cleanenv v1.4.2
 	github.com/jackc/pgx/v5 v5.4.2
-	github.com/joho/godotenv v1.5.1
 	golang.org/x/crypto v0.9.0
+	golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1
 )
 
 require (
@@ -26,10 +28,10 @@ require (
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/uuid v1.3.0 // indirect
-	github.com/ilyakaznacheev/cleanenv v1.4.2 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
 	github.com/jackc/puddle/v2 v2.2.0 // indirect
+	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
 	github.com/kr/text v0.2.0 // indirect

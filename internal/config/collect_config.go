@@ -1,13 +1,13 @@
 package config
 
 import (
-	"log"
 	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
 type collectableConfig struct {
+	Env      string `env:"ENV" env-required:"true"`
 	Database databaseConfig
 	JWT      jwtConfig
 	APIKey   apiKeyConfig
@@ -40,11 +40,11 @@ type apiKeyConfig struct {
 	Key string `env:"API_KEY" env-required:"true"`
 }
 
-func Load() Config {
+func Load() (Config, error) {
 	var collectConfigs collectableConfig
 	err := cleanenv.ReadConfig(".env", &collectConfigs)
 	if err != nil {
-		log.Fatal(err)
+		return Config{}, err
 	}
-	return mapConfig(&collectConfigs)
+	return mapConfig(&collectConfigs), nil
 }
