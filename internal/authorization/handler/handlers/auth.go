@@ -27,7 +27,7 @@ func (ah AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	accessKey, err := ah.serv.AuthUser(r.Context(), mapValidateUser(loginInput))
 	if err != nil {
-		responses.Error(w, http.StatusInternalServerError, err)
+		responses.KnownError(w, err)
 		return
 	}
 
@@ -59,7 +59,7 @@ func (ah AuthHandler) Registration(w http.ResponseWriter, r *http.Request) {
 
 	accessKey, err := ah.serv.CreateUser(r.Context(), mapCreateUserInput(regInput))
 	if err != nil {
-		responses.Error(w, http.StatusInternalServerError, err)
+		responses.KnownError(w, err)
 		return
 	}
 

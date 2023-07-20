@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"errors"
 	"net/http"
 	"time"
 
@@ -10,7 +9,6 @@ import (
 	"github.com/Dyleme/Notifier/internal/lib/http/responses"
 	"github.com/Dyleme/Notifier/internal/timetable-service/handler/timetableapi"
 	"github.com/Dyleme/Notifier/internal/timetable-service/models"
-	"github.com/Dyleme/Notifier/internal/timetable-service/service"
 )
 
 func (t TimetableHandler) ListTasks(w http.ResponseWriter, r *http.Request) {
@@ -22,7 +20,7 @@ func (t TimetableHandler) ListTasks(w http.ResponseWriter, r *http.Request) {
 
 	tasks, err := t.serv.GetUserTasks(r.Context(), userID)
 	if err != nil {
-		responses.Error(w, http.StatusInternalServerError, err)
+		responses.KnownError(w, err)
 		return
 	}
 	apiTasks := mapAPITasks(tasks)
@@ -47,7 +45,7 @@ func (t TimetableHandler) AddTask(w http.ResponseWriter, r *http.Request) {
 	task := mapAddTaskReq(addTaskBody, userID)
 	createdTask, err := t.serv.AddTask(r.Context(), task)
 	if err != nil {
-		responses.Error(w, http.StatusInternalServerError, err)
+		responses.KnownError(w, err)
 		return
 	}
 
@@ -106,12 +104,7 @@ func (t TimetableHandler) GetTask(w http.ResponseWriter, r *http.Request, taskID
 
 	task, err := t.serv.GetTask(r.Context(), taskID, userID)
 	if err != nil {
-		if errors.Is(err, service.ErrNotFound) {
-			responses.Status(w, http.StatusNotFound)
-			return
-		}
-
-		responses.Status(w, http.StatusInternalServerError)
+		responses.KnownError(w, err)
 		return
 	}
 
@@ -136,7 +129,7 @@ func (t TimetableHandler) UpdateTask(w http.ResponseWriter, r *http.Request, tas
 
 	err = t.serv.UpdateTask(r.Context(), task)
 	if err != nil {
-		responses.Status(w, http.StatusInternalServerError)
+		responses.KnownError(w, err)
 		return
 	}
 
