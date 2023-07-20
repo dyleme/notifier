@@ -25,6 +25,7 @@ func (s *Service) AddTaskToTimetable(ctx context.Context, userID, taskID int, st
 	})
 
 	if err != nil {
+		logError(ctx, err)
 		return models.TimetableTask{}, err
 	}
 
@@ -32,15 +33,33 @@ func (s *Service) AddTaskToTimetable(ctx context.Context, userID, taskID int, st
 }
 
 func (s *Service) GetTimetableTask(ctx context.Context, userID, timetableTaskID int) (models.TimetableTask, error) {
-	return s.repo.GetTimetableTask(ctx, timetableTaskID, userID)
+	tt, err := s.repo.GetTimetableTask(ctx, timetableTaskID, userID)
+	if err != nil {
+		logError(ctx, err)
+		return models.TimetableTask{}, err
+	}
+
+	return tt, nil
 }
 
 func (s *Service) ListTimetableTasks(ctx context.Context, userID int) ([]models.TimetableTask, error) {
-	return s.repo.ListTimetableTasks(ctx, userID)
+	tts, err := s.repo.ListTimetableTasks(ctx, userID)
+	if err != nil {
+		logError(ctx, err)
+		return nil, err
+	}
+
+	return tts, nil
 }
 
 func (s *Service) ListTimetableTasksInPeriod(ctx context.Context, userID int, from, to time.Time) ([]models.TimetableTask, error) {
-	return s.repo.ListTimetableTasksInPeriod(ctx, userID, from, to)
+	tts, err := s.repo.ListTimetableTasksInPeriod(ctx, userID, from, to)
+	if err != nil {
+		logError(ctx, err)
+		return nil, err
+	}
+
+	return tts, nil
 }
 
 type UpdateTimetableParams struct {
@@ -77,6 +96,7 @@ func (s *Service) UpdateTimetable(ctx context.Context, params UpdateTimetablePar
 		return nil
 	})
 	if err != nil {
+		logError(ctx, err)
 		return models.TimetableTask{}, err
 	}
 
@@ -84,5 +104,11 @@ func (s *Service) UpdateTimetable(ctx context.Context, params UpdateTimetablePar
 }
 
 func (s *Service) DeleteTimetableTask(ctx context.Context, userID, timeTableTaskID int) error {
-	return s.repo.DeleteTimetableTask(ctx, timeTableTaskID, userID)
+	err := s.repo.DeleteTimetableTask(ctx, timeTableTaskID, userID)
+	if err != nil {
+		logError(ctx, err)
+		return err
+	}
+
+	return nil
 }

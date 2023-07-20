@@ -9,6 +9,7 @@ import (
 func (s *Service) AddTask(ctx context.Context, task models.Task) (models.Task, error) {
 	createdTask, err := s.repo.AddTask(ctx, task)
 	if err != nil {
+		logError(ctx, err)
 		return models.Task{}, err
 	}
 
@@ -18,6 +19,7 @@ func (s *Service) AddTask(ctx context.Context, task models.Task) (models.Task, e
 func (s *Service) GetTask(ctx context.Context, taskID, userID int) (models.Task, error) {
 	task, err := s.repo.GetTask(ctx, taskID, userID)
 	if err != nil {
+		logError(ctx, err)
 		return models.Task{}, err
 	}
 
@@ -25,12 +27,19 @@ func (s *Service) GetTask(ctx context.Context, taskID, userID int) (models.Task,
 }
 
 func (s *Service) UpdateTask(ctx context.Context, task models.Task) error {
-	return s.repo.UpdateTask(ctx, task)
+	err := s.repo.UpdateTask(ctx, task)
+	if err != nil {
+		logError(ctx, err)
+		return err
+	}
+
+	return nil
 }
 
 func (s *Service) GetUserTasks(ctx context.Context, userID int) ([]models.Task, error) {
 	tasks, err := s.repo.ListTasks(ctx, userID)
 	if err != nil {
+		logError(ctx, err)
 		return nil, err
 	}
 

@@ -31,7 +31,7 @@ func (t TimetableHandler) ListTimetableTasks(w http.ResponseWriter, r *http.Requ
 
 	tasks, err := t.serv.ListTimetableTasksInPeriod(r.Context(), userID, from, to)
 	if err != nil {
-		responses.Error(w, http.StatusInternalServerError, err)
+		responses.KnownError(w, err)
 		return
 	}
 
@@ -58,7 +58,7 @@ func (t TimetableHandler) PostTimetableSetTaskID(w http.ResponseWriter, r *http.
 
 	tt, err := t.serv.AddTaskToTimetable(r.Context(), userID, taskID, setTimetableTask.Start, description)
 	if err != nil {
-		responses.Error(w, http.StatusInternalServerError, err)
+		responses.KnownError(w, err)
 		return
 	}
 
@@ -88,7 +88,7 @@ func (t TimetableHandler) GetTimetableTask(w http.ResponseWriter, r *http.Reques
 
 	tt, err := t.serv.GetTimetableTask(r.Context(), userID, timetableTaskID)
 	if err != nil {
-		responses.Error(w, http.StatusInternalServerError, err)
+		responses.KnownError(w, err)
 		return
 	}
 
@@ -107,7 +107,7 @@ func (t TimetableHandler) UpdateTimetableTask(w http.ResponseWriter, r *http.Req
 	var updateBody timetableapi.UpdateTimetableTaskJSONRequestBody
 	err = requests.Bind(r, &updateBody)
 	if err != nil {
-		responses.Error(w, http.StatusBadRequest, err)
+		responses.KnownError(w, err)
 		return
 	}
 	description := ""

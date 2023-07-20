@@ -2,10 +2,11 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/Dyleme/Notifier/internal/lib/serverrors"
 )
 
 // HashGenerator interface providing you the ability to generate password hash
@@ -88,8 +89,6 @@ func (s *AuthService) CreateUser(ctx context.Context, user CreateUserInput) (str
 	return accessToken, nil
 }
 
-var ErrWrongPassword = errors.New("wrong password")
-
 // AuthUser returns the jwt token of the user, if the provided user exists  in repo and password is correct.
 // In any other situation function returns ("", err).
 // Method get password and if calling repo.GetPasswordHashAndID then validates it with the hashGen.IsValidPassword,
@@ -101,7 +100,7 @@ func (s *AuthService) AuthUser(ctx context.Context, input ValidateUserInput) (st
 	}
 
 	if !s.hashGen.IsValidPassword(input.Password, hash) {
-		return "", ErrWrongPassword
+		return "", serverrors.NewInvalidAuth("wrong password")
 	}
 
 	return s.jwtGen.CreateToken(id)
