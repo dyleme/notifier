@@ -14,7 +14,7 @@ type Task struct {
 	Archived     bool
 }
 
-func (t Task) ToTimetableTask(start time.Time, description string) TimetableTask {
+func (t *Task) ToTimetableTask(start time.Time, description string) TimetableTask {
 	return TimetableTask{ //nolint:exhaustruct  // TODO: We dont know timetabletask id
 		UserID:      t.UserID,
 		Text:        t.Text,
@@ -24,4 +24,15 @@ func (t Task) ToTimetableTask(start time.Time, description string) TimetableTask
 		TaskID:      t.ID,
 		Description: description,
 	}
+}
+
+func (t *Task) UsedTask() Task {
+	if !t.Periodic {
+		t.Archived = true
+	}
+	return *t
+}
+
+func (t *Task) CanUse() bool {
+	return !t.Archived
 }

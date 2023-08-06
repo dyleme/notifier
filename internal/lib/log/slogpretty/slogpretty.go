@@ -23,6 +23,7 @@ func NewHandler(
 	h := &PrettyHandler{
 		Handler: slog.NewJSONHandler(out, opts),
 		l:       stdLog.New(out, "", 0),
+		attrs:   nil,
 	}
 
 	return h
@@ -89,5 +90,6 @@ func (h *PrettyHandler) WithGroup(name string) slog.Handler {
 	return &PrettyHandler{
 		Handler: h.Handler.WithGroup(name),
 		l:       h.l,
+		attrs:   nil,
 	}
 }

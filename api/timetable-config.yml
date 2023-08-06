@@ -7,3 +7,4 @@ output-options:
   include-tags:
     - Tasks
     - Timetable
+    - NotificationParams

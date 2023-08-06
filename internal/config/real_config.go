@@ -3,15 +3,19 @@ package config
 import (
 	"github.com/Dyleme/Notifier/internal/authorization/jwt"
 	"github.com/Dyleme/Notifier/internal/lib/sqldatabase"
+	"github.com/Dyleme/Notifier/internal/notification-service/notifier"
 	"github.com/Dyleme/Notifier/internal/server"
+	"github.com/Dyleme/Notifier/internal/timetable-service/service"
 )
 
 type Config struct {
-	Env      string
-	Database *sqldatabase.Config
-	JWT      *jwt.Config
-	APIKey   string
-	Server   *server.Config
+	Env       string
+	Database  *sqldatabase.Config
+	JWT       *jwt.Config
+	APIKey    string
+	Server    *server.Config
+	Notifier  notifier.Config
+	Timetable service.Config
 }
 
 func mapConfig(cc *collectableConfig) Config {
@@ -36,6 +40,12 @@ func mapConfig(cc *collectableConfig) Config {
 			ReadTimeout:             cc.Server.ReadTimeout,
 			WriteTimeout:            cc.Server.WriteTimeout,
 			TimeForGracefulShutdown: cc.Server.TimeForGracefulShutdown,
+		},
+		Notifier: notifier.Config{
+			Period: cc.Notifier.CheckPeriod,
+		},
+		Timetable: service.Config{
+			CheckTasksPeriod: cc.TimetableService.CheckPeriod,
 		},
 	}
 }

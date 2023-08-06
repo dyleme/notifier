@@ -7,11 +7,13 @@ import (
 )
 
 type collectableConfig struct {
-	Env      string `env:"ENV" env-required:"true"`
-	Database databaseConfig
-	JWT      jwtConfig
-	APIKey   apiKeyConfig
-	Server   serverConfig
+	Env              string `env:"ENV" env-required:"true"`
+	Database         databaseConfig
+	JWT              jwtConfig
+	APIKey           apiKeyConfig
+	Server           serverConfig
+	Notifier         notificationConfig
+	TimetableService timetableServiceConfig
 }
 
 type serverConfig struct {
@@ -38,6 +40,14 @@ type jwtConfig struct {
 
 type apiKeyConfig struct {
 	Key string `env:"API_KEY" env-required:"true"`
+}
+
+type notificationConfig struct {
+	CheckPeriod time.Duration `env:"NOTIFICATIONS_CHECK_PERIOD" env-required:"true"`
+}
+
+type timetableServiceConfig struct {
+	CheckPeriod time.Duration `env:"TIMETABLE_TASK_CHECK_PERIOD" env-required:"true"`
 }
 
 func Load() (Config, error) {

@@ -8,38 +8,39 @@ package queries
 import (
 	"context"
 
+	models "github.com/Dyleme/Notifier/internal/timetable-service/models"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const addTimetableTask = `-- name: AddTimetableTask :one
-INSERT INTO timetable_tasks (
-            user_id,
-            task_id,
-            text,
-            start,
-            finish,
-            description,
-            done
-) VALUES (
-            $1,
-            $2,
-            $3,
-            $4,
-            $5,
-            $6,
-            $7
-)
-RETURNING id, created_at, text, description, user_id, start, finish, done, task_id
+INSERT INTO timetable_tasks (user_id,
+                             task_id,
+                             text,
+                             start,
+                             finish,
+                             description,
+                             done,
+                             notification)
+VALUES ($1,
+        $2,
+        $3,
+        $4,
+        $5,
+        $6,
+        $7,
+        $8)
+RETURNING id, created_at, text, description, user_id, start, finish, done, task_id, notification
 `
 
 type AddTimetableTaskParams struct {
-	UserID      int32
-	TaskID      int32
-	Text        string
-	Start       pgtype.Timestamp
-	Finish      pgtype.Timestamp
-	Description pgtype.Text
-	Done        bool
+	UserID       int32
+	TaskID       int32
+	Text         string
+	Start        pgtype.Timestamp
+	Finish       pgtype.Timestamp
+	Description  pgtype.Text
+	Done         bool
+	Notification models.Notification
 }
 
 func (q *Queries) AddTimetableTask(ctx context.Context, arg AddTimetableTaskParams) (TimetableTask, error) {
@@ -51,6 +52,7 @@ func (q *Queries) AddTimetableTask(ctx context.Context, arg AddTimetableTaskPara
 		arg.Finish,
 		arg.Description,
 		arg.Done,
+		arg.Notification,
 	)
 	var i TimetableTask
 	err := row.Scan(
@@ -63,6 +65,7 @@ func (q *Queries) AddTimetableTask(ctx context.Context, arg AddTimetableTaskPara
 		&i.Finish,
 		&i.Done,
 		&i.TaskID,
+		&i.Notification,
 	)
 	return i, err
 }
@@ -72,7 +75,7 @@ DELETE
 FROM timetable_tasks
 WHERE id = $1
   AND user_id = $2
-RETURNING count(*) as deleted_amount
+RETURNING COUNT(*) AS deleted_amount
 `
 
 type DeleteTimetableTaskParams struct {
@@ -87,8 +90,47 @@ func (q *Queries) DeleteTimetableTask(ctx context.Context, arg DeleteTimetableTa
 	return deleted_amount, err
 }
 
+const getTimetableReadyTasks = `-- name: GetTimetableReadyTasks :many
+SELECT id, created_at, text, description, user_id, start, finish, done, task_id, notification
+FROM timetable_tasks AS t
+WHERE t.start <= NOW()
+  AND t.done = FALSE
+  AND t.notification->>'sended' = 'false'
+`
+
+func (q *Queries) GetTimetableReadyTasks(ctx context.Context) ([]TimetableTask, error) {
+	rows, err := q.db.Query(ctx, getTimetableReadyTasks)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TimetableTask
+	for rows.Next() {
+		var i TimetableTask
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.Text,
+			&i.Description,
+			&i.UserID,
+			&i.Start,
+			&i.Finish,
+			&i.Done,
+			&i.TaskID,
+			&i.Notification,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTimetableTask = `-- name: GetTimetableTask :one
-SELECT id, created_at, text, description, user_id, start, finish, done, task_id
+SELECT id, created_at, text, description, user_id, start, finish, done, task_id, notification
 FROM timetable_tasks
 WHERE id = $1
   AND user_id = $2
@@ -112,12 +154,13 @@ func (q *Queries) GetTimetableTask(ctx context.Context, arg GetTimetableTaskPara
 		&i.Finish,
 		&i.Done,
 		&i.TaskID,
+		&i.Notification,
 	)
 	return i, err
 }
 
 const getTimetableTasksInPeriod = `-- name: GetTimetableTasksInPeriod :many
-SELECT id, created_at, text, description, user_id, start, finish, done, task_id
+SELECT id, created_at, text, description, user_id, start, finish, done, task_id, notification
 FROM timetable_tasks
 WHERE user_id = $1
   AND start BETWEEN $2 AND $3
@@ -148,6 +191,7 @@ func (q *Queries) GetTimetableTasksInPeriod(ctx context.Context, arg GetTimetabl
 			&i.Finish,
 			&i.Done,
 			&i.TaskID,
+			&i.Notification,
 		); err != nil {
 			return nil, err
 		}
@@ -160,7 +204,7 @@ func (q *Queries) GetTimetableTasksInPeriod(ctx context.Context, arg GetTimetabl
 }
 
 const listTimetableTasks = `-- name: ListTimetableTasks :many
-SELECT id, created_at, text, description, user_id, start, finish, done, task_id
+SELECT id, created_at, text, description, user_id, start, finish, done, task_id, notification
 FROM timetable_tasks
 WHERE user_id = $1
 `
@@ -184,6 +228,7 @@ func (q *Queries) ListTimetableTasks(ctx context.Context, userID int32) ([]Timet
 			&i.Finish,
 			&i.Done,
 			&i.TaskID,
+			&i.Notification,
 		); err != nil {
 			return nil, err
 		}
@@ -195,16 +240,48 @@ func (q *Queries) ListTimetableTasks(ctx context.Context, userID int32) ([]Timet
 	return items, nil
 }
 
+const markNotificationSended = `-- name: MarkNotificationSended :exec
+UPDATE timetable_tasks as t
+SET notification = notification || '{"sended":true}'
+WHERE id in ($1::int[])
+`
+
+func (q *Queries) MarkNotificationSended(ctx context.Context, ids []int32) error {
+	_, err := q.db.Exec(ctx, markNotificationSended, ids)
+	return err
+}
+
+const updateNotificationParams = `-- name: UpdateNotificationParams :one
+UPDATE timetable_tasks as t
+SET notification = jsonb_set(notification, '{notification_params}', $1)
+WHERE id = $2
+AND user_id = $3
+RETURNING notification
+`
+
+type UpdateNotificationParamsParams struct {
+	Params []byte
+	ID     int32
+	UserID int32
+}
+
+func (q *Queries) UpdateNotificationParams(ctx context.Context, arg UpdateNotificationParamsParams) (models.Notification, error) {
+	row := q.db.QueryRow(ctx, updateNotificationParams, arg.Params, arg.ID, arg.UserID)
+	var notification models.Notification
+	err := row.Scan(&notification)
+	return notification, err
+}
+
 const updateTimetableTask = `-- name: UpdateTimetableTask :one
 UPDATE timetable_tasks
-   SET start = $1,
-       finish = $2,
-       text = $3,
-       description = $4,
-       done = $5
- WHERE id = $6
-   AND user_id = $7
-RETURNING id, created_at, text, description, user_id, start, finish, done, task_id
+SET start       = $1,
+    finish      = $2,
+    text        = $3,
+    description = $4,
+    done        = $5
+WHERE id = $6
+  AND user_id = $7
+RETURNING id, created_at, text, description, user_id, start, finish, done, task_id, notification
 `
 
 type UpdateTimetableTaskParams struct {
@@ -238,6 +315,7 @@ func (q *Queries) UpdateTimetableTask(ctx context.Context, arg UpdateTimetableTa
 		&i.Finish,
 		&i.Done,
 		&i.TaskID,
+		&i.Notification,
 	)
 	return i, err
 }

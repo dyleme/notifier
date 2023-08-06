@@ -53,6 +53,10 @@ type AuthRepo interface {
 	GetPasswordHashAndID(ctx context.Context, authName string) (hash []byte, userID int, err error)
 }
 
+type NotifcationService interface {
+	CreateDefaultNotificationParams()
+}
+
 // JwtGenerator is an interface that provides method to create jwt tokens.
 type JwtGenerator interface {
 	// CreateToken is method which creates jwt token.

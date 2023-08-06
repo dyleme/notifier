@@ -7,6 +7,7 @@ import (
 	"github.com/Dyleme/Notifier/internal/authorization/authmiddleware"
 	"github.com/Dyleme/Notifier/internal/lib/http/requests"
 	"github.com/Dyleme/Notifier/internal/lib/http/responses"
+	"github.com/Dyleme/Notifier/internal/lib/utils/dto"
 	"github.com/Dyleme/Notifier/internal/timetable-service/handler/timetableapi"
 	"github.com/Dyleme/Notifier/internal/timetable-service/models"
 )
@@ -18,12 +19,12 @@ func (t TimetableHandler) ListTasks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tasks, err := t.serv.GetUserTasks(r.Context(), userID)
+	tasks, err := t.serv.ListUserTasks(r.Context(), userID)
 	if err != nil {
 		responses.KnownError(w, err)
 		return
 	}
-	apiTasks := mapAPITasks(tasks)
+	apiTasks := dto.Slice(tasks, mapAPITask)
 
 	responses.JSON(w, http.StatusOK, apiTasks)
 }
@@ -84,15 +85,6 @@ func mapAPITask(task models.Task) timetableapi.Task {
 		Done:         task.Done,
 		Periodic:     task.Periodic,
 	}
-}
-
-func mapAPITasks(tasks []models.Task) []timetableapi.Task {
-	apiTasks := make([]timetableapi.Task, 0, len(tasks))
-	for _, t := range tasks {
-		apiTasks = append(apiTasks, mapAPITask(t))
-	}
-
-	return apiTasks
 }
 
 func (t TimetableHandler) GetTask(w http.ResponseWriter, r *http.Request, taskID int) {

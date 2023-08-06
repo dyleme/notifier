@@ -1,21 +1,20 @@
 -- name: AddTimetableTask :one
-INSERT INTO timetable_tasks (
-            user_id,
-            task_id,
-            text,
-            start,
-            finish,
-            description,
-            done
-) VALUES (
-            @user_id,
-            @task_id,
-            @text,
-            @start,
-            @finish,
-            @description,
-            @done
-)
+INSERT INTO timetable_tasks (user_id,
+                             task_id,
+                             text,
+                             start,
+                             finish,
+                             description,
+                             done,
+                             notification)
+VALUES (@user_id,
+        @task_id,
+        @text,
+        @start,
+        @finish,
+        @description,
+        @done,
+        @notification)
 RETURNING *;
 
 -- name: GetTimetableTask :one
@@ -40,15 +39,35 @@ DELETE
 FROM timetable_tasks
 WHERE id = @id
   AND user_id = @user_id
-RETURNING count(*) as deleted_amount;
+RETURNING COUNT(*) AS deleted_amount;
 
 -- name: UpdateTimetableTask :one
 UPDATE timetable_tasks
-   SET start = @start,
-       finish = @finish,
-       text = @text,
-       description = @description,
-       done = @done
- WHERE id = @id
-   AND user_id = @user_id
+SET start       = @start,
+    finish      = @finish,
+    text        = @text,
+    description = @description,
+    done        = @done
+WHERE id = @id
+  AND user_id = @user_id
 RETURNING *;
+
+-- name: GetTimetableReadyTasks :many
+SELECT *
+FROM timetable_tasks AS t
+WHERE t.start <= NOW()
+  AND t.done = FALSE
+  AND t.notification->>'sended' = 'false';
+
+-- name: MarkNotificationSended :exec
+UPDATE timetable_tasks as t
+SET notification = notification || '{"sended":true}'
+WHERE id in (sqlc.arg(ids)::int[]);
+
+-- name: UpdateNotificationParams :one
+UPDATE timetable_tasks as t
+SET notification = jsonb_set(notification, '{notification_params}', @params)
+WHERE id = @id
+AND user_id = @user_id
+RETURNING notification;
+

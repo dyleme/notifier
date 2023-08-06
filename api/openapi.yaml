@@ -31,6 +31,8 @@ tags:
     description: Create and manage your tasks
   - name: Timetable
     description: Create and manafe your timetable
+  - name: NotificationParams
+    description: Manage Notification params
 paths:
   /auth/register:
     post:
@@ -242,6 +244,29 @@ paths:
                   $ref: '#/components/schemas/TimetableTask'
         '405':
           description: Invalid input
+    post:
+      summary: Create new timetable task
+      tags:
+        - Timetable
+      security:
+        - bearerAuth: []
+      description: Create new timetable task
+      operationId: createTimetableTask
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTimetableTaskReqBody'
+        required: true
+      responses:
+        '201':
+          description: Successfull creation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimetableTask'
+        '405':
+          description: Invalid input
 
   /timetable/{timetableTaskID}:
     get:
@@ -299,6 +324,109 @@ paths:
                 $ref: '#/components/schemas/TimetableTask'
         '405':
           description: Invalid input
+
+  /timetable/{timetableTaskID}/notification-params:
+    get:
+      summary: Get timetable task notification params
+      tags:
+        - Timetable
+        - NotificationParams
+      security:
+        - bearerAuth: []
+      description: Get timetable task notification params
+      operationId: getTimetableTaskNotificationParams
+      parameters:
+        - in: path
+          name: timetableTaskID
+          schema:
+            type: integer
+          required: true
+          description: Timetable task id
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationParams'
+        '405':
+          description: Invalid input
+
+    put:
+      summary: Set timetable task notification params
+      tags:
+        - Timetable
+        - NotificationParams
+      security:
+        - bearerAuth: []
+      description: Set timetable task notification params
+      operationId: setTimetableTaskNotificationParams
+      parameters:
+        - in: path
+          name: timetableTaskID
+          schema:
+            type: integer
+          required: true
+          description: Timetable task id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationParams'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationParams'
+        '405':
+          description: Invalid input
+
+  /notification-params:
+    get:
+      summary: Set default notification params
+      tags:
+        - NotificationParams
+      security:
+        - bearerAuth: []
+      description: get default notification params
+      operationId: getDefaultNotificationParams
+      responses:
+        '200':
+          description: Successfull operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationParams'
+        '405':
+          description: Invalid input
+
+    put:
+      summary: Set default notification params
+      tags:
+        - NotificationParams
+      security:
+        - bearerAuth: []
+      description: set default notification params
+      operationId: setDefaultNotificationParams
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationParams'
+        required: true
+      responses:
+        '201':
+          description: Successfull creation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationParams'
+        '405':
+          description: Invalid input
+
 
 components:
   schemas:
@@ -392,6 +520,29 @@ components:
         archived:
           type: boolean
 
+    CreateTimetableTaskReqBody:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Message
+        requiredTime:
+          type: integer
+          description: Required time for task in minutes
+          minimum: 1
+        periodic:
+          type: boolean
+        start:
+          type: string
+          format: date-time
+        description:
+          type: string
+          example: Description
+      required:
+        - message
+        - requiredTime
+        - periodic
+        - start
 
     SetTimetableTaskReqBody:
       required:
@@ -482,10 +633,32 @@ components:
         task_id:
           type: integer
           example: 1234
-  #        done:
-#          type: boolean
-#          description: is task already done
-#          example: false
+
+    NotificationParams:
+      type: object
+      required:
+        - period
+        - info
+      properties:
+        period:
+          type: integer
+          description: Required time for task in minutes
+          minimum: 1
+          example: 5
+        info:
+          $ref: '#/components/schemas/NotificationInfo'
+
+
+    NotificationInfo:
+      type: object
+      properties:
+        cmd:
+          type: boolean
+        telegram:
+          type: boolean
+        webhook:
+          type: string
+
 
   securitySchemes:
     bearerAuth: # arbitrary name for the security scheme

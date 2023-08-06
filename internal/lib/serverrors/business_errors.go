@@ -65,18 +65,34 @@ func (u UniqueError) BusinessError() string {
 	return fmt.Sprintf("%q %s already exists", u.value, u.name)
 }
 
-type InvalidAuth struct {
+type InvalidAuthError struct {
 	msg string
 }
 
-func NewInvalidAuth(msg string) InvalidAuth {
-	return InvalidAuth{msg: msg}
+func NewInvalidAuth(msg string) InvalidAuthError {
+	return InvalidAuthError{msg: msg}
 }
 
-func (i InvalidAuth) Error() string {
+func (i InvalidAuthError) Error() string {
 	return i.msg
 }
 
-func (i InvalidAuth) BusinessError() string {
+func (i InvalidAuthError) BusinessError() string {
 	return i.msg
+}
+
+type BusinessLogicError struct {
+	msg string
+}
+
+func NewBusinessLogicError(msg string) BusinessLogicError {
+	return BusinessLogicError{msg: msg}
+}
+
+func (b BusinessLogicError) Error() string {
+	return b.msg
+}
+
+func (b BusinessLogicError) BusinessError() string {
+	return b.msg
 }

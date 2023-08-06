@@ -2,72 +2,77 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-
 	"github.com/Dyleme/Notifier/internal/lib/serverrors"
 	"github.com/Dyleme/Notifier/internal/lib/sql/pgxconv"
+	"github.com/Dyleme/Notifier/internal/lib/utils/dto"
 	"github.com/Dyleme/Notifier/internal/timetable-service/models"
 	"github.com/Dyleme/Notifier/internal/timetable-service/repository/queries"
+	"github.com/Dyleme/Notifier/internal/timetable-service/service"
+	"github.com/jackc/pgx/v5"
 )
 
-func dtoTimetableTask(t queries.TimetableTask) models.TimetableTask {
+type TimetableTaskRepository struct {
+	q *queries.Queries
+}
+
+func (r *Repository) TimetableTasks() service.TimetableTaskRepository {
+	return &TimetableTaskRepository{q: r.q}
+}
+
+func dtoTimetableTask(t queries.TimetableTask) (models.TimetableTask, error) {
 	return models.TimetableTask{
-		ID:          int(t.ID),
-		UserID:      int(t.UserID),
-		TaskID:      int(t.TaskID),
-		Text:        t.Text,
-		Description: pgxconv.String(t.Description),
-		Start:       pgxconv.Time(t.Start),
-		Finish:      pgxconv.Time(t.Finish),
-		Done:        t.Done,
-	}
+		ID:           int(t.ID),
+		UserID:       int(t.UserID),
+		TaskID:       int(t.TaskID),
+		Text:         t.Text,
+		Description:  pgxconv.String(t.Description),
+		Start:        pgxconv.Time(t.Start),
+		Finish:       pgxconv.Time(t.Finish),
+		Done:         t.Done,
+		Notification: t.Notification,
+	}, nil
 }
 
-func dtoTimetableTasks(ts []queries.TimetableTask) []models.TimetableTask {
-	timetables := make([]models.TimetableTask, 0, len(ts))
-
-	for _, t := range ts { //nolint:gocritic // parsing database range
-		timetables = append(timetables, dtoTimetableTask(t))
-	}
-
-	return timetables
-}
-
-func (r *Repository) AddTimetableTask(ctx context.Context, tt models.TimetableTask) (models.TimetableTask, error) {
+func (tr *TimetableTaskRepository) Add(ctx context.Context, tt models.TimetableTask) (models.TimetableTask, error) {
 	op := "add timetable task: %w"
-	addedTimetable, err := r.q.AddTimetableTask(ctx, queries.AddTimetableTaskParams{
-		UserID:      int32(tt.UserID),
-		TaskID:      int32(tt.TaskID),
-		Text:        tt.Text,
-		Done:        tt.Done,
-		Description: pgxconv.Text(tt.Description),
-		Start:       pgxconv.Timestamp(tt.Start),
-		Finish:      pgxconv.Timestamp(tt.Finish),
+	addedTimetable, err := tr.q.AddTimetableTask(ctx, queries.AddTimetableTaskParams{
+		UserID:       int32(tt.UserID),
+		TaskID:       int32(tt.TaskID),
+		Text:         tt.Text,
+		Done:         tt.Done,
+		Description:  pgxconv.Text(tt.Description),
+		Start:        pgxconv.Timestamp(tt.Start),
+		Finish:       pgxconv.Timestamp(tt.Finish),
+		Notification: models.Notification{Sended: false, Params: nil},
 	})
 	if err != nil {
 		return models.TimetableTask{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
-	return dtoTimetableTask(addedTimetable), nil
+	return dtoTimetableTask(addedTimetable)
 }
 
-func (r *Repository) ListTimetableTasks(ctx context.Context, userID int) ([]models.TimetableTask, error) {
+func (tr *TimetableTaskRepository) List(ctx context.Context, userID int) ([]models.TimetableTask, error) {
 	op := fmt.Sprintf("list timetable tasks userID{%v} %%w", userID)
-	tt, err := r.q.ListTimetableTasks(ctx, int32(userID))
+	tt, err := tr.q.ListTimetableTasks(ctx, int32(userID))
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
 		return nil, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
-	return dtoTimetableTasks(tt), nil
+	return dto.ErrorSlice(tt, dtoTimetableTask)
 }
 
-func (r *Repository) DeleteTimetableTask(ctx context.Context, timetableTaskID, userID int) error {
+func (tr *TimetableTaskRepository) Delete(ctx context.Context, timetableTaskID, userID int) error {
 	op := fmt.Sprintf("delete timetable tasks timetableTaskID{%v} userID{%v} %%w", timetableTaskID, userID)
-	amount, err := r.q.DeleteTimetableTask(ctx, queries.DeleteTimetableTaskParams{
+	amount, err := tr.q.DeleteTimetableTask(ctx, queries.DeleteTimetableTaskParams{
 		ID:     int32(timetableTaskID),
 		UserID: int32(userID),
 	})
@@ -82,23 +87,26 @@ func (r *Repository) DeleteTimetableTask(ctx context.Context, timetableTaskID, u
 	return nil
 }
 
-func (r *Repository) ListTimetableTasksInPeriod(ctx context.Context, userID int, from, to time.Time) ([]models.TimetableTask, error) {
+func (tr *TimetableTaskRepository) ListInPeriod(ctx context.Context, userID int, from, to time.Time) ([]models.TimetableTask, error) {
 	op := fmt.Sprintf("list timetable tasks userID{%v} from{%v} to{%v}: %%w", userID, from, to)
-	tts, err := r.q.GetTimetableTasksInPeriod(ctx, queries.GetTimetableTasksInPeriodParams{
+	tts, err := tr.q.GetTimetableTasksInPeriod(ctx, queries.GetTimetableTasksInPeriodParams{
 		UserID:   int32(userID),
 		FromTime: pgxconv.Timestamp(from),
 		ToTime:   pgxconv.Timestamp(to),
 	})
 	if err != nil {
-		return nil, fmt.Errorf(op, err)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
-	return dtoTimetableTasks(tts), nil
+	return dto.ErrorSlice(tts, dtoTimetableTask)
 }
 
-func (r *Repository) GetTimetableTask(ctx context.Context, timetableTaskID, userID int) (models.TimetableTask, error) {
+func (tr *TimetableTaskRepository) Get(ctx context.Context, timetableTaskID, userID int) (models.TimetableTask, error) {
 	op := fmt.Sprintf("get timetable tasks timetableTaskID{%v} userID{%v} %%w", timetableTaskID, userID)
-	tt, err := r.q.GetTimetableTask(ctx, queries.GetTimetableTaskParams{
+	tt, err := tr.q.GetTimetableTask(ctx, queries.GetTimetableTaskParams{
 		ID:     int32(timetableTaskID),
 		UserID: int32(userID),
 	})
@@ -106,16 +114,15 @@ func (r *Repository) GetTimetableTask(ctx context.Context, timetableTaskID, user
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.TimetableTask{}, fmt.Errorf(op, serverrors.NewNotFoundError(err, "timetable task"))
 		}
-
 		return models.TimetableTask{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
-	return dtoTimetableTask(tt), nil
+	return dtoTimetableTask(tt)
 }
 
-func (r *Repository) UpdateTimetableTask(ctx context.Context, tt models.TimetableTask) (models.TimetableTask, error) {
+func (tr *TimetableTaskRepository) Update(ctx context.Context, tt models.TimetableTask) (models.TimetableTask, error) {
 	op := "update timetable task: %w"
-	updatedTT, err := r.q.UpdateTimetableTask(ctx, queries.UpdateTimetableTaskParams{
+	updatedTT, err := tr.q.UpdateTimetableTask(ctx, queries.UpdateTimetableTaskParams{
 		ID:          int32(tt.ID),
 		UserID:      int32(tt.UserID),
 		Text:        tt.Text,
@@ -128,5 +135,49 @@ func (r *Repository) UpdateTimetableTask(ctx context.Context, tt models.Timetabl
 		return models.TimetableTask{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
-	return dtoTimetableTask(updatedTT), nil
+	return dtoTimetableTask(updatedTT)
+}
+
+func (tr *TimetableTaskRepository) GetNotNotified(ctx context.Context) ([]models.TimetableTask, error) {
+	op := "get timetable ready tasks: %w"
+	tasks, err := tr.q.GetTimetableReadyTasks(ctx)
+	if err != nil {
+		return nil, fmt.Errorf(op, serverrors.NewRepositoryError(err))
+	}
+
+	return dto.ErrorSlice(tasks, dtoTimetableTask)
+}
+
+func (tr *TimetableTaskRepository) MarkNotified(ctx context.Context, ids []int) error {
+	err := tr.q.MarkNotificationSended(ctx, dto.Slice(ids, func(i int) int32 {
+		return int32(i)
+	}))
+	if err != nil {
+		return serverrors.NewRepositoryError(err)
+	}
+
+	return nil
+}
+
+func (tr *TimetableTaskRepository) UpdateNotificationParams(ctx context.Context, timetableTaskID, userID int, params models.NotificationParams) (models.NotificationParams, error) {
+	op := "TimetableTaskRepository.UpdateNotificationParams: %w"
+	bts, err := json.Marshal(params)
+	if err != nil {
+		return models.NotificationParams{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
+	}
+
+	p, err := tr.q.UpdateNotificationParams(ctx, queries.UpdateNotificationParamsParams{
+		Params: bts,
+		ID:     int32(timetableTaskID),
+		UserID: int32(userID),
+	})
+
+	if err != nil {
+		return models.NotificationParams{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
+	}
+
+	if p.Params == nil {
+		return models.NotificationParams{}, fmt.Errorf(op, serverrors.NewRepositoryError(fmt.Errorf("params are nil after update")))
+	}
+	return *p.Params, nil
 }

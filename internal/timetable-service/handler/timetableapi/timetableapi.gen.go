@@ -26,6 +26,32 @@ type CreateTaskReqBody struct {
 	RequiredTime int `json:"requiredTime"`
 }
 
+// CreateTimetableTaskReqBody defines model for CreateTimetableTaskReqBody.
+type CreateTimetableTaskReqBody struct {
+	Description *string `json:"description,omitempty"`
+	Message     string  `json:"message"`
+	Periodic    bool    `json:"periodic"`
+
+	// RequiredTime Required time for task in minutes
+	RequiredTime int       `json:"requiredTime"`
+	Start        time.Time `json:"start"`
+}
+
+// NotificationInfo defines model for NotificationInfo.
+type NotificationInfo struct {
+	Cmd      *bool   `json:"cmd,omitempty"`
+	Telegram *bool   `json:"telegram,omitempty"`
+	Webhook  *string `json:"webhook,omitempty"`
+}
+
+// NotificationParams defines model for NotificationParams.
+type NotificationParams struct {
+	Info NotificationInfo `json:"info"`
+
+	// Period Required time for task in minutes
+	Period int `json:"period"`
+}
+
 // SetTimetableTaskReqBody defines model for SetTimetableTaskReqBody.
 type SetTimetableTaskReqBody struct {
 	Description *string   `json:"description,omitempty"`
@@ -79,11 +105,17 @@ type ListTimetableTasksParams struct {
 	To   *time.Time `form:"to,omitempty" json:"to,omitempty"`
 }
 
+// SetDefaultNotificationParamsJSONRequestBody defines body for SetDefaultNotificationParams for application/json ContentType.
+type SetDefaultNotificationParamsJSONRequestBody = NotificationParams
+
 // AddTaskJSONRequestBody defines body for AddTask for application/json ContentType.
 type AddTaskJSONRequestBody = CreateTaskReqBody
 
 // UpdateTaskJSONRequestBody defines body for UpdateTask for application/json ContentType.
 type UpdateTaskJSONRequestBody = UpdateTaskReqBody
+
+// CreateTimetableTaskJSONRequestBody defines body for CreateTimetableTask for application/json ContentType.
+type CreateTimetableTaskJSONRequestBody = CreateTimetableTaskReqBody
 
 // PostTimetableSetTaskIDJSONRequestBody defines body for PostTimetableSetTaskID for application/json ContentType.
 type PostTimetableSetTaskIDJSONRequestBody = SetTimetableTaskReqBody
@@ -91,8 +123,17 @@ type PostTimetableSetTaskIDJSONRequestBody = SetTimetableTaskReqBody
 // UpdateTimetableTaskJSONRequestBody defines body for UpdateTimetableTask for application/json ContentType.
 type UpdateTimetableTaskJSONRequestBody = UpdateTimetableReqBody
 
+// SetTimetableTaskNotificationParamsJSONRequestBody defines body for SetTimetableTaskNotificationParams for application/json ContentType.
+type SetTimetableTaskNotificationParamsJSONRequestBody = NotificationParams
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Set default notification params
+	// (GET /notification-params)
+	GetDefaultNotificationParams(w http.ResponseWriter, r *http.Request)
+	// Set default notification params
+	// (PUT /notification-params)
+	SetDefaultNotificationParams(w http.ResponseWriter, r *http.Request)
 	// List user tasks
 	// (GET /task)
 	ListTasks(w http.ResponseWriter, r *http.Request)
@@ -108,6 +149,9 @@ type ServerInterface interface {
 	// List timetable tasks
 	// (GET /timetable)
 	ListTimetableTasks(w http.ResponseWriter, r *http.Request, params ListTimetableTasksParams)
+	// Create new timetable task
+	// (POST /timetable)
+	CreateTimetableTask(w http.ResponseWriter, r *http.Request)
 	// Add a new timetable
 	// (POST /timetable/set/{taskID})
 	PostTimetableSetTaskID(w http.ResponseWriter, r *http.Request, taskID int)
@@ -117,6 +161,12 @@ type ServerInterface interface {
 	// Update timetable task
 	// (PUT /timetable/{timetableTaskID})
 	UpdateTimetableTask(w http.ResponseWriter, r *http.Request, timetableTaskID int)
+	// Get timetable task notification params
+	// (GET /timetable/{timetableTaskID}/notification-params)
+	GetTimetableTaskNotificationParams(w http.ResponseWriter, r *http.Request, timetableTaskID int)
+	// Set timetable task notification params
+	// (PUT /timetable/{timetableTaskID}/notification-params)
+	SetTimetableTaskNotificationParams(w http.ResponseWriter, r *http.Request, timetableTaskID int)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -127,6 +177,40 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// GetDefaultNotificationParams operation middleware
+func (siw *ServerInterfaceWrapper) GetDefaultNotificationParams(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDefaultNotificationParams(w, r)
+	})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// SetDefaultNotificationParams operation middleware
+func (siw *ServerInterfaceWrapper) SetDefaultNotificationParams(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetDefaultNotificationParams(w, r)
+	})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
 
 // ListTasks operation middleware
 func (siw *ServerInterfaceWrapper) ListTasks(w http.ResponseWriter, r *http.Request) {
@@ -256,6 +340,23 @@ func (siw *ServerInterfaceWrapper) ListTimetableTasks(w http.ResponseWriter, r *
 	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
+// CreateTimetableTask operation middleware
+func (siw *ServerInterfaceWrapper) CreateTimetableTask(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateTimetableTask(w, r)
+	})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
 // PostTimetableSetTaskID operation middleware
 func (siw *ServerInterfaceWrapper) PostTimetableSetTaskID(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -331,6 +432,62 @@ func (siw *ServerInterfaceWrapper) UpdateTimetableTask(w http.ResponseWriter, r 
 
 	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateTimetableTask(w, r, timetableTaskID)
+	})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// GetTimetableTaskNotificationParams operation middleware
+func (siw *ServerInterfaceWrapper) GetTimetableTaskNotificationParams(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "timetableTaskID" -------------
+	var timetableTaskID int
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "timetableTaskID", runtime.ParamLocationPath, chi.URLParam(r, "timetableTaskID"), &timetableTaskID)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "timetableTaskID", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTimetableTaskNotificationParams(w, r, timetableTaskID)
+	})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// SetTimetableTaskNotificationParams operation middleware
+func (siw *ServerInterfaceWrapper) SetTimetableTaskNotificationParams(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "timetableTaskID" -------------
+	var timetableTaskID int
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "timetableTaskID", runtime.ParamLocationPath, chi.URLParam(r, "timetableTaskID"), &timetableTaskID)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "timetableTaskID", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetTimetableTaskNotificationParams(w, r, timetableTaskID)
 	})
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -454,6 +611,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/notification-params", wrapper.GetDefaultNotificationParams)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/notification-params", wrapper.SetDefaultNotificationParams)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/task", wrapper.ListTasks)
 	})
 	r.Group(func(r chi.Router) {
@@ -469,6 +632,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/timetable", wrapper.ListTimetableTasks)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/timetable", wrapper.CreateTimetableTask)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/timetable/set/{taskID}", wrapper.PostTimetableSetTaskID)
 	})
 	r.Group(func(r chi.Router) {
@@ -476,6 +642,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/timetable/{timetableTaskID}", wrapper.UpdateTimetableTask)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/timetable/{timetableTaskID}/notification-params", wrapper.GetTimetableTaskNotificationParams)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/timetable/{timetableTaskID}/notification-params", wrapper.SetTimetableTaskNotificationParams)
 	})
 
 	return r

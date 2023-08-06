@@ -5,8 +5,15 @@
 package queries
 
 import (
+	models "github.com/Dyleme/Notifier/internal/timetable-service/models"
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+type DefaultUserNotificationParam struct {
+	UserID    int32
+	CreatedAt pgtype.Timestamp
+	Params    models.NotificationParams
+}
 
 type Task struct {
 	ID           int32
@@ -20,15 +27,16 @@ type Task struct {
 }
 
 type TimetableTask struct {
-	ID          int32
-	CreatedAt   pgtype.Timestamp
-	Text        string
-	Description pgtype.Text
-	UserID      int32
-	Start       pgtype.Timestamp
-	Finish      pgtype.Timestamp
-	Done        bool
-	TaskID      int32
+	ID           int32
+	CreatedAt    pgtype.Timestamp
+	Text         string
+	Description  pgtype.Text
+	UserID       int32
+	Start        pgtype.Timestamp
+	Finish       pgtype.Timestamp
+	Done         bool
+	TaskID       int32
+	Notification models.Notification
 }
 
 type User struct {

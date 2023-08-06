@@ -31,7 +31,7 @@ type Config struct {
 
 func New(handler http.Handler, cfg *Config) Server {
 	return Server{
-		server: &http.Server{
+		server: &http.Server{ //nolint:exhaustruct //TODO:implement everything
 			Addr:           ":" + strconv.Itoa(cfg.Port),
 			Handler:        handler,
 			MaxHeaderBytes: cfg.MaxHeaderBytes,
@@ -78,7 +78,7 @@ func (s *Server) Run(ctx context.Context) error {
 		ctxShutDown, cancel := context.WithTimeout(context.Background(), s.gracefulShutdownTime)
 		defer cancel()
 
-		if err := s.server.Shutdown(ctxShutDown); err != nil { // nolint: contextcheck // create new context for graceful shutdown
+		if err := s.server.Shutdown(ctxShutDown); err != nil { //nolint:contextcheck //create new context for graceful shutdown
 			return fmt.Errorf("shutdown: %w", err)
 		}
 

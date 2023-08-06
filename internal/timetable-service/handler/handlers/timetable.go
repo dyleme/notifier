@@ -131,3 +131,53 @@ func (t TimetableHandler) UpdateTimetableTask(w http.ResponseWriter, r *http.Req
 
 	responses.JSON(w, http.StatusOK, apiTT)
 }
+
+func mapCreateTimetableTask(body timetableapi.CreateTimetableTaskReqBody, userID int) (models.Task, models.TimetableTask) {
+	description := ""
+	if body.Description != nil {
+		description = *body.Description
+	}
+	requiredTime := time.Duration(body.RequiredTime * int(time.Minute))
+	task := models.Task{ //nolint:exhaustruct //creation object we don't know ids
+		UserID:       userID,
+		Text:         body.Message,
+		RequiredTime: requiredTime,
+		Periodic:     body.Periodic,
+	}
+
+	timetableTask := models.TimetableTask{ //nolint:exhaustruct //creation object we don't know ids
+		UserID:      userID,
+		Text:        body.Message,
+		Description: description,
+		Start:       body.Start,
+		Finish:      body.Start.Add(requiredTime),
+		Done:        false,
+	}
+
+	return task, timetableTask
+}
+
+func (t TimetableHandler) CreateTimetableTask(w http.ResponseWriter, r *http.Request) {
+	userID, err := authmiddleware.UserIDFromCtx(r.Context())
+	if err != nil {
+		responses.Error(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	var createBody timetableapi.CreateTimetableTaskReqBody
+	err = requests.Bind(r, &createBody)
+	if err != nil {
+		responses.KnownError(w, err)
+		return
+	}
+	task, timetableTask := mapCreateTimetableTask(createBody, userID)
+	tt, err := t.serv.CreateTimetableTask(r.Context(), task, timetableTask)
+	if err != nil {
+		responses.Error(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	apiTT := mapAPITimetableTask(tt)
+
+	responses.JSON(w, http.StatusOK, apiTT)
+}

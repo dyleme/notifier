@@ -12,15 +12,12 @@ import (
 )
 
 const addTask = `-- name: AddTask :one
-INSERT INTO tasks (
-    user_id,
-    message,
-    required_time
-) VALUES (
-             $1,
-             $2,
-             $3
-         )
+INSERT INTO tasks (user_id,
+                   message,
+                   required_time)
+VALUES ($1,
+        $2,
+        $3)
 RETURNING id, created_at, message, user_id, required_time, periodic, done, archived
 `
 
@@ -47,10 +44,11 @@ func (q *Queries) AddTask(ctx context.Context, arg AddTaskParams) (Task, error) 
 }
 
 const deleteTask = `-- name: DeleteTask :one
-DELETE FROM tasks
+DELETE
+FROM tasks
 WHERE id = $1
   AND user_id = $2
-RETURNING count(*) as deleted_amount
+RETURNING COUNT(*) AS deleted_amount
 `
 
 type DeleteTaskParams struct {
@@ -67,9 +65,9 @@ func (q *Queries) DeleteTask(ctx context.Context, arg DeleteTaskParams) (int64, 
 
 const getTask = `-- name: GetTask :one
 SELECT id, created_at, message, user_id, required_time, periodic, done, archived
-  FROM tasks
- WHERE id = $1
-   AND user_id = $2
+FROM tasks
+WHERE id = $1
+  AND user_id = $2
 `
 
 type GetTaskParams struct {
@@ -95,8 +93,9 @@ func (q *Queries) GetTask(ctx context.Context, arg GetTaskParams) (Task, error) 
 
 const listUserTasks = `-- name: ListUserTasks :many
 SELECT id, created_at, message, user_id, required_time, periodic, done, archived
-  FROM tasks
- WHERE tasks.user_id = $1
+FROM tasks
+WHERE user_id = $1
+  AND archived = FALSE
 `
 
 func (q *Queries) ListUserTasks(ctx context.Context, userID int32) ([]Task, error) {
@@ -130,14 +129,13 @@ func (q *Queries) ListUserTasks(ctx context.Context, userID int32) ([]Task, erro
 
 const updateTask = `-- name: UpdateTask :exec
 UPDATE tasks
-   SET
-       required_time = $1,
-       message = $2,
-       periodic = $3,
-       done = $4,
-       archived = $5
- WHERE id = $6
-   AND user_id = $7
+SET required_time = $1,
+    message       = $2,
+    periodic      = $3,
+    done          = $4,
+    archived      = $5
+WHERE id = $6
+  AND user_id = $7
 `
 
 type UpdateTaskParams struct {

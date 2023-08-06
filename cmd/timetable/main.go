@@ -19,6 +19,8 @@ import (
 	"github.com/Dyleme/Notifier/internal/lib/log"
 	"github.com/Dyleme/Notifier/internal/lib/log/slogpretty"
 	"github.com/Dyleme/Notifier/internal/lib/sqldatabase"
+	cmd_notifier "github.com/Dyleme/Notifier/internal/notification-service/cmdnotifier"
+	"github.com/Dyleme/Notifier/internal/notification-service/notifier"
 	"github.com/Dyleme/Notifier/internal/server"
 	"github.com/Dyleme/Notifier/internal/server/custmidlleware"
 	timetableHandler "github.com/Dyleme/Notifier/internal/timetable-service/handler/handlers"
@@ -40,8 +42,9 @@ func main() {
 		return
 	}
 
+	notif := notifier.New(cmd_notifier.New(logger), cfg.Notifier)
 	timetableRepo := timetableRepository.New(db)
-	timetableServ := timetableService.New(timetableRepo)
+	timetableServ := timetableService.New(timetableRepo, notif, cfg.Timetable)
 	timeTableHandler := timetableHandler.New(timetableServ)
 
 	apiTokenMiddleware := authmiddleware.NewAPIToken(cfg.APIKey)
@@ -82,14 +85,14 @@ func setupLogger(env string) *slog.Logger {
 
 	switch env {
 	case localEnv:
-		prettyHandler := slogpretty.NewHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})
+		prettyHandler := slogpretty.NewHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}) //nolint:exhaustruct //no need to set this params
 		logger = slog.New(prettyHandler)
 	case devEnv:
-		logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+		logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})) //nolint:exhaustruct //no need to set this params
 	case prodEnv:
-		logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+		logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})) //nolint:exhaustruct //no need to set this params
 	default:
-		logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+		logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})) //nolint:exhaustruct //no need to set this params
 	}
 
 	return logger

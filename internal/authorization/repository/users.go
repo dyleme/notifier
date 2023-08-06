@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -14,14 +15,15 @@ import (
 )
 
 func (r *Repository) CreateUser(ctx context.Context, input service.CreateUserInput) (int, error) {
-	op := "create user: %w"
+	op := "Repository.CreateUser: %w"
 	id, err := r.q.AddUser(ctx, queries.AddUserParams{
 		Email:        input.Email,
 		Nickname:     input.NickName,
 		PasswordHash: input.Password,
 	})
 	if err != nil {
-		if pgerr, ok := err.(*pgconn.PgError); ok {
+		var pgerr *pgconn.PgError
+		if errors.As(err, &pgerr) {
 			if pgerr.Code == pgerrcode.UniqueViolation {
 				if strings.Contains(pgerr.Detail, "nickname") {
 					return 0, fmt.Errorf(op, serverrors.NewUniqueError("nickname", input.NickName))
