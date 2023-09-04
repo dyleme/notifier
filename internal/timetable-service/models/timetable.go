@@ -20,3 +20,10 @@ type Notification struct {
 	Sended bool                `json:"sended"`
 	Params *NotificationParams `json:"notification_params"`
 }
+
+func (tt *TimetableTask) IsGettingDone(newDone bool) bool {
+	if !tt.Done && newDone {
+		return true
+	}
+	return false
+}

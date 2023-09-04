@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -32,6 +33,7 @@ func (s *Service) RunJob(ctx context.Context) {
 }
 
 func getNotifParams(ctx context.Context, r Repository, t *models.TimetableTask, defaultParams map[int]models.NotificationParams) (models.NotificationParams, error) {
+	op := "getNotifParams: %w"
 	if t.Notification.Params == nil {
 		userParam, ok := defaultParams[t.UserID]
 		if !ok {
@@ -40,8 +42,9 @@ func getNotifParams(ctx context.Context, r Repository, t *models.TimetableTask, 
 			if err != nil {
 				var notFoundErr serverrors.NotFoundError
 				if errors.As(err, &notFoundErr) {
-					return models.NotificationParams{}, err
+					return models.NotificationParams{}, fmt.Errorf(op, err)
 				}
+				return models.NotificationParams{}, fmt.Errorf(op, err)
 			}
 			defaultParams[t.UserID] = userParam
 		}
@@ -52,11 +55,13 @@ func getNotifParams(ctx context.Context, r Repository, t *models.TimetableTask, 
 }
 
 func mapNotifications(ctx context.Context, r Repository, timetableTasks []models.TimetableTask) ([]models.SendingNotification, error) {
+	op := "mapNotifications: %w"
 	defaultParams := make(map[int]models.NotificationParams)
 
-	notifs, err := dto.ErrorSlice(timetableTasks, func(t models.TimetableTask) (models.SendingNotification, error) {
+	notifs, err := dto.ErrorContinueSlice(timetableTasks, func(t models.TimetableTask) (models.SendingNotification, error) {
 		notifParams, err := getNotifParams(ctx, r, &t, defaultParams)
 		if err != nil {
+			log.Ctx(ctx).Error("get_notif_params_error", log.Err(err))
 			return models.SendingNotification{}, err
 		}
 		return models.SendingNotification{
@@ -70,24 +75,27 @@ func mapNotifications(ctx context.Context, r Repository, timetableTasks []models
 		}, nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(op, err)
 	}
 
-	return notifs, err
+	return notifs, nil
 }
 
 func (s *Service) notify(ctx context.Context) {
+	op := "Service.notify: %w"
 	err := s.repo.Atomic(ctx, func(ctx context.Context, r Repository) error {
 		timetableTasks, err := r.TimetableTasks().GetNotNotified(ctx)
 		if err != nil {
 			return err
 		}
+		log.Ctx(ctx).Info("not_notified_from_database", "amount", len(timetableTasks))
 
 		if len(timetableTasks) == 0 {
 			return nil
 		}
 
 		wg, wgCtx := errgroup.WithContext(ctx)
+		wg.SetLimit(1)
 
 		wg.Go(func() error {
 			notifs, err := mapNotifications(ctx, r, timetableTasks) //nolint:govet //need to shadow error
@@ -95,6 +103,7 @@ func (s *Service) notify(ctx context.Context) {
 				return err
 			}
 
+			log.Ctx(ctx).Debug("add_notifications", "notifs", notifs)
 			return s.notifier.Add(wgCtx, notifs)
 		})
 
@@ -112,6 +121,6 @@ func (s *Service) notify(ctx context.Context) {
 		return nil
 	})
 	if err != nil {
-		log.Ctx(ctx).Error("server error", log.Err(err))
+		log.Ctx(ctx).Error("server error", log.Err(fmt.Errorf(op, err)))
 	}
 }

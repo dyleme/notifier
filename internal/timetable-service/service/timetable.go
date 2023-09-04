@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/Dyleme/Notifier/internal/lib/serverrors"
@@ -21,6 +22,7 @@ type TimetableTaskRepository interface {
 }
 
 func (s *Service) CreateTimetableTask(ctx context.Context, task models.Task, timetableTask models.TimetableTask) (models.TimetableTask, error) {
+	op := "Service.CreateTimetableTask: %w"
 	var tt models.TimetableTask
 
 	err := s.repo.Atomic(ctx, func(ctx context.Context, r Repository) error {
@@ -31,6 +33,7 @@ func (s *Service) CreateTimetableTask(ctx context.Context, task models.Task, tim
 		}
 
 		timetableTask.TaskID = task.ID
+		timetableTask.Finish = timetableTask.Start.Add(task.RequiredTime)
 
 		tt, err = r.TimetableTasks().Add(ctx, timetableTask)
 		if err != nil {
@@ -41,7 +44,7 @@ func (s *Service) CreateTimetableTask(ctx context.Context, task models.Task, tim
 	})
 
 	if err != nil {
-		logError(ctx, err)
+		logError(ctx, fmt.Errorf(op, err))
 		return models.TimetableTask{}, err
 	}
 
@@ -49,6 +52,7 @@ func (s *Service) CreateTimetableTask(ctx context.Context, task models.Task, tim
 }
 
 func (s *Service) AddTaskToTimetable(ctx context.Context, userID, taskID int, start time.Time, description string) (models.TimetableTask, error) {
+	op := "Servcie.AddTaskToTimetable: %w"
 	var tt models.TimetableTask
 
 	err := s.repo.Atomic(ctx, func(ctx context.Context, r Repository) error {
@@ -76,6 +80,7 @@ func (s *Service) AddTaskToTimetable(ctx context.Context, userID, taskID int, st
 	})
 
 	if err != nil {
+		logError(ctx, fmt.Errorf(op, err))
 		return models.TimetableTask{}, err
 	}
 
@@ -83,9 +88,10 @@ func (s *Service) AddTaskToTimetable(ctx context.Context, userID, taskID int, st
 }
 
 func (s *Service) GetTimetableTask(ctx context.Context, userID, timetableTaskID int) (models.TimetableTask, error) {
+	op := "Service.GetTimetableTask: %w"
 	tt, err := s.repo.TimetableTasks().Get(ctx, timetableTaskID, userID)
 	if err != nil {
-		logError(ctx, err)
+		logError(ctx, fmt.Errorf(op, err))
 		return models.TimetableTask{}, err
 	}
 
@@ -93,9 +99,10 @@ func (s *Service) GetTimetableTask(ctx context.Context, userID, timetableTaskID 
 }
 
 func (s *Service) ListTimetableTasks(ctx context.Context, userID int) ([]models.TimetableTask, error) {
+	op := "Service.ListTimetableTasks: %w"
 	tts, err := s.repo.TimetableTasks().List(ctx, userID)
 	if err != nil {
-		logError(ctx, err)
+		logError(ctx, fmt.Errorf(op, err))
 		return nil, err
 	}
 
@@ -103,9 +110,10 @@ func (s *Service) ListTimetableTasks(ctx context.Context, userID int) ([]models.
 }
 
 func (s *Service) ListTimetableTasksInPeriod(ctx context.Context, userID int, from, to time.Time) ([]models.TimetableTask, error) {
+	op := "Service.ListTimetableTasksInPeriod: %w"
 	tts, err := s.repo.TimetableTasks().ListInPeriod(ctx, userID, from, to)
 	if err != nil {
-		logError(ctx, err)
+		logError(ctx, fmt.Errorf(op, err))
 		return nil, err
 	}
 
@@ -121,6 +129,7 @@ type UpdateTimetableParams struct {
 }
 
 func (s *Service) UpdateTimetable(ctx context.Context, params UpdateTimetableParams) (models.TimetableTask, error) {
+	op := "Service.UpdateTimetable: %w"
 	var res models.TimetableTask
 	err := s.repo.Atomic(ctx, func(ctx context.Context, repo Repository) error {
 		tt, err := repo.TimetableTasks().Get(ctx, params.ID, params.UserID)
@@ -131,6 +140,13 @@ func (s *Service) UpdateTimetable(ctx context.Context, params UpdateTimetablePar
 		task, err := repo.Tasks().Get(ctx, tt.TaskID, tt.UserID)
 		if err != nil {
 			return err
+		}
+
+		if tt.IsGettingDone(params.Done) {
+			err := s.notifier.Delete(ctx, tt.ID) //nolint:govet //new error
+			if err != nil {
+				return serverrors.NewServiceError(err)
+			}
 		}
 
 		tt.Description = params.Description
@@ -146,6 +162,7 @@ func (s *Service) UpdateTimetable(ctx context.Context, params UpdateTimetablePar
 		return nil
 	})
 	if err != nil {
+		logError(ctx, fmt.Errorf(op, err))
 		return models.TimetableTask{}, err
 	}
 
@@ -153,9 +170,10 @@ func (s *Service) UpdateTimetable(ctx context.Context, params UpdateTimetablePar
 }
 
 func (s *Service) DeleteTimetableTask(ctx context.Context, userID, timeTableTaskID int) error {
+	op := "Service.DeleteTimetableTask: %w"
 	err := s.repo.TimetableTasks().Delete(ctx, timeTableTaskID, userID)
 	if err != nil {
-		logError(ctx, err)
+		logError(ctx, fmt.Errorf(op, err))
 		return err
 	}
 

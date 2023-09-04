@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"io"
 	stdLog "log"
+	"log/slog"
 
 	"github.com/fatih/color"
-	"golang.org/x/exp/slog"
 )
 
 type PrettyHandler struct {
@@ -28,6 +28,11 @@ func NewHandler(
 
 	return h
 }
+
+const (
+	errField      = "error"
+	callPathField = "callPath"
+)
 
 func (h *PrettyHandler) Handle(_ context.Context, r slog.Record) error {
 	level := r.Level.String() + ":"
@@ -55,24 +60,48 @@ func (h *PrettyHandler) Handle(_ context.Context, r slog.Record) error {
 		fields[a.Key] = a.Value.Any()
 	}
 
-	var b []byte
-	var err error
+	var errMsg string
 
+	if val, ok := fields[errField]; ok {
+		errMsg, ok = val.(string)
+		if ok {
+			delete(fields, errField)
+		}
+	}
+	// var errMsg string
+	// var callPathMsg string
+	// if val, ok := fields[errField]; ok {
+	// 	errMsg, ok = val.(string)
+	// 	if ok {
+	// 		delete(fields, errField)
+	// 	}
+	// 	callPath := strings.Split(errMsg, ": ")
+	// 	if len(callPath) > 1 {
+	// 		errMsg = callPath[len(callPath)-1]
+	// 		callPath = callPath[:len(callPath)-1]
+	// 		callPathMsg = fmt.Sprintf("\n%v", callPath)
+	// 	}
+	// 	errMsg = "\n" + errMsg
+	// }
+
+	var fieldsMsg string
 	if len(fields) > 0 {
-		b, err = json.MarshalIndent(fields, "", "  ")
+		fieldsBytes, err := json.MarshalIndent(fields, "", "  ")
 		if err != nil {
 			return err
 		}
+		fieldsMsg = "\n" + string(fieldsBytes)
 	}
 
 	timeStr := r.Time.Format("[15:05:05.000]")
-	msg := color.CyanString(r.Message)
 
 	h.l.Println(
 		timeStr,
 		level,
-		msg,
-		color.WhiteString(string(b)),
+		color.CyanString(r.Message),
+		// color.HiRedString(callPathMsg),
+		color.RedString(errMsg),
+		color.WhiteString(fieldsMsg),
 	)
 
 	return nil

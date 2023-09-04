@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Dyleme/Notifier/internal/timetable-service/models"
 )
@@ -15,8 +16,10 @@ type TaskRepository interface {
 }
 
 func (s *Service) AddTask(ctx context.Context, task models.Task) (models.Task, error) {
+	op := "Service.AddTask: %w"
 	createdTask, err := s.repo.Tasks().Add(ctx, task)
 	if err != nil {
+		logError(ctx, fmt.Errorf(op, err))
 		return models.Task{}, err
 	}
 
@@ -24,8 +27,10 @@ func (s *Service) AddTask(ctx context.Context, task models.Task) (models.Task, e
 }
 
 func (s *Service) GetTask(ctx context.Context, taskID, userID int) (models.Task, error) {
+	op := "Service.GetTask: %w"
 	task, err := s.repo.Tasks().Get(ctx, taskID, userID)
 	if err != nil {
+		logError(ctx, fmt.Errorf(op, err))
 		return models.Task{}, err
 	}
 
@@ -33,9 +38,10 @@ func (s *Service) GetTask(ctx context.Context, taskID, userID int) (models.Task,
 }
 
 func (s *Service) UpdateTask(ctx context.Context, task models.Task) error {
+	op := "Service.UpdateTask: %w"
 	err := s.repo.Tasks().Update(ctx, task)
 	if err != nil {
-		logError(ctx, err)
+		logError(ctx, fmt.Errorf(op, err))
 		return err
 	}
 
@@ -43,8 +49,10 @@ func (s *Service) UpdateTask(ctx context.Context, task models.Task) error {
 }
 
 func (s *Service) ListUserTasks(ctx context.Context, userID int) ([]models.Task, error) {
+	op := "Service.ListUserTasks: %w"
 	tasks, err := s.repo.Tasks().List(ctx, userID)
 	if err != nil {
+		logError(ctx, fmt.Errorf(op, err))
 		return nil, err
 	}
 

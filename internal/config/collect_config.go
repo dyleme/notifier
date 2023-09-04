@@ -14,6 +14,7 @@ type collectableConfig struct {
 	Server           serverConfig
 	Notifier         notificationConfig
 	TimetableService timetableServiceConfig
+	Telegram         telegramConfig
 }
 
 type serverConfig struct {
@@ -48,6 +49,10 @@ type notificationConfig struct {
 
 type timetableServiceConfig struct {
 	CheckPeriod time.Duration `env:"TIMETABLE_TASK_CHECK_PERIOD" env-required:"true"`
+}
+
+type telegramConfig struct {
+	Token string `env:"TELEGRAM_TOKEN" env-required:"true"`
 }
 
 func Load() (Config, error) {

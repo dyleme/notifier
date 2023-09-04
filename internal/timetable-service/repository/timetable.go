@@ -7,13 +7,14 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/Dyleme/Notifier/internal/lib/serverrors"
 	"github.com/Dyleme/Notifier/internal/lib/sql/pgxconv"
 	"github.com/Dyleme/Notifier/internal/lib/utils/dto"
 	"github.com/Dyleme/Notifier/internal/timetable-service/models"
 	"github.com/Dyleme/Notifier/internal/timetable-service/repository/queries"
 	"github.com/Dyleme/Notifier/internal/timetable-service/service"
-	"github.com/jackc/pgx/v5"
 )
 
 type TimetableTaskRepository struct {
@@ -139,21 +140,27 @@ func (tr *TimetableTaskRepository) Update(ctx context.Context, tt models.Timetab
 }
 
 func (tr *TimetableTaskRepository) GetNotNotified(ctx context.Context) ([]models.TimetableTask, error) {
-	op := "get timetable ready tasks: %w"
+	op := "TimetableTaskRepository.GetNotNotified: %w"
 	tasks, err := tr.q.GetTimetableReadyTasks(ctx)
 	if err != nil {
 		return nil, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
-	return dto.ErrorSlice(tasks, dtoTimetableTask)
+	notNotified, err := dto.ErrorSlice(tasks, dtoTimetableTask)
+	if err != nil {
+		return nil, fmt.Errorf(op, serverrors.NewRepositoryError(err))
+	}
+
+	return notNotified, nil
 }
 
 func (tr *TimetableTaskRepository) MarkNotified(ctx context.Context, ids []int) error {
+	op := "TimetableTaskRepository.MarkNotified: %w"
 	err := tr.q.MarkNotificationSended(ctx, dto.Slice(ids, func(i int) int32 {
 		return int32(i)
 	}))
 	if err != nil {
-		return serverrors.NewRepositoryError(err)
+		return fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
 	return nil

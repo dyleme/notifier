@@ -4,13 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
-	"os"
-	"os/signal"
 	"strconv"
 	"time"
-
-	"golang.org/x/exp/slog"
 
 	"github.com/Dyleme/Notifier/internal/lib/log"
 )
@@ -42,23 +39,9 @@ func New(handler http.Handler, cfg *Config) Server {
 	}
 }
 
-func catchOSInterrupt(cancel context.CancelFunc) {
-	c := make(chan os.Signal, 1)
-
-	signal.Notify(c, os.Interrupt)
-
-	go func() {
-		<-c
-		cancel()
-	}()
-}
-
 // After Run method Server starts to listen port and response to  the reqeusts.
 // Run function provide the abitility of the gracefule shutdown.
 func (s *Server) Run(ctx context.Context) error {
-	ctx, cancel := context.WithCancel(ctx)
-
-	catchOSInterrupt(cancel)
 
 	servError := make(chan error, 1)
 
@@ -71,10 +54,11 @@ func (s *Server) Run(ctx context.Context) error {
 
 	select {
 	case err := <-servError:
+		log.Ctx(ctx).Error("server error", log.Err(err))
 		return err
 	case <-ctx.Done():
 		gsStart := time.Now()
-		log.Ctx(ctx).Info("starting graceful shutdown")
+		log.Ctx(ctx).Info("server start graceful shutdown")
 		ctxShutDown, cancel := context.WithTimeout(context.Background(), s.gracefulShutdownTime)
 		defer cancel()
 
@@ -82,7 +66,7 @@ func (s *Server) Run(ctx context.Context) error {
 			return fmt.Errorf("shutdown: %w", err)
 		}
 
-		log.Ctx(ctx).Info("end graceful shutdown", slog.Duration("shutdown_dur", time.Since(gsStart)))
+		log.Ctx(ctx).Info("server end graceful shutdown", slog.Duration("shutdown_dur", time.Since(gsStart)))
 	}
 
 	return nil

@@ -57,7 +57,7 @@ func mapNotificationParamsResp(p models.NotificationParams) timetableapi.Notific
 	return timetableapi.NotificationParams{
 		Info: timetableapi.NotificationInfo{
 			Cmd:      ptr.Ptr(true),
-			Telegram: ptr.Ptr(true),
+			Telegram: &p.Params.Telegram,
 			Webhook:  &p.Params.Webhook,
 		},
 		Period: int(p.Period.Minutes()),
@@ -66,15 +66,19 @@ func mapNotificationParamsResp(p models.NotificationParams) timetableapi.Notific
 
 func mapNotificationParams(req timetableapi.NotificationParams) models.NotificationParams {
 	var (
-		webhook string
+		webhook  string
+		telegram int
 	)
 	if req.Info.Webhook != nil {
 		webhook = *req.Info.Webhook
 	}
+	if req.Info.Telegram != nil {
+		telegram = *req.Info.Telegram
+	}
 	params := models.NotificationParams{
 		Period: time.Duration(req.Period) * time.Minute,
 		Params: models.Params{
-			Telegram: "",
+			Telegram: telegram,
 			Webhook:  webhook,
 			Cmd:      "",
 		},

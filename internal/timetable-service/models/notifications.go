@@ -8,7 +8,7 @@ type NotificationParams struct {
 }
 
 type Params struct {
-	Telegram string `json:"telegram,omitempty"`
+	Telegram int    `json:"telegram,omitempty"`
 	Webhook  string `json:"webhook,omitempty"`
 	Cmd      string `json:"cmd,omitempty"`
 }

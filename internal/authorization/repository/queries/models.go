@@ -40,7 +40,7 @@ type TimetableTask struct {
 
 type User struct {
 	ID           int32
-	Email        string
-	Nickname     string
-	PasswordHash string
+	Email        pgtype.Text
+	PasswordHash pgtype.Text
+	TgID         pgtype.Int4
 }

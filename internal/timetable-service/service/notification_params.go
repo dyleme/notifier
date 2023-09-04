@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/Dyleme/Notifier/internal/lib/serverrors"
 	"github.com/Dyleme/Notifier/internal/timetable-service/models"
@@ -14,9 +15,10 @@ type NotificationParamsRepository interface {
 }
 
 func (s *Service) SetDefaultNotificationParams(ctx context.Context, params models.NotificationParams, userID int) (models.NotificationParams, error) {
+	op := "Service.SetDefaultNotificationParams: %w"
 	defParams, err := s.repo.DefaultNotificationParams().Set(ctx, userID, params)
 	if err != nil {
-		logError(ctx, err)
+		logError(ctx, fmt.Errorf(op, err))
 		return models.NotificationParams{}, err
 	}
 
@@ -24,9 +26,10 @@ func (s *Service) SetDefaultNotificationParams(ctx context.Context, params model
 }
 
 func (s *Service) GetDefaultNotificationParams(ctx context.Context, userID int) (models.NotificationParams, error) {
+	op := "Service.GetDefaultNotificationParams: %w"
 	defParams, err := s.repo.DefaultNotificationParams().Get(ctx, userID)
 	if err != nil {
-		logError(ctx, err)
+		logError(ctx, fmt.Errorf(op, err))
 		return models.NotificationParams{}, err
 	}
 
@@ -34,6 +37,7 @@ func (s *Service) GetDefaultNotificationParams(ctx context.Context, userID int) 
 }
 
 func (s *Service) GetNotificationParams(ctx context.Context, timetableTaskID, userID int) (*models.NotificationParams, error) {
+	op := "Service.GetNotificationParams: %w"
 	var notifParams models.NotificationParams
 	err := s.repo.Atomic(ctx, func(ctx context.Context, repo Repository) error {
 		tt, err := repo.TimetableTasks().Get(ctx, timetableTaskID, userID)
@@ -59,7 +63,7 @@ func (s *Service) GetNotificationParams(ctx context.Context, timetableTaskID, us
 		return nil
 	})
 	if err != nil {
-		logError(ctx, err)
+		logError(ctx, fmt.Errorf(op, err))
 		return nil, err
 	}
 
@@ -67,9 +71,10 @@ func (s *Service) GetNotificationParams(ctx context.Context, timetableTaskID, us
 }
 
 func (s *Service) SetNotificationParams(ctx context.Context, timetableTaskID int, params models.NotificationParams, userID int) (models.NotificationParams, error) {
+	op := "Service.SetNotificationParams: %w"
 	updatedParams, err := s.repo.TimetableTasks().UpdateNotificationParams(ctx, timetableTaskID, userID, params)
 	if err != nil {
-		logError(ctx, err)
+		logError(ctx, fmt.Errorf(op, err))
 		return models.NotificationParams{}, err
 	}
 

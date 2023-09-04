@@ -655,7 +655,7 @@ components:
         cmd:
           type: boolean
         telegram:
-          type: boolean
+          type: integer
         webhook:
           type: string
 

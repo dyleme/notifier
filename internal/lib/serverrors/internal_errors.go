@@ -24,3 +24,21 @@ func (re RepositoryError) Error() string {
 func (re RepositoryError) InternalError() string {
 	return re.err.Error()
 }
+
+type ServiceError struct {
+	err error
+}
+
+func NewServiceError(err error) ServiceError {
+	return ServiceError{
+		err: err,
+	}
+}
+
+func (se ServiceError) Error() string {
+	return fmt.Sprintf("service %s", se.err)
+}
+
+func (se ServiceError) InternalError() string {
+	return se.err.Error()
+}

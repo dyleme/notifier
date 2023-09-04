@@ -3,8 +3,7 @@ package cmdnotifier
 import (
 	"context"
 	"log"
-
-	"golang.org/x/exp/slog"
+	"log/slog"
 
 	"github.com/Dyleme/Notifier/internal/timetable-service/models"
 )

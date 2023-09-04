@@ -7,32 +7,64 @@ package queries
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const addUser = `-- name: AddUser :one
-INSERT INTO users (email,
-                   nickname,
-                   password_hash
+INSERT INTO users (
+                   email,
+                   password_hash,
+                   tg_id
                    )
 VALUES (
         $1,
         $2,
         $3
        )
-RETURNING id
+RETURNING id, email, password_hash, tg_id
 `
 
 type AddUserParams struct {
-	Email        string
-	Nickname     string
-	PasswordHash string
+	Email        pgtype.Text
+	PasswordHash pgtype.Text
+	TgID         pgtype.Int4
 }
 
-func (q *Queries) AddUser(ctx context.Context, arg AddUserParams) (int32, error) {
-	row := q.db.QueryRow(ctx, addUser, arg.Email, arg.Nickname, arg.PasswordHash)
-	var id int32
-	err := row.Scan(&id)
-	return id, err
+func (q *Queries) AddUser(ctx context.Context, arg AddUserParams) (User, error) {
+	row := q.db.QueryRow(ctx, addUser, arg.Email, arg.PasswordHash, arg.TgID)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.TgID,
+	)
+	return i, err
+}
+
+const findUser = `-- name: FindUser :one
+SELECT id, email, password_hash, tg_id
+FROM users
+WHERE email = $1
+   OR tg_id = $2
+`
+
+type FindUserParams struct {
+	Email pgtype.Text
+	TgID  pgtype.Int4
+}
+
+func (q *Queries) FindUser(ctx context.Context, arg FindUserParams) (User, error) {
+	row := q.db.QueryRow(ctx, findUser, arg.Email, arg.TgID)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.TgID,
+	)
+	return i, err
 }
 
 const getLoginParameters = `-- name: GetLoginParameters :one
@@ -40,16 +72,15 @@ SELECT id,
        password_hash
 FROM users
 WHERE email = $1
-   OR nickname = $1
 `
 
 type GetLoginParametersRow struct {
 	ID           int32
-	PasswordHash string
+	PasswordHash pgtype.Text
 }
 
-func (q *Queries) GetLoginParameters(ctx context.Context, authName string) (GetLoginParametersRow, error) {
-	row := q.db.QueryRow(ctx, getLoginParameters, authName)
+func (q *Queries) GetLoginParameters(ctx context.Context, email pgtype.Text) (GetLoginParametersRow, error) {
+	row := q.db.QueryRow(ctx, getLoginParameters, email)
 	var i GetLoginParametersRow
 	err := row.Scan(&i.ID, &i.PasswordHash)
 	return i, err

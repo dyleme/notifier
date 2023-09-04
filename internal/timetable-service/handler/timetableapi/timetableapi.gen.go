@@ -40,7 +40,7 @@ type CreateTimetableTaskReqBody struct {
 // NotificationInfo defines model for NotificationInfo.
 type NotificationInfo struct {
 	Cmd      *bool   `json:"cmd,omitempty"`
-	Telegram *bool   `json:"telegram,omitempty"`
+	Telegram *int    `json:"telegram,omitempty"`
 	Webhook  *string `json:"webhook,omitempty"`
 }
 

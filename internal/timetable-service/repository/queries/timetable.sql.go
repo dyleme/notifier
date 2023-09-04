@@ -95,7 +95,7 @@ SELECT id, created_at, text, description, user_id, start, finish, done, task_id,
 FROM timetable_tasks AS t
 WHERE t.start <= NOW()
   AND t.done = FALSE
-  AND t.notification->>'sended' = 'false'
+  AND t.notification ->> 'sended' = 'false'
 `
 
 func (q *Queries) GetTimetableReadyTasks(ctx context.Context) ([]TimetableTask, error) {
@@ -241,9 +241,9 @@ func (q *Queries) ListTimetableTasks(ctx context.Context, userID int32) ([]Timet
 }
 
 const markNotificationSended = `-- name: MarkNotificationSended :exec
-UPDATE timetable_tasks as t
+UPDATE timetable_tasks AS t
 SET notification = notification || '{"sended":true}'
-WHERE id in ($1::int[])
+WHERE id = ANY($1::INTEGER[])
 `
 
 func (q *Queries) MarkNotificationSended(ctx context.Context, ids []int32) error {
@@ -252,10 +252,10 @@ func (q *Queries) MarkNotificationSended(ctx context.Context, ids []int32) error
 }
 
 const updateNotificationParams = `-- name: UpdateNotificationParams :one
-UPDATE timetable_tasks as t
-SET notification = jsonb_set(notification, '{notification_params}', $1)
+UPDATE timetable_tasks AS t
+SET notification = JSONB_SET(notification, '{notification_params}', $1)
 WHERE id = $2
-AND user_id = $3
+  AND user_id = $3
 RETURNING notification
 `
 

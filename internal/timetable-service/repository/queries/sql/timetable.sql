@@ -57,17 +57,17 @@ SELECT *
 FROM timetable_tasks AS t
 WHERE t.start <= NOW()
   AND t.done = FALSE
-  AND t.notification->>'sended' = 'false';
+  AND t.notification ->> 'sended' = 'false';
 
 -- name: MarkNotificationSended :exec
-UPDATE timetable_tasks as t
+UPDATE timetable_tasks AS t
 SET notification = notification || '{"sended":true}'
-WHERE id in (sqlc.arg(ids)::int[]);
+WHERE id = ANY(sqlc.arg(ids)::INTEGER[]);
 
 -- name: UpdateNotificationParams :one
-UPDATE timetable_tasks as t
-SET notification = jsonb_set(notification, '{notification_params}', @params)
+UPDATE timetable_tasks AS t
+SET notification = JSONB_SET(notification, '{notification_params}', @params)
 WHERE id = @id
-AND user_id = @user_id
+  AND user_id = @user_id
 RETURNING notification;
 

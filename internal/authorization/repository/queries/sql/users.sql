@@ -1,18 +1,24 @@
 -- name: AddUser :one
-INSERT INTO users (email,
-                   nickname,
-                   password_hash
+INSERT INTO users (
+                   email,
+                   password_hash,
+                   tg_id
                    )
 VALUES (
         @email,
-        @nickname,
-        @password_hash
+        @password_hash,
+        @tg_id
        )
-RETURNING id;
+RETURNING *;
+
+-- name: FindUser :one
+SELECT *
+FROM users
+WHERE email = @email
+   OR tg_id = @tg_id;
 
 -- name: GetLoginParameters :one
 SELECT id,
        password_hash
 FROM users
-WHERE email = @auth_name
-   OR nickname = @auth_name;
+WHERE email = @email;

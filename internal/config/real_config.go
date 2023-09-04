@@ -5,6 +5,7 @@ import (
 	"github.com/Dyleme/Notifier/internal/lib/sqldatabase"
 	"github.com/Dyleme/Notifier/internal/notification-service/notifier"
 	"github.com/Dyleme/Notifier/internal/server"
+	"github.com/Dyleme/Notifier/internal/telegram/handler"
 	"github.com/Dyleme/Notifier/internal/timetable-service/service"
 )
 
@@ -16,6 +17,7 @@ type Config struct {
 	Server    *server.Config
 	Notifier  notifier.Config
 	Timetable service.Config
+	Telegram  handler.Config
 }
 
 func mapConfig(cc *collectableConfig) Config {
@@ -46,6 +48,9 @@ func mapConfig(cc *collectableConfig) Config {
 		},
 		Timetable: service.Config{
 			CheckTasksPeriod: cc.TimetableService.CheckPeriod,
+		},
+		Telegram: handler.Config{
+			Token: cc.Telegram.Token,
 		},
 	}
 }

@@ -22,6 +22,7 @@ type Config struct {
 	CheckTasksPeriod time.Duration
 }
 
-func New(repo Repository, notifier Notifier, cfg Config) *Service {
-	return &Service{repo: repo, notifier: notifier, checkTaskPeriod: cfg.CheckTasksPeriod}
+func New(_ context.Context, repo Repository, notifier Notifier, cfg Config) *Service {
+	s := &Service{repo: repo, notifier: notifier, checkTaskPeriod: cfg.CheckTasksPeriod}
+	return s
 }

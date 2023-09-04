@@ -2,9 +2,9 @@ package notifier
 
 import (
 	"context"
-	"log"
 	"time"
 
+	"github.com/Dyleme/Notifier/internal/lib/log"
 	"github.com/Dyleme/Notifier/internal/timetable-service/models"
 )
 
@@ -22,8 +22,14 @@ type Service struct {
 	notifications map[int]*Notification
 }
 
-func New(notifier Notifier, cfg Config) *Service {
-	return &Service{notifier: notifier, period: cfg.Period, notifications: make(map[int]*Notification)}
+func New(ctx context.Context, notifier Notifier, cfg Config) *Service {
+	s := &Service{notifier: notifier, period: cfg.Period, notifications: make(map[int]*Notification)}
+	go s.RunJob(ctx)
+	return s
+}
+
+func (s *Service) SetNotifier(notifier Notifier) {
+	s.notifier = notifier
 }
 
 type Notification struct {
@@ -31,8 +37,8 @@ type Notification struct {
 	notification models.SendingNotification
 }
 
-func (s *Service) RunJob(ctx context.Context, period time.Duration) {
-	ticker := time.NewTicker(period)
+func (s *Service) RunJob(ctx context.Context) {
+	ticker := time.NewTicker(s.period)
 	for {
 		select {
 		case <-ticker.C:
@@ -46,13 +52,13 @@ func (s *Service) RunJob(ctx context.Context, period time.Duration) {
 
 func (s *Service) notify(ctx context.Context) {
 	for _, n := range s.notifications {
-		n.timePassed += s.period
 		if n.timePassed%n.notification.Params.Period == 0 {
 			err := s.notifier.Notify(ctx, n.notification)
 			if err != nil {
-				log.Printf("job: %v\n", err)
+				log.Ctx(ctx).Error("notifier error", log.Err(err))
 			}
 		}
+		n.timePassed += s.period
 	}
 }
 
