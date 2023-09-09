@@ -2,13 +2,14 @@ package main
 
 import (
 	"context"
-	_ "embed"
+	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
 
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
-	"golang.org/x/exp/slog"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/Dyleme/Notifier/internal/authorization/authmiddleware"
 	authHandlerrs "github.com/Dyleme/Notifier/internal/authorization/handler/handlers"
@@ -19,8 +20,11 @@ import (
 	"github.com/Dyleme/Notifier/internal/lib/log"
 	"github.com/Dyleme/Notifier/internal/lib/log/slogpretty"
 	"github.com/Dyleme/Notifier/internal/lib/sqldatabase"
+	"github.com/Dyleme/Notifier/internal/notification-service/cmdnotifier"
+	"github.com/Dyleme/Notifier/internal/notification-service/notifier"
 	"github.com/Dyleme/Notifier/internal/server"
 	"github.com/Dyleme/Notifier/internal/server/custmidlleware"
+	"github.com/Dyleme/Notifier/internal/telegram/handler"
 	timetableHandler "github.com/Dyleme/Notifier/internal/timetable-service/handler/handlers"
 	timetableRepository "github.com/Dyleme/Notifier/internal/timetable-service/repository"
 	timetableService "github.com/Dyleme/Notifier/internal/timetable-service/service"
@@ -34,14 +38,17 @@ func main() {
 		return
 	}
 	ctx := log.InCtx(context.Background(), logger)
+	ctx = cancelOnInterruption(ctx)
+
 	db, err := sqldatabase.NewPGX(ctx, cfg.Database.ConnectionString())
 	if err != nil {
 		logger.Error("db init error", log.Err(err))
 		return
 	}
 
+	notif := notifier.New(ctx, cmdnotifier.New(logger), cfg.Notifier)
 	timetableRepo := timetableRepository.New(db)
-	timetableServ := timetableService.New(timetableRepo)
+	timetableServ := timetableService.New(ctx, timetableRepo, notif, cfg.Event)
 	timeTableHandler := timetableHandler.New(timetableServ)
 
 	apiTokenMiddleware := authmiddleware.NewAPIToken(cfg.APIKey)
@@ -65,10 +72,43 @@ func main() {
 		},
 	)
 
-	serv := server.New(router, cfg.Server)
-	if err := serv.Run(ctx); err != nil {
-		logger.Error("server error", log.Err(err))
+	tg, err := handler.New(timetableServ, handler.NewUserRepoCache(authRepo), cfg.Telegram)
+	if err != nil {
+		logger.Error("tg init error", log.Err(err))
+		return
 	}
+
+	notif.SetNotifier(tg)
+
+	go timetableServ.RunJob(ctx)
+
+	serv := server.New(router, cfg.Server)
+
+	wg, ctx := errgroup.WithContext(ctx)
+	wg.Go(func() error {
+		return serv.Run(ctx)
+	})
+	wg.Go(func() error {
+		tg.Run(ctx)
+		return nil
+	})
+	err = wg.Wait()
+	if err != nil {
+		logger.Error("error", log.Err(err))
+	}
+}
+
+func cancelOnInterruption(ctx context.Context) context.Context {
+	ctx, cancel := context.WithCancel(ctx)
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+
+	go func() {
+		<-c
+		cancel()
+	}()
+	return ctx
 }
 
 const (
@@ -82,14 +122,14 @@ func setupLogger(env string) *slog.Logger {
 
 	switch env {
 	case localEnv:
-		prettyHandler := slogpretty.NewHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})
+		prettyHandler := slogpretty.NewHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}) //nolint:exhaustruct //no need to set this params
 		logger = slog.New(prettyHandler)
 	case devEnv:
-		logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+		logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})) //nolint:exhaustruct //no need to set this params
 	case prodEnv:
-		logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+		logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})) //nolint:exhaustruct //no need to set this params
 	default:
-		logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+		logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})) //nolint:exhaustruct //no need to set this params
 	}
 
 	return logger

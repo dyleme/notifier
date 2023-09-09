@@ -1,12 +1,12 @@
 package custmidlleware
 
 import (
+	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/google/uuid"
-	"golang.org/x/exp/slog"
 
 	"github.com/Dyleme/Notifier/internal/lib/log"
 )

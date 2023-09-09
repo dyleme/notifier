@@ -9,12 +9,14 @@ import (
 
 	"github.com/Dyleme/Notifier/internal/lib/serverrors"
 	"github.com/Dyleme/Notifier/internal/lib/sql/pgxconv"
-	"github.com/Dyleme/Notifier/internal/timetable-service/models"
+	"github.com/Dyleme/Notifier/internal/lib/utils/dto"
+	"github.com/Dyleme/Notifier/internal/timetable-service/domains"
 	"github.com/Dyleme/Notifier/internal/timetable-service/repository/queries"
+	"github.com/Dyleme/Notifier/internal/timetable-service/service"
 )
 
-func dtoTask(task queries.Task) models.Task {
-	return models.Task{
+func dtoTask(task queries.Task) domains.Task {
+	return domains.Task{
 		ID:           int(task.ID),
 		UserID:       int(task.UserID),
 		RequiredTime: pgxconv.Duration(task.RequiredTime),
@@ -25,45 +27,45 @@ func dtoTask(task queries.Task) models.Task {
 	}
 }
 
-func dtoTasks(tasks []queries.Task) []models.Task {
-	tsks := make([]models.Task, 0, len(tasks))
-	for _, t := range tasks {
-		tsks = append(tsks, dtoTask(t))
-	}
-	return tsks
+type TaskRepository struct {
+	q *queries.Queries
 }
 
-func (r *Repository) GetTask(ctx context.Context, id, userID int) (models.Task, error) {
+func (r *Repository) Tasks() service.TaskRepository {
+	return &TaskRepository{q: r.q}
+}
+
+func (tr *TaskRepository) Get(ctx context.Context, id, userID int) (domains.Task, error) {
 	op := fmt.Sprintf("get task with (id{%v} userID{%v}): %%w", id, userID)
-	task, err := r.q.GetTask(ctx, queries.GetTaskParams{
+	task, err := tr.q.GetTask(ctx, queries.GetTaskParams{
 		ID:     int32(id),
 		UserID: int32(userID),
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return models.Task{}, fmt.Errorf(op, serverrors.NewNotFoundError(err, "task"))
+			return domains.Task{}, fmt.Errorf(op, serverrors.NewNotFoundError(err, "task"))
 		}
-		return models.Task{}, serverrors.NewRepositoryError(err)
+		return domains.Task{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 	return dtoTask(task), nil
 }
 
-func (r *Repository) AddTask(ctx context.Context, task models.Task) (models.Task, error) {
+func (tr *TaskRepository) Add(ctx context.Context, task domains.Task) (domains.Task, error) {
 	op := "add task: %%w"
-	addedTask, err := r.q.AddTask(ctx, queries.AddTaskParams{
+	addedTask, err := tr.q.AddTask(ctx, queries.AddTaskParams{
 		UserID:       int32(task.UserID),
 		RequiredTime: pgxconv.Interval(task.RequiredTime),
 		Message:      task.Text,
 	})
 	if err != nil {
-		return models.Task{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
+		return domains.Task{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 	return dtoTask(addedTask), nil
 }
 
-func (r *Repository) UpdateTask(ctx context.Context, task models.Task) error {
+func (tr *TaskRepository) Update(ctx context.Context, task domains.Task) error {
 	op := "update task: %%w"
-	err := r.q.UpdateTask(ctx, queries.UpdateTaskParams{
+	err := tr.q.UpdateTask(ctx, queries.UpdateTaskParams{
 		ID:           int32(task.ID),
 		UserID:       int32(task.UserID),
 		RequiredTime: pgxconv.Interval(task.RequiredTime),
@@ -73,25 +75,35 @@ func (r *Repository) UpdateTask(ctx context.Context, task models.Task) error {
 		Archived:     task.Archived,
 	})
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf(op, serverrors.NewNotFoundError(err, "task"))
+		}
 		return fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
 	return nil
 }
 
-func (r *Repository) ListTasks(ctx context.Context, userID int) ([]models.Task, error) {
+func (tr *TaskRepository) List(ctx context.Context, userID int) ([]domains.Task, error) {
 	op := fmt.Sprintf("list tasks userID{%v}: %%w", userID)
-	tasks, err := r.q.ListUserTasks(ctx, int32(userID))
+	tasks, err := tr.q.ListUserTasks(ctx, int32(userID))
 	if err != nil {
+		return nil, err
+	}
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf(op, serverrors.NewNotFoundError(err, "task"))
+		}
 		return nil, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
-	return dtoTasks(tasks), nil
+	return dto.Slice(tasks, dtoTask), nil
 }
 
-func (r *Repository) DeleteTask(ctx context.Context, taskID, userID int) error {
+func (tr *TaskRepository) Delete(ctx context.Context, taskID, userID int) error {
 	op := fmt.Sprintf("delete task with (id{%v} userID{%v}): %%w", taskID, userID)
-	amount, err := r.q.DeleteTask(ctx, queries.DeleteTaskParams{
+	amount, err := tr.q.DeleteTask(ctx, queries.DeleteTaskParams{
 		ID:     int32(taskID),
 		UserID: int32(userID),
 	})

@@ -1,6 +1,6 @@
 version: "2"
 sql:
-    - schema: "database-migrations"
+    - schema: "migrations"
       queries: "internal/authorization/repository/queries/sql"
       engine: "postgresql"
       gen:
@@ -8,9 +8,8 @@ sql:
           package: "queries"
           sql_package: "pgx/v5"
           out: "internal/authorization/repository/queries"
-#          emit_methods_with_db_argument: true
 
-    - schema: "database-migrations"
+    - schema: "migrations"
       queries: "internal/timetable-service/repository/queries/sql"
       engine: "postgresql"
       gen:
@@ -18,10 +17,14 @@ sql:
           package: "queries"
           out: "internal/timetable-service/repository/queries"
           sql_package: "pgx/v5"
-#          overrides:
-#            - db_type: "pg_catalog.interval"
-#              engine: "postgresql"
-#              go_type:
-#                import: "time"
-#                type: "Duration"
-#          emit_methods_with_db_argument: true
+          overrides:
+            - column: events.notification
+              go_type:
+                import: "github.com/Dyleme/Notifier/internal/timetable-service/models"
+                package: "models"
+                type: Notification
+            - column: default_user_notification_params.params
+              go_type:
+                import: "github.com/Dyleme/Notifier/internal/timetable-service/models"
+                package: "models"
+                type: NotificationParams

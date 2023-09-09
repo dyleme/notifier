@@ -13,7 +13,7 @@ linters-settings:
       - style
     settings:
       hugeParam:
-        sizeThreshold: 256
+        sizeThreshold: 2048
   govet:
     check-shadowing: true
   nolintlint:

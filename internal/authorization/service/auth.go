@@ -2,11 +2,12 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/Dyleme/Notifier/internal/lib/serverrors"
+	"github.com/Dyleme/Notifier/internal/authorization/models"
 )
 
 // HashGenerator interface providing you the ability to generate password hash
@@ -34,9 +35,10 @@ func (h *HashGen) IsValidPassword(password string, hash []byte) bool {
 }
 
 type CreateUserInput struct {
-	NickName string
 	Email    string
 	Password string
+	TGID     *int
+	TGChatID *int
 }
 
 type ValidateUserInput struct {
@@ -44,13 +46,18 @@ type ValidateUserInput struct {
 	Password string
 }
 
-// AuthRepo is an interface which provides methods to implement with repository.
-type AuthRepo interface {
+// UserRepo is an interface which provides methods to implement with repository.
+type UserRepo interface {
+	Atomic(context.Context, func(ctx context.Context, repo UserRepo) error) error
 	// CreateUser creates user in the repository.
-	CreateUser(ctx context.Context, input CreateUserInput) (id int, err error)
+	Create(ctx context.Context, input CreateUserInput) (user models.User, err error)
 
 	// GetPasswordHashAndID returns user password hash and id.
-	GetPasswordHashAndID(ctx context.Context, authName string) (hash []byte, userID int, err error)
+	Get(ctx context.Context, authName string, tgID *int) (models.User, error)
+}
+
+type NotifcationService interface {
+	CreateDefaultNotificationParams()
 }
 
 // JwtGenerator is an interface that provides method to create jwt tokens.
@@ -61,27 +68,27 @@ type JwtGenerator interface {
 
 // AuthService struct provides the ability to create user and validate it.
 type AuthService struct {
-	repo    AuthRepo
+	repo    UserRepo
 	hashGen HashGenerator
 	jwtGen  JwtGenerator
 }
 
 // NewAuth is the constructor to the AuthService.
-func NewAuth(repo AuthRepo, hashGen HashGenerator, jwtGen JwtGenerator) *AuthService {
+func NewAuth(repo UserRepo, hashGen HashGenerator, jwtGen JwtGenerator) *AuthService {
 	return &AuthService{repo: repo, hashGen: hashGen, jwtGen: jwtGen}
 }
 
 // CreateUser function returns the id of the created user or error if any occures.
 // Function get password hash of the user and creates user and calls CreateUser method of repository.
-func (s *AuthService) CreateUser(ctx context.Context, user CreateUserInput) (string, error) {
-	user.Password = s.hashGen.GeneratePasswordHash(user.Password)
+func (s *AuthService) CreateUser(ctx context.Context, input CreateUserInput) (string, error) {
+	input.Password = s.hashGen.GeneratePasswordHash(input.Password)
 
-	id, err := s.repo.CreateUser(ctx, user)
+	user, err := s.repo.Create(ctx, input)
 	if err != nil {
 		return "", err
 	}
 
-	accessToken, err := s.jwtGen.CreateToken(id)
+	accessToken, err := s.jwtGen.CreateToken(user.ID)
 	if err != nil {
 		return "", err
 	}
@@ -89,19 +96,21 @@ func (s *AuthService) CreateUser(ctx context.Context, user CreateUserInput) (str
 	return accessToken, nil
 }
 
+var ErrWrongPassword = errors.New("wrong password")
+
 // AuthUser returns the jwt token of the user, if the provided user exists  in repo and password is correct.
 // In any other situation function returns ("", err).
-// Method get password and if calling repo.GetPasswordHashAndID then validates it with the hashGen.IsValidPassword,
+// Method get password and if calling repo.Get then validates it with the hashGen.IsValidPassword,
 // and create token with the help jwtGen.CreateToken.
 func (s *AuthService) AuthUser(ctx context.Context, input ValidateUserInput) (string, error) {
-	hash, id, err := s.repo.GetPasswordHashAndID(ctx, input.AuthName)
+	user, err := s.repo.Get(ctx, input.AuthName, nil)
 	if err != nil {
 		return "", fmt.Errorf("get user: %w", err)
 	}
 
-	if !s.hashGen.IsValidPassword(input.Password, hash) {
-		return "", serverrors.NewInvalidAuth("wrong password")
+	if !s.hashGen.IsValidPassword(input.Password, user.PasswordHash) {
+		return "", ErrWrongPassword
 	}
 
-	return s.jwtGen.CreateToken(id)
+	return s.jwtGen.CreateToken(user.ID)
 }

@@ -69,7 +69,6 @@ func (ah AuthHandler) Registration(w http.ResponseWriter, r *http.Request) {
 
 func mapCreateUserInput(reg authapi.RegistrationBody) service.CreateUserInput {
 	return service.CreateUserInput{
-		NickName: reg.Nickname,
 		Email:    string(reg.Email),
 		Password: reg.Password,
 	}

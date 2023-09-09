@@ -52,3 +52,25 @@ func String(text pgtype.Text) string {
 
 	return ""
 }
+
+func ByteSlice(text pgtype.Text) []byte {
+	if text.Valid {
+		return []byte(text.String)
+	}
+
+	return nil
+}
+
+func Int4(i *int) pgtype.Int4 {
+	if i == nil {
+		return pgtype.Int4{Int32: 0, Valid: false}
+	}
+	return pgtype.Int4{Int32: int32(*i), Valid: true}
+}
+
+func Int(i pgtype.Int4) int {
+	if i.Valid {
+		return int(i.Int32)
+	}
+	return 0
+}

@@ -29,8 +29,10 @@ tags:
     description: Authentication
   - name: Tasks
     description: Create and manage your tasks
-  - name: Timetable
-    description: Create and manafe your timetable
+  - name: Events
+    description: Create and manafe your events
+  - name: NotificationParams
+    description: Manage Notification params
 paths:
   /auth/register:
     post:
@@ -179,11 +181,11 @@ paths:
         '405':
           description: Invalid input
 
-  /timetable/set/{taskID}:
+  /event/set/{taskID}:
     post:
-      summary: Add a new timetable
+      summary: Add a new event
       tags:
-        - Timetable
+        - Events
       security:
         - bearerAuth: []
       description: Add a task
@@ -195,11 +197,11 @@ paths:
            required: true
            description: Task id
       requestBody:
-        description: Set timetable task
+        description: Set event task
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SetTimetableTaskReqBody'
+              $ref: '#/components/schemas/SetEventReqBody'
         required: true
       responses:
         '200':
@@ -207,19 +209,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TimetableTask'
+                $ref: '#/components/schemas/Event'
         '405':
           description: Invalid input
 
-  /timetable:
+  /event:
     get:
-      summary: List timetable tasks
+      summary: List events
       tags:
-        - Timetable
+        - Events
       security:
         - bearerAuth: []
-      description: List timetable tasks
-      operationId: listTimetableTasks
+      description: List events
+      operationId: listEvents
       parameters:
         - in: query
           name: from
@@ -239,66 +241,192 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/TimetableTask'
+                  $ref: '#/components/schemas/Event'
+        '405':
+          description: Invalid input
+    post:
+      summary: Create new event
+      tags:
+        - Events
+      security:
+        - bearerAuth: []
+      description: Create new event
+      operationId: createEvent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEventReqBody'
+        required: true
+      responses:
+        '201':
+          description: Successfull creation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
         '405':
           description: Invalid input
 
-  /timetable/{timetableTaskID}:
+  /event/{eventID}:
     get:
-      summary: Get timetable task
+      summary: Get event
       tags:
-        - Timetable
+        - Events
       security:
         - bearerAuth: []
-      description: Get timetable task
-      operationId: getTimetableTask
+      description: Get event
+      operationId: getEvent
       parameters:
         - in: path
-          name: timetableTaskID
+          name: eventID
           schema:
             type: integer
           required: true
-          description: Timetable task id
+          description: event task id
       responses:
         '200':
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TimetableTask'
+                $ref: '#/components/schemas/Event'
         '405':
           description: Invalid input
 
     put:
-      summary: Update timetable task
+      summary: Update event
       tags:
-        - Timetable
+        - Events
       security:
         - bearerAuth: []
-      description: List timetable tasks
-      operationId: updateTimetableTask
+      description: Update event
+      operationId: updateEvent
       parameters:
         - in: path
-          name: timetableTaskID
+          name: eventID
           schema:
             type: integer
           required: true
-          description: Timetable task id
+          description: Event task id
       requestBody:
-        description: Update timetable task
+        description: Update Event task
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateTimetableReqBody'
+              $ref: '#/components/schemas/UpdateEventReqBody'
       responses:
         '200':
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TimetableTask'
+                $ref: '#/components/schemas/Event'
         '405':
           description: Invalid input
+
+  /event/{eventID}/notification-params:
+    get:
+      summary: Get event notification params
+      tags:
+        - Events
+        - NotificationParams
+      security:
+        - bearerAuth: []
+      description: Get event notification params
+      operationId: getEventNotificationParams
+      parameters:
+        - in: path
+          name: eventID
+          schema:
+            type: integer
+          required: true
+          description: Event id
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationParams'
+        '405':
+          description: Invalid input
+
+    put:
+      summary: Set Event notification params
+      tags:
+        - Events
+        - NotificationParams
+      security:
+        - bearerAuth: []
+      description: Set event notification params
+      operationId: setEventNotificationParams
+      parameters:
+        - in: path
+          name: eventID
+          schema:
+            type: integer
+          required: true
+          description: Event task id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationParams'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationParams'
+        '405':
+          description: Invalid input
+
+  /notification-params:
+    get:
+      summary: Set default notification params
+      tags:
+        - NotificationParams
+      security:
+        - bearerAuth: []
+      description: get default notification params
+      operationId: getDefaultNotificationParams
+      responses:
+        '200':
+          description: Successfull operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationParams'
+        '405':
+          description: Invalid input
+
+    put:
+      summary: Set default notification params
+      tags:
+        - NotificationParams
+      security:
+        - bearerAuth: []
+      description: set default notification params
+      operationId: setDefaultNotificationParams
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationParams'
+        required: true
+      responses:
+        '201':
+          description: Successfull creation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationParams'
+        '405':
+          description: Invalid input
+
 
 components:
   schemas:
@@ -392,8 +520,25 @@ components:
         archived:
           type: boolean
 
+    CreateEventReqBody:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Message
+        start:
+          type: string
+          format: date-time
+        description:
+          type: string
+          example: Description
+      required:
+        - message
+        - requiredTime
+        - periodic
+        - start
 
-    SetTimetableTaskReqBody:
+    SetEventReqBody:
       required:
         - start
         - done
@@ -407,7 +552,7 @@ components:
           format: date-time
 
 
-    UpdateTimetableReqBody:
+    UpdateEventReqBody:
       required:
         - finish
         - start
@@ -452,7 +597,7 @@ components:
           example: 5
 
 
-    TimetableTask:
+    Event:
       required:
         - id
         - text
@@ -482,10 +627,32 @@ components:
         task_id:
           type: integer
           example: 1234
-  #        done:
-#          type: boolean
-#          description: is task already done
-#          example: false
+
+    NotificationParams:
+      type: object
+      required:
+        - period
+        - info
+      properties:
+        period:
+          type: integer
+          description: Required time for task in minutes
+          minimum: 1
+          example: 5
+        info:
+          $ref: '#/components/schemas/NotificationInfo'
+
+
+    NotificationInfo:
+      type: object
+      properties:
+        cmd:
+          type: boolean
+        telegram:
+          type: integer
+        webhook:
+          type: string
+
 
   securitySchemes:
     bearerAuth: # arbitrary name for the security scheme

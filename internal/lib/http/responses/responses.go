@@ -1,11 +1,13 @@
 package responses
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 
+	"github.com/Dyleme/Notifier/internal/lib/log"
 	"github.com/Dyleme/Notifier/internal/lib/serverrors"
 )
 
@@ -13,7 +15,7 @@ type errorResponse struct {
 	Err string `json:"error_message"`
 }
 
-var serverError = errors.New("server error")
+var errServer = errors.New("server error")
 
 func KnownError(w http.ResponseWriter, err error) {
 	unwrappedErr := errors.Unwrap(err)
@@ -21,18 +23,20 @@ func KnownError(w http.ResponseWriter, err error) {
 		err = unwrappedErr
 	}
 
-	if _, ok := err.(serverrors.InternalError); ok {
-		Error(w, http.StatusInternalServerError, serverError)
+	if _, ok := err.(serverrors.InternalError); ok { //nolint:errorlint //error is already unwrapped
+		Error(w, http.StatusInternalServerError, errServer)
 	} else {
-		switch err.(type) {
+		switch err.(type) { //nolint:errorlint //error is already unwrapped
 		case serverrors.NotFoundError:
 			Error(w, http.StatusNotFound, err)
 		case serverrors.NoDeletionsError:
 			Error(w, http.StatusUnprocessableEntity, err)
 		case serverrors.UniqueError:
 			Error(w, http.StatusConflict, err)
-		case serverrors.InvalidAuth:
+		case serverrors.InvalidAuthError:
 			Error(w, http.StatusUnauthorized, err)
+		case serverrors.BusinessLogicError:
+			Error(w, http.StatusUnprocessableEntity, err)
 		default:
 			Error(w, http.StatusInternalServerError, err)
 		}
@@ -46,6 +50,7 @@ func Error(w http.ResponseWriter, statusCode int, err error) {
 	js, err := json.Marshal(errorResponse{err.Error()})
 
 	if err != nil {
+		log.Ctx(context.TODO()).Error(err.Error())
 		statusCode = http.StatusInternalServerError
 	}
 

@@ -3,7 +3,10 @@ package config
 import (
 	"github.com/Dyleme/Notifier/internal/authorization/jwt"
 	"github.com/Dyleme/Notifier/internal/lib/sqldatabase"
+	"github.com/Dyleme/Notifier/internal/notification-service/notifier"
 	"github.com/Dyleme/Notifier/internal/server"
+	"github.com/Dyleme/Notifier/internal/telegram/handler"
+	"github.com/Dyleme/Notifier/internal/timetable-service/service"
 )
 
 type Config struct {
@@ -12,6 +15,9 @@ type Config struct {
 	JWT      *jwt.Config
 	APIKey   string
 	Server   *server.Config
+	Notifier notifier.Config
+	Event    service.Config
+	Telegram handler.Config
 }
 
 func mapConfig(cc *collectableConfig) Config {
@@ -36,6 +42,15 @@ func mapConfig(cc *collectableConfig) Config {
 			ReadTimeout:             cc.Server.ReadTimeout,
 			WriteTimeout:            cc.Server.WriteTimeout,
 			TimeForGracefulShutdown: cc.Server.TimeForGracefulShutdown,
+		},
+		Notifier: notifier.Config{
+			Period: cc.Notifier.CheckPeriod,
+		},
+		Event: service.Config{
+			CheckTasksPeriod: cc.EventService.CheckPeriod,
+		},
+		Telegram: handler.Config{
+			Token: cc.Telegram.Token,
 		},
 	}
 }
