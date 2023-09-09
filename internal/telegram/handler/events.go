@@ -11,7 +11,7 @@ import (
 	"github.com/go-telegram/bot/models"
 
 	"github.com/Dyleme/Notifier/internal/lib/tgwf"
-	domains "github.com/Dyleme/Notifier/internal/timetable-service/models"
+	domains "github.com/Dyleme/Notifier/internal/timetable-service/domains"
 	"github.com/Dyleme/Notifier/internal/timetable-service/service"
 )
 
@@ -39,7 +39,7 @@ func (l *ListEvents) list(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.H
 		return nil, fmt.Errorf(op, err)
 	}
 
-	tasks, err := l.serv.ListTimetableTasks(ctx, userID)
+	tasks, err := l.serv.ListEvents(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf(op, err)
 	}
@@ -71,7 +71,6 @@ type EventCreation struct {
 	requiredTime time.Duration
 	day          time.Time
 	time         time.Time
-	periodic     bool
 }
 
 func (ec *EventCreation) MessageSetText(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
@@ -226,43 +225,6 @@ func (ec *EventCreation) SetRequiredTime(_ context.Context, _ *bot.Bot, update *
 	}
 
 	ec.requiredTime = time.Duration(dur) * time.Minute
-	return ec.MessageSetPeriodic, nil
-}
-
-func (ec *EventCreation) MessageSetPeriodic(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
-	op := "EventCreation.MessageSetPeriodic: %w"
-	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: chatID,
-		Text:   "Is periodic",
-		ReplyMarkup: models.ReplyKeyboardMarkup{
-			Keyboard: [][]models.KeyboardButton{
-				{
-					{Text: "true"},
-					{Text: "false"},
-				},
-			},
-			OneTimeKeyboard: true,
-		},
-	})
-	if err != nil {
-		return nil, fmt.Errorf(op, err)
-	}
-
-	return ec.SetPeriodic, nil
-}
-
-func (ec *EventCreation) SetPeriodic(ctx context.Context, b *bot.Bot, update *models.Update) (tgwf.Action, error) {
-	op := "EventCreation.SetPeriodic: %w"
-	message, err := tgwf.GetMessage(update)
-	if err != nil {
-		return nil, fmt.Errorf(op, err)
-	}
-	periodic, err := strconv.ParseBool(message.Text)
-	if err != nil {
-		return nil, fmt.Errorf(op, err)
-	}
-	ec.periodic = periodic
-
 	return ec.create, nil
 }
 
@@ -273,22 +235,14 @@ func (ec *EventCreation) create(ctx context.Context, b *bot.Bot, chatID int64) (
 		return nil, fmt.Errorf(op, err)
 	}
 
-	task := domains.Task{
-		UserID:       userID,
-		Text:         ec.text,
-		RequiredTime: ec.requiredTime,
-		Periodic:     ec.periodic,
-		Done:         false,
-		Archived:     false,
-	}
-	event := domains.TimetableTask{
+	event := domains.Event{
 		UserID:      userID,
 		Text:        ec.text,
 		Description: "",
 		Start:       time.Date(ec.day.Year(), ec.day.Month(), ec.day.Day(), ec.time.Hour(), ec.time.Minute(), 0, 0, time.Local),
 	}
 
-	_, err = ec.serv.CreateTimetableTask(ctx, task, event)
+	_, err = ec.serv.CreateEvent(ctx, event)
 	if err != nil {
 		return nil, fmt.Errorf(op, err)
 	}

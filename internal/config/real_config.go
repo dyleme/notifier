@@ -10,14 +10,14 @@ import (
 )
 
 type Config struct {
-	Env       string
-	Database  *sqldatabase.Config
-	JWT       *jwt.Config
-	APIKey    string
-	Server    *server.Config
-	Notifier  notifier.Config
-	Timetable service.Config
-	Telegram  handler.Config
+	Env      string
+	Database *sqldatabase.Config
+	JWT      *jwt.Config
+	APIKey   string
+	Server   *server.Config
+	Notifier notifier.Config
+	Event    service.Config
+	Telegram handler.Config
 }
 
 func mapConfig(cc *collectableConfig) Config {
@@ -46,8 +46,8 @@ func mapConfig(cc *collectableConfig) Config {
 		Notifier: notifier.Config{
 			Period: cc.Notifier.CheckPeriod,
 		},
-		Timetable: service.Config{
-			CheckTasksPeriod: cc.TimetableService.CheckPeriod,
+		Event: service.Config{
+			CheckTasksPeriod: cc.EventService.CheckPeriod,
 		},
 		Telegram: handler.Config{
 			Token: cc.Telegram.Token,

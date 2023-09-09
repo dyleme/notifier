@@ -48,7 +48,7 @@ func main() {
 
 	notif := notifier.New(ctx, cmdnotifier.New(logger), cfg.Notifier)
 	timetableRepo := timetableRepository.New(db)
-	timetableServ := timetableService.New(ctx, timetableRepo, notif, cfg.Timetable)
+	timetableServ := timetableService.New(ctx, timetableRepo, notif, cfg.Event)
 	timeTableHandler := timetableHandler.New(timetableServ)
 
 	apiTokenMiddleware := authmiddleware.NewAPIToken(cfg.APIKey)

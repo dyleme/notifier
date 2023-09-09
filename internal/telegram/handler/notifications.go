@@ -8,7 +8,7 @@ import (
 	"github.com/go-telegram/bot"
 
 	"github.com/Dyleme/Notifier/internal/lib/tgwf"
-	domains "github.com/Dyleme/Notifier/internal/timetable-service/models"
+	domains "github.com/Dyleme/Notifier/internal/timetable-service/domains"
 	"github.com/Dyleme/Notifier/internal/timetable-service/service"
 )
 

@@ -23,12 +23,11 @@ SET required_time = @required_time,
 WHERE id = @id
   AND user_id = @user_id;
 
--- name: DeleteTask :one
+-- name: DeleteTask :execrows
 DELETE
 FROM tasks
 WHERE id = @id
-  AND user_id = @user_id
-RETURNING COUNT(*) AS deleted_amount;
+  AND user_id = @user_id;
 
 -- name: ListUserTasks :many
 SELECT *

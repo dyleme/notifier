@@ -4,14 +4,13 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"time"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 
 	"github.com/Dyleme/Notifier/internal/lib/log"
 	"github.com/Dyleme/Notifier/internal/lib/tgwf"
-	domains "github.com/Dyleme/Notifier/internal/timetable-service/models"
+	domains "github.com/Dyleme/Notifier/internal/timetable-service/domains"
 	"github.com/Dyleme/Notifier/internal/timetable-service/service"
 )
 
@@ -69,8 +68,10 @@ func (l *ListTasks) list(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Ha
 	}
 
 	kb := tgwf.NewMenuAction("Tasks")
-	for _, t := range tasks {
-		kb.Row().Btn(t.Text, nil)
+	for i, t := range tasks {
+		text := strconv.Itoa(i+1) + ". " + t.Text
+		te := TaskEdit{serv: l.serv, id: t.ID}
+		kb.Row().Btn(text, te.Menu)
 	}
 
 	if len(tasks) == 0 {
@@ -86,25 +87,21 @@ func (l *ListTasks) Post(ctx context.Context, b *bot.Bot, update *models.Update)
 }
 
 type TaskCreation struct {
-	serv         *service.Service
-	text         string
-	requiredTime time.Duration
-	periodic     bool
+	serv *service.Service
+	text string
 }
 
-func (tf *TaskCreation) create(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
+func (tc *TaskCreation) create(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
 	userID, err := UserIDFromCtx(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = tf.serv.AddTask(ctx, domains.Task{
-		UserID:       userID,
-		Text:         tf.text,
-		RequiredTime: tf.requiredTime,
-		Periodic:     tf.periodic,
-		Done:         false,
-		Archived:     false,
+	_, err = tc.serv.AddTask(ctx, domains.Task{
+		UserID:   userID,
+		Text:     tc.text,
+		Done:     false,
+		Archived: false,
 	})
 	if err != nil {
 		return nil, err
@@ -140,68 +137,93 @@ func (tc *TaskCreation) SetText(_ context.Context, _ *bot.Bot, update *models.Up
 		return nil, err
 	}
 	tc.text = message.Text
-	return tc.MessageSetRequiredTime, nil
-}
-
-func (tc *TaskCreation) MessageSetRequiredTime(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
-	op := "SetRequireeTime.Show: %w"
-	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: chatID,
-		Text:   "Provide required time in minutes",
-	})
-	if err != nil {
-		return nil, fmt.Errorf(op, err)
-	}
-
-	return tc.SetRequiredTime, nil
-}
-
-func (tc *TaskCreation) SetRequiredTime(_ context.Context, _ *bot.Bot, update *models.Update) (tgwf.Action, error) {
-	message, err := tgwf.GetMessage(update)
-	if err != nil {
-		return nil, err
-	}
-	dur, err := strconv.Atoi(message.Text)
-	if err != nil {
-		return nil, err
-	}
-
-	tc.requiredTime = time.Duration(dur) * time.Minute
-	return tc.MessageSetPeridic, nil
-}
-
-func (tc *TaskCreation) MessageSetPeridic(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
-	op := "SetRequiredTime.Show: %w"
-	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: chatID,
-		Text:   "Is periodic",
-		ReplyMarkup: models.ReplyKeyboardMarkup{
-			Keyboard: [][]models.KeyboardButton{
-				{
-					{Text: "true"},
-					{Text: "false"},
-				},
-			},
-			OneTimeKeyboard: true,
-		},
-	})
-	if err != nil {
-		return nil, fmt.Errorf(op, err)
-	}
-
-	return tc.SetPeriodic, nil
-}
-
-func (tc *TaskCreation) SetPeriodic(ctx context.Context, b *bot.Bot, update *models.Update) (tgwf.Action, error) {
-	message, err := tgwf.GetMessage(update)
-	if err != nil {
-		return nil, err
-	}
-	periodic, err := strconv.ParseBool(message.Text)
-	if err != nil {
-		return nil, err
-	}
-	tc.periodic = periodic
-
 	return tc.create, nil
+}
+
+type TaskEdit struct {
+	serv *service.Service
+	id   int
+	text string
+}
+
+func (te *TaskEdit) Menu(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
+	userID, err := UserIDFromCtx(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	t, err := te.serv.GetTask(ctx, te.id, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	message := fmt.Sprintf("Task:\n%s", t.Text)
+	menu := tgwf.NewMenuAction(message).Row().
+		Btn("Edit", te.MessageSetText).
+		Btn("Delete", te.Delete)
+	return menu.Show(ctx, b, chatID)
+}
+
+func (te *TaskEdit) MessageSetText(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
+	op := "SetTextAction.Show: %w"
+	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID: chatID,
+		Text:   "Enter task text",
+	})
+	if err != nil {
+		return nil, fmt.Errorf(op, err)
+	}
+
+	return te.SetText, nil
+}
+
+func (te *TaskEdit) Delete(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
+	userID, err := UserIDFromCtx(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	err = te.serv.DeleteTask(ctx, te.id, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (te *TaskEdit) SetText(_ context.Context, _ *bot.Bot, update *models.Update) (tgwf.Action, error) {
+	message, err := tgwf.GetMessage(update)
+	if err != nil {
+		return nil, err
+	}
+	te.text = message.Text
+	return te.save, nil
+}
+
+func (te *TaskEdit) save(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
+	userID, err := UserIDFromCtx(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	err = te.serv.UpdateTask(ctx, domains.Task{
+		ID:       te.id,
+		UserID:   userID,
+		Text:     te.text,
+		Done:     false,
+		Archived: false,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID: chatID,
+		Text:   "Task successfully created",
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
 }

@@ -1,50 +1,45 @@
--- name: AddTimetableTask :one
-INSERT INTO timetable_tasks (user_id,
-                             task_id,
+-- name: AddEvent :one
+INSERT INTO events (user_id,
                              text,
                              start,
-                             finish,
                              description,
                              done,
                              notification)
 VALUES (@user_id,
-        @task_id,
         @text,
         @start,
-        @finish,
         @description,
         @done,
         @notification)
 RETURNING *;
 
--- name: GetTimetableTask :one
+-- name: GetEvent :one
 SELECT *
-FROM timetable_tasks
+FROM events
 WHERE id = @id
   AND user_id = @user_id;
 
--- name: ListTimetableTasks :many
+-- name: ListEvents :many
 SELECT *
-FROM timetable_tasks
+FROM events
 WHERE user_id = @user_id;
 
--- name: GetTimetableTasksInPeriod :many
+-- name: GetEventsInPeriod :many
 SELECT *
-FROM timetable_tasks
+FROM events
 WHERE user_id = @user_id
   AND start BETWEEN @from_time AND @to_time;
 
--- name: DeleteTimetableTask :one
+-- name: DeleteEvent :one
 DELETE
-FROM timetable_tasks
+FROM events
 WHERE id = @id
   AND user_id = @user_id
 RETURNING COUNT(*) AS deleted_amount;
 
--- name: UpdateTimetableTask :one
-UPDATE timetable_tasks
+-- name: UpdateEvent :one
+UPDATE events
 SET start       = @start,
-    finish      = @finish,
     text        = @text,
     description = @description,
     done        = @done
@@ -52,22 +47,31 @@ WHERE id = @id
   AND user_id = @user_id
 RETURNING *;
 
--- name: GetTimetableReadyTasks :many
+-- name: GetEventReadyTasks :many
 SELECT *
-FROM timetable_tasks AS t
+FROM events AS t
 WHERE t.start <= NOW()
   AND t.done = FALSE
-  AND t.notification ->> 'sended' = 'false';
+  AND t.notification ->> 'sended' = 'false'
+  AND (
+        t.notification ->> 'delayed_till' IS NULL
+        OR CAST(t.notification ->> 'delayed_till' AS TIMESTAMP) <= NOW()
+    );
 
 -- name: MarkNotificationSended :exec
-UPDATE timetable_tasks AS t
+UPDATE events AS t
 SET notification = notification || '{"sended":true}'
-WHERE id = ANY(sqlc.arg(ids)::INTEGER[]);
+WHERE id = ANY (sqlc.arg(ids)::INTEGER[]);
 
 -- name: UpdateNotificationParams :one
-UPDATE timetable_tasks AS t
+UPDATE events AS t
 SET notification = JSONB_SET(notification, '{notification_params}', @params)
 WHERE id = @id
   AND user_id = @user_id
 RETURNING notification;
 
+-- name: DelayEvent :exec
+UPDATE events AS t
+SET notification = JSONB_SET(notificaiton, '{"delayed_till"}',sqlc.arg(till)::TIMESTAMP)
+WHERE id = @id
+  AND user_id = @user_id;

@@ -19,3 +19,18 @@ func (r RepositoryError) ServerError() {
 func (r RepositoryError) Error() string {
 	return r.err.Error()
 }
+
+type ServiceError struct {
+	err error
+}
+
+func NewServiceError(err error) ServiceError {
+	return ServiceError{err: err}
+}
+
+func (r ServiceError) Error() string {
+	return r.err.Error()
+}
+
+func (r ServiceError) ServerError() {
+}

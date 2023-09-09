@@ -9,10 +9,7 @@ ALTER TABLE users
 
 -- +goose Down
 -- +goose StatementBegin
-
 ALTER TABLE users
     ADD COLUMN nickname VARCHAR(250),
     DROP COLUMN tg_id;
---     ALTER COLUMN email SET NOT NULL
---     ALTER COLUMN password_hash SET NOT NULL;
 -- +goose StatementEnd

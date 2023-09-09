@@ -43,12 +43,11 @@ func (q *Queries) AddTask(ctx context.Context, arg AddTaskParams) (Task, error) 
 	return i, err
 }
 
-const deleteTask = `-- name: DeleteTask :one
+const deleteTask = `-- name: DeleteTask :execrows
 DELETE
 FROM tasks
 WHERE id = $1
   AND user_id = $2
-RETURNING COUNT(*) AS deleted_amount
 `
 
 type DeleteTaskParams struct {
@@ -57,10 +56,11 @@ type DeleteTaskParams struct {
 }
 
 func (q *Queries) DeleteTask(ctx context.Context, arg DeleteTaskParams) (int64, error) {
-	row := q.db.QueryRow(ctx, deleteTask, arg.ID, arg.UserID)
-	var deleted_amount int64
-	err := row.Scan(&deleted_amount)
-	return deleted_amount, err
+	result, err := q.db.Exec(ctx, deleteTask, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const getTask = `-- name: GetTask :one

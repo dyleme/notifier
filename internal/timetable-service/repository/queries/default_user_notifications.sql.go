@@ -8,7 +8,7 @@ package queries
 import (
 	"context"
 
-	models "github.com/Dyleme/Notifier/internal/timetable-service/models"
+	models "github.com/Dyleme/Notifier/internal/timetable-service/domains"
 )
 
 const getDefaultUserNotificationsParams = `-- name: GetDefaultUserNotificationsParams :one

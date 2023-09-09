@@ -9,7 +9,7 @@ type Repository interface {
 	Atomic(ctx context.Context, fn func(ctx context.Context, repo Repository) error) error
 	DefaultNotificationParams() NotificationParamsRepository
 	Tasks() TaskRepository
-	TimetableTasks() TimetableTaskRepository
+	Events() EventRepository
 }
 
 type Service struct {

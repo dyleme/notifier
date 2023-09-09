@@ -18,7 +18,7 @@ sql:
           out: "internal/timetable-service/repository/queries"
           sql_package: "pgx/v5"
           overrides:
-            - column: timetable_tasks.notification
+            - column: events.notification
               go_type:
                 import: "github.com/Dyleme/Notifier/internal/timetable-service/models"
                 package: "models"

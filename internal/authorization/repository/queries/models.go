@@ -14,6 +14,18 @@ type DefaultUserNotificationParam struct {
 	Params    []byte
 }
 
+type Event struct {
+	ID           int32
+	CreatedAt    pgtype.Timestamp
+	Text         string
+	Description  pgtype.Text
+	UserID       int32
+	Start        pgtype.Timestamp
+	Finish       pgtype.Timestamp
+	Done         bool
+	Notification []byte
+}
+
 type Task struct {
 	ID           int32
 	CreatedAt    pgtype.Timestamp
@@ -23,19 +35,6 @@ type Task struct {
 	Periodic     bool
 	Done         bool
 	Archived     bool
-}
-
-type TimetableTask struct {
-	ID           int32
-	CreatedAt    pgtype.Timestamp
-	Text         string
-	Description  pgtype.Text
-	UserID       int32
-	Start        pgtype.Timestamp
-	Finish       pgtype.Timestamp
-	Done         bool
-	TaskID       int32
-	Notification []byte
 }
 
 type User struct {

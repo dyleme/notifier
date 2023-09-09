@@ -1,10 +1,11 @@
-package models
+package domains
 
 import "time"
 
 type NotificationParams struct {
-	Period time.Duration `json:"period"`
-	Params Params        `json:"params"`
+	Period      time.Duration `json:"period"`
+	DalayedTill time.Time     `json:"dalayed_till"`
+	Params      Params        `json:"params"`
 }
 
 type Params struct {
@@ -14,11 +15,10 @@ type Params struct {
 }
 
 type SendingNotification struct {
-	TimetableTaskID  int
+	EventID          int
 	UserID           int
 	Message          string
 	Description      string
-	TaskID           int
 	Params           NotificationParams
 	NotificationTime time.Time
 }

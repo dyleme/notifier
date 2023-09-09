@@ -4,10 +4,10 @@ import (
 	"github.com/Dyleme/Notifier/internal/timetable-service/service"
 )
 
-type TimetableHandler struct {
+type EventHandler struct {
 	serv *service.Service
 }
 
-func New(serv *service.Service) TimetableHandler {
-	return TimetableHandler{serv: serv}
+func New(serv *service.Service) EventHandler {
+	return EventHandler{serv: serv}
 }

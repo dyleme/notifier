@@ -11,8 +11,8 @@ CREATE TABLE IF NOT EXISTS timetable_tasks
     finish      TIMESTAMP    NOT NULL,
     done        BOOLEAN      NOT NULL DEFAULT FALSE,
     task_id     INTEGER      NOT NULL,
-    CONSTRAINT fk_timetable_tasks_user FOREIGN KEY (user_id) REFERENCES users,
-    CONSTRAINT fk_timetable_tasks_tasks FOREIGN KEY (task_id) REFERENCES tasks
+    CONSTRAINT fk_events_user FOREIGN KEY (user_id) REFERENCES users,
+    CONSTRAINT fk_events_tasks FOREIGN KEY (task_id) REFERENCES tasks
 );
 -- +goose StatementEnd
 

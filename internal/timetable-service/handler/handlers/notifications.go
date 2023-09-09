@@ -8,11 +8,11 @@ import (
 	"github.com/Dyleme/Notifier/internal/lib/http/requests"
 	"github.com/Dyleme/Notifier/internal/lib/http/responses"
 	"github.com/Dyleme/Notifier/internal/lib/utils/ptr"
+	"github.com/Dyleme/Notifier/internal/timetable-service/domains"
 	"github.com/Dyleme/Notifier/internal/timetable-service/handler/timetableapi"
-	"github.com/Dyleme/Notifier/internal/timetable-service/models"
 )
 
-func (t TimetableHandler) GetDefaultNotificationParams(w http.ResponseWriter, r *http.Request) {
+func (t EventHandler) GetDefaultNotificationParams(w http.ResponseWriter, r *http.Request) {
 	userID, err := authmiddleware.UserIDFromCtx(r.Context())
 	if err != nil {
 		responses.Error(w, http.StatusInternalServerError, err)
@@ -28,7 +28,7 @@ func (t TimetableHandler) GetDefaultNotificationParams(w http.ResponseWriter, r 
 	responses.JSON(w, http.StatusOK, mapNotificationParamsResp(defParams))
 }
 
-func (t TimetableHandler) SetDefaultNotificationParams(w http.ResponseWriter, r *http.Request) {
+func (t EventHandler) SetDefaultNotificationParams(w http.ResponseWriter, r *http.Request) {
 	userID, err := authmiddleware.UserIDFromCtx(r.Context())
 	if err != nil {
 		responses.Error(w, http.StatusInternalServerError, err)
@@ -53,7 +53,7 @@ func (t TimetableHandler) SetDefaultNotificationParams(w http.ResponseWriter, r 
 	responses.JSON(w, http.StatusOK, mapNotificationParamsResp(defParams))
 }
 
-func mapNotificationParamsResp(p models.NotificationParams) timetableapi.NotificationParams {
+func mapNotificationParamsResp(p domains.NotificationParams) timetableapi.NotificationParams {
 	return timetableapi.NotificationParams{
 		Info: timetableapi.NotificationInfo{
 			Cmd:      ptr.Ptr(true),
@@ -64,7 +64,7 @@ func mapNotificationParamsResp(p models.NotificationParams) timetableapi.Notific
 	}
 }
 
-func mapNotificationParams(req timetableapi.NotificationParams) models.NotificationParams {
+func mapNotificationParams(req timetableapi.NotificationParams) domains.NotificationParams {
 	var (
 		webhook  string
 		telegram int
@@ -75,9 +75,9 @@ func mapNotificationParams(req timetableapi.NotificationParams) models.Notificat
 	if req.Info.Telegram != nil {
 		telegram = *req.Info.Telegram
 	}
-	params := models.NotificationParams{
+	params := domains.NotificationParams{
 		Period: time.Duration(req.Period) * time.Minute,
-		Params: models.Params{
+		Params: domains.Params{
 			Telegram: telegram,
 			Webhook:  webhook,
 			Cmd:      "",
@@ -86,14 +86,14 @@ func mapNotificationParams(req timetableapi.NotificationParams) models.Notificat
 	return params
 }
 
-func (t TimetableHandler) GetTimetableTaskNotificationParams(w http.ResponseWriter, r *http.Request, timetableTaskID int) {
+func (t EventHandler) GetEventNotificationParams(w http.ResponseWriter, r *http.Request, eventID int) {
 	userID, err := authmiddleware.UserIDFromCtx(r.Context())
 	if err != nil {
 		responses.Error(w, http.StatusInternalServerError, err)
 		return
 	}
 
-	params, err := t.serv.GetNotificationParams(r.Context(), timetableTaskID, userID)
+	params, err := t.serv.GetNotificationParams(r.Context(), eventID, userID)
 	if err != nil {
 		responses.KnownError(w, err)
 		return
@@ -102,14 +102,14 @@ func (t TimetableHandler) GetTimetableTaskNotificationParams(w http.ResponseWrit
 	responses.JSON(w, http.StatusOK, mapNotificationParamsResp(*params))
 }
 
-func (t TimetableHandler) SetTimetableTaskNotificationParams(w http.ResponseWriter, r *http.Request, timetableTaskID int) {
+func (t EventHandler) SetEventNotificationParams(w http.ResponseWriter, r *http.Request, eventID int) {
 	userID, err := authmiddleware.UserIDFromCtx(r.Context())
 	if err != nil {
 		responses.Error(w, http.StatusInternalServerError, err)
 		return
 	}
 
-	var reqParamsBody timetableapi.SetTimetableTaskNotificationParamsJSONRequestBody
+	var reqParamsBody timetableapi.SetEventNotificationParamsJSONRequestBody
 	err = requests.Bind(r, &reqParamsBody)
 	if err != nil {
 		responses.KnownError(w, err)
@@ -118,7 +118,7 @@ func (t TimetableHandler) SetTimetableTaskNotificationParams(w http.ResponseWrit
 
 	params := mapNotificationParams(reqParamsBody)
 
-	res, err := t.serv.SetNotificationParams(r.Context(), timetableTaskID, params, userID)
+	res, err := t.serv.SetNotificationParams(r.Context(), eventID, params, userID)
 	if err != nil {
 		responses.KnownError(w, err)
 		return

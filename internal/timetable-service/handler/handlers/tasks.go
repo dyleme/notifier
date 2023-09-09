@@ -8,11 +8,11 @@ import (
 	"github.com/Dyleme/Notifier/internal/lib/http/requests"
 	"github.com/Dyleme/Notifier/internal/lib/http/responses"
 	"github.com/Dyleme/Notifier/internal/lib/utils/dto"
+	"github.com/Dyleme/Notifier/internal/timetable-service/domains"
 	"github.com/Dyleme/Notifier/internal/timetable-service/handler/timetableapi"
-	"github.com/Dyleme/Notifier/internal/timetable-service/models"
 )
 
-func (t TimetableHandler) ListTasks(w http.ResponseWriter, r *http.Request) {
+func (t EventHandler) ListTasks(w http.ResponseWriter, r *http.Request) {
 	userID, err := authmiddleware.UserIDFromCtx(r.Context())
 	if err != nil {
 		responses.Error(w, http.StatusInternalServerError, err)
@@ -29,7 +29,7 @@ func (t TimetableHandler) ListTasks(w http.ResponseWriter, r *http.Request) {
 	responses.JSON(w, http.StatusOK, apiTasks)
 }
 
-func (t TimetableHandler) AddTask(w http.ResponseWriter, r *http.Request) {
+func (t EventHandler) AddTask(w http.ResponseWriter, r *http.Request) {
 	userID, err := authmiddleware.UserIDFromCtx(r.Context())
 	if err != nil {
 		responses.Error(w, http.StatusInternalServerError, err)
@@ -53,8 +53,8 @@ func (t TimetableHandler) AddTask(w http.ResponseWriter, r *http.Request) {
 	responses.JSON(w, http.StatusCreated, mapAPITask(createdTask))
 }
 
-func mapAddTaskReq(body timetableapi.AddTaskJSONRequestBody, userID int) models.Task {
-	return models.Task{ //nolint:exhaustruct // TODO: use separate struct for creation
+func mapAddTaskReq(body timetableapi.AddTaskJSONRequestBody, userID int) domains.Task {
+	return domains.Task{ //nolint:exhaustruct // TODO: use separate struct for creation
 		UserID:       userID,
 		Text:         body.Message,
 		RequiredTime: time.Duration(body.RequiredTime * int(time.Minute)),
@@ -64,8 +64,8 @@ func mapAddTaskReq(body timetableapi.AddTaskJSONRequestBody, userID int) models.
 	}
 }
 
-func mapUpdateTaskReq(body timetableapi.UpdateTaskReqBody, taskID, userID int) models.Task {
-	return models.Task{
+func mapUpdateTaskReq(body timetableapi.UpdateTaskReqBody, taskID, userID int) domains.Task {
+	return domains.Task{
 		ID:           taskID,
 		UserID:       userID,
 		Text:         body.Message,
@@ -76,7 +76,7 @@ func mapUpdateTaskReq(body timetableapi.UpdateTaskReqBody, taskID, userID int) m
 	}
 }
 
-func mapAPITask(task models.Task) timetableapi.Task {
+func mapAPITask(task domains.Task) timetableapi.Task {
 	return timetableapi.Task{
 		Id:           task.ID,
 		Message:      task.Text,
@@ -87,7 +87,7 @@ func mapAPITask(task models.Task) timetableapi.Task {
 	}
 }
 
-func (t TimetableHandler) GetTask(w http.ResponseWriter, r *http.Request, taskID int) {
+func (t EventHandler) GetTask(w http.ResponseWriter, r *http.Request, taskID int) {
 	userID, err := authmiddleware.UserIDFromCtx(r.Context())
 	if err != nil {
 		responses.Error(w, http.StatusInternalServerError, err)
@@ -103,7 +103,7 @@ func (t TimetableHandler) GetTask(w http.ResponseWriter, r *http.Request, taskID
 	responses.JSON(w, http.StatusOK, mapAPITask(task))
 }
 
-func (t TimetableHandler) UpdateTask(w http.ResponseWriter, r *http.Request, taskID int) {
+func (t EventHandler) UpdateTask(w http.ResponseWriter, r *http.Request, taskID int) {
 	userID, err := authmiddleware.UserIDFromCtx(r.Context())
 	if err != nil {
 		responses.Error(w, http.StatusInternalServerError, err)

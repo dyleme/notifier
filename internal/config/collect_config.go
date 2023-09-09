@@ -7,14 +7,14 @@ import (
 )
 
 type collectableConfig struct {
-	Env              string `env:"ENV" env-required:"true"`
-	Database         databaseConfig
-	JWT              jwtConfig
-	APIKey           apiKeyConfig
-	Server           serverConfig
-	Notifier         notificationConfig
-	TimetableService timetableServiceConfig
-	Telegram         telegramConfig
+	Env          string `env:"ENV" env-required:"true"`
+	Database     databaseConfig
+	JWT          jwtConfig
+	APIKey       apiKeyConfig
+	Server       serverConfig
+	Notifier     notificationConfig
+	EventService timetableServiceConfig
+	Telegram     telegramConfig
 }
 
 type serverConfig struct {

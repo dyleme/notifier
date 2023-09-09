@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/go-telegram/bot"
@@ -89,6 +90,10 @@ func (th *TelegramHandler) Handle(ctx context.Context, _ *bot.Bot, update *model
 	}
 	err = th.bot.HandleAction(ctx, update)
 	if err != nil {
+		if errors.Is(err, tgwf.ErrNoAssociatedAction) {
+			th.Info(ctx, nil, update)
+			return
+		}
 		th.handleError(ctx, chatID, err)
 		return
 	}
