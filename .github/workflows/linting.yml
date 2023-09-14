@@ -1,12 +1,11 @@
-name: linting
+name: Linters
 
 on:
   push:
   pull_request:
 
 jobs:
-
-  lint:
+  golangci-lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
