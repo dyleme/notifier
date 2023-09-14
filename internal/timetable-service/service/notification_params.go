@@ -19,6 +19,7 @@ func (s *Service) SetDefaultNotificationParams(ctx context.Context, params domai
 	defParams, err := s.repo.DefaultNotificationParams().Set(ctx, userID, params)
 	if err != nil {
 		logError(ctx, fmt.Errorf(op, err))
+
 		return domains.NotificationParams{}, err
 	}
 
@@ -30,6 +31,7 @@ func (s *Service) GetDefaultNotificationParams(ctx context.Context, userID int) 
 	defParams, err := s.repo.DefaultNotificationParams().Get(ctx, userID)
 	if err != nil {
 		logError(ctx, fmt.Errorf(op, err))
+
 		return domains.NotificationParams{}, err
 	}
 
@@ -45,8 +47,9 @@ func (s *Service) GetNotificationParams(ctx context.Context, eventID, userID int
 			return err
 		}
 
-		if tt.Notification.Params != nil {
-			notifParams = *tt.Notification.Params
+		if tt.Notification.NotificationParams != nil {
+			notifParams = *tt.Notification.NotificationParams
+
 			return nil
 		}
 
@@ -56,14 +59,17 @@ func (s *Service) GetNotificationParams(ctx context.Context, eventID, userID int
 			if errors.As(err, &notFoundErr) {
 				return err
 			}
+
 			return err
 		}
 
 		notifParams = defaultParams
+
 		return nil
 	})
 	if err != nil {
 		logError(ctx, fmt.Errorf(op, err))
+
 		return nil, err
 	}
 
@@ -75,6 +81,7 @@ func (s *Service) SetNotificationParams(ctx context.Context, eventID int, params
 	updatedParams, err := s.repo.Events().UpdateNotificationParams(ctx, eventID, userID, params)
 	if err != nil {
 		logError(ctx, fmt.Errorf(op, err))
+
 		return domains.NotificationParams{}, err
 	}
 

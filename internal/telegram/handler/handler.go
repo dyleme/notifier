@@ -17,6 +17,8 @@ type Config struct {
 	Token string
 }
 
+const defaultListLimit = 100
+
 func New(service *timetableService.Service, userRepo UserRepo, cfg Config) (*TelegramHandler, error) {
 	tgHandler := TelegramHandler{
 		serv:     service,
@@ -40,19 +42,19 @@ func New(service *timetableService.Service, userRepo UserRepo, cfg Config) (*Tel
 	return &tgHandler, nil
 }
 
+type TelegramHandler struct {
+	bot      *tgwf.WorkflowHandler
+	serv     *timetableService.Service
+	userRepo UserRepo
+}
+
 func (th *TelegramHandler) Run(ctx context.Context) {
 	log.Ctx(ctx).Info("start telegram bot")
 	th.bot.Bot.Start(ctx)
 }
 
 type UserRepo interface {
-	GetID(ctx context.Context, tgID, chatID int) (userID int, err error)
-}
-
-type TelegramHandler struct {
-	bot      *tgwf.WorkflowHandler
-	serv     *timetableService.Service
-	userRepo UserRepo
+	GetID(ctx context.Context, tgID int) (userID int, err error)
 }
 
 func (th *TelegramHandler) SetBot(b *bot.Bot) {
@@ -79,6 +81,7 @@ func (th *TelegramHandler) chatID(update *models.Update) (int64, error) {
 			return update.CallbackQuery.Message.Chat.ID, nil
 		}
 	}
+
 	return 0, fmt.Errorf("no chat id")
 }
 
@@ -86,15 +89,18 @@ func (th *TelegramHandler) Handle(ctx context.Context, _ *bot.Bot, update *model
 	chatID, err := th.chatID(update)
 	if err != nil {
 		th.handleError(ctx, 0, err)
+
 		return
 	}
 	err = th.bot.HandleAction(ctx, update)
 	if err != nil {
 		if errors.Is(err, tgwf.ErrNoAssociatedAction) {
 			th.Info(ctx, nil, update)
+
 			return
 		}
 		th.handleError(ctx, chatID, err)
+
 		return
 	}
 }
@@ -103,11 +109,15 @@ func (th *TelegramHandler) Info(ctx context.Context, _ *bot.Bot, update *models.
 	chatID, err := th.chatID(update)
 	if err != nil {
 		th.handleError(ctx, 0, err)
+
+		return
 	}
 
 	err = th.info(ctx, chatID)
 	if err != nil {
 		th.handleError(ctx, chatID, err)
+
+		return
 	}
 }
 
@@ -116,12 +126,14 @@ func (th *TelegramHandler) MainMenu(ctx context.Context, _ *bot.Bot, update *mod
 	chatID, err := th.chatID(update)
 	if err != nil {
 		handleError(ctx, th.bot, chatID, fmt.Errorf(op, err))
+
 		return
 	}
 
 	err = th.bot.Start(ctx, chatID, th.MainMenuAction())
 	if err != nil {
 		handleError(ctx, th.bot, chatID, fmt.Errorf(op, err))
+
 		return
 	}
 }
@@ -132,6 +144,7 @@ func (th *TelegramHandler) MainMenuAction() tgwf.Action {
 		Row().Btn("Tasks", th.TaskMenu()).
 		Row().Btn("Events", th.EventsMenu()).
 		Row().Btn("Notifications", th.NotificationMenu())
+
 	return menu.Show
 }
 
@@ -143,6 +156,7 @@ func (th *TelegramHandler) mainMenu(ctx context.Context, chatID int64) error {
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}
+
 	return nil
 }
 
@@ -151,6 +165,7 @@ func (th *TelegramHandler) Cancel(ctx context.Context, _ *bot.Bot, update *model
 	chatID, err := th.chatID(update)
 	if err != nil {
 		th.handleError(ctx, 0, fmt.Errorf(op, err))
+
 		return
 	}
 
@@ -162,12 +177,14 @@ func (th *TelegramHandler) Cancel(ctx context.Context, _ *bot.Bot, update *model
 	})
 	if err != nil {
 		th.handleError(ctx, chatID, fmt.Errorf(op, err))
+
 		return
 	}
 
 	err = th.mainMenu(ctx, chatID)
 	if err != nil {
 		th.handleError(ctx, chatID, fmt.Errorf(op, err))
+
 		return
 	}
 }

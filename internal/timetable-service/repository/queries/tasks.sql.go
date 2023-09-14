@@ -7,37 +7,33 @@ package queries
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const addTask = `-- name: AddTask :one
 INSERT INTO tasks (user_id,
                    message,
-                   required_time)
+                   periodic )
 VALUES ($1,
         $2,
         $3)
-RETURNING id, created_at, message, user_id, required_time, periodic, done, archived
+RETURNING id, created_at, message, user_id, periodic, archived
 `
 
 type AddTaskParams struct {
-	UserID       int32
-	Message      string
-	RequiredTime pgtype.Interval
+	UserID   int32
+	Message  string
+	Periodic bool
 }
 
 func (q *Queries) AddTask(ctx context.Context, arg AddTaskParams) (Task, error) {
-	row := q.db.QueryRow(ctx, addTask, arg.UserID, arg.Message, arg.RequiredTime)
+	row := q.db.QueryRow(ctx, addTask, arg.UserID, arg.Message, arg.Periodic)
 	var i Task
 	err := row.Scan(
 		&i.ID,
 		&i.CreatedAt,
 		&i.Message,
 		&i.UserID,
-		&i.RequiredTime,
 		&i.Periodic,
-		&i.Done,
 		&i.Archived,
 	)
 	return i, err
@@ -78,7 +74,7 @@ func (q *Queries) DeleteTask(ctx context.Context, arg DeleteTaskParams) (int64, 
 }
 
 const getTask = `-- name: GetTask :one
-SELECT id, created_at, message, user_id, required_time, periodic, done, archived
+SELECT id, created_at, message, user_id, periodic, archived
 FROM tasks
 WHERE id = $1
   AND user_id = $2
@@ -97,16 +93,14 @@ func (q *Queries) GetTask(ctx context.Context, arg GetTaskParams) (Task, error) 
 		&i.CreatedAt,
 		&i.Message,
 		&i.UserID,
-		&i.RequiredTime,
 		&i.Periodic,
-		&i.Done,
 		&i.Archived,
 	)
 	return i, err
 }
 
 const listTasks = `-- name: ListTasks :many
-SELECT id, created_at, message, user_id, required_time, periodic, done, archived
+SELECT id, created_at, message, user_id, periodic, archived
 FROM tasks
 WHERE user_id = $1
   AND archived = FALSE
@@ -135,9 +129,7 @@ func (q *Queries) ListTasks(ctx context.Context, arg ListTasksParams) ([]Task, e
 			&i.CreatedAt,
 			&i.Message,
 			&i.UserID,
-			&i.RequiredTime,
 			&i.Periodic,
-			&i.Done,
 			&i.Archived,
 		); err != nil {
 			return nil, err
@@ -152,31 +144,25 @@ func (q *Queries) ListTasks(ctx context.Context, arg ListTasksParams) ([]Task, e
 
 const updateTask = `-- name: UpdateTask :exec
 UPDATE tasks
-SET required_time = $1,
-    message       = $2,
-    periodic      = $3,
-    done          = $4,
-    archived      = $5
-WHERE id = $6
-  AND user_id = $7
+SET message       = $1,
+    periodic      = $2,
+    archived      = $3
+WHERE id = $4
+  AND user_id = $5
 `
 
 type UpdateTaskParams struct {
-	RequiredTime pgtype.Interval
-	Message      string
-	Periodic     bool
-	Done         bool
-	Archived     bool
-	ID           int32
-	UserID       int32
+	Message  string
+	Periodic bool
+	Archived bool
+	ID       int32
+	UserID   int32
 }
 
 func (q *Queries) UpdateTask(ctx context.Context, arg UpdateTaskParams) error {
 	_, err := q.db.Exec(ctx, updateTask,
-		arg.RequiredTime,
 		arg.Message,
 		arg.Periodic,
-		arg.Done,
 		arg.Archived,
 		arg.ID,
 		arg.UserID,

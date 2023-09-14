@@ -25,16 +25,17 @@ func NewUserRepoCache(userRepo service.UserRepo) *UserRepoCache {
 	}
 }
 
-func (u *UserRepoCache) GetID(ctx context.Context, tgID, tgChatID int) (userID int, err error) {
-	userID, err = u.cache.Get(tgID)
+func (u *UserRepoCache) GetID(ctx context.Context, tgID int) (int, error) {
+	userID, err := u.cache.Get(tgID)
 	if err == nil { // err equal nil
 		return userID, nil
 	}
 
 	err = u.userRepo.Atomic(ctx, func(ctx context.Context, userRepo service.UserRepo) error {
-		user, err := userRepo.Get(ctx, "", &tgID)
-		if err == nil { // err equal nil
+		user, err := userRepo.Get(ctx, "", &tgID) //nolint:govet //just err in tx
+		if err == nil {                           // err equal nil
 			userID = user.ID
+
 			return nil
 		}
 
@@ -47,12 +48,12 @@ func (u *UserRepoCache) GetID(ctx context.Context, tgID, tgChatID int) (userID i
 			Email:    "",
 			Password: "",
 			TGID:     &tgID,
-			TGChatID: &tgChatID,
 		})
 		if err != nil {
 			return err
 		}
 		userID = user.ID
+
 		return nil
 	})
 	if err != nil {

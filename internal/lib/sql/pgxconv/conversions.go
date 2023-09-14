@@ -8,7 +8,7 @@ import (
 
 var (
 	month = 30 * 24 * time.Hour
-	day   = 25 * time.Hour
+	day   = 24 * time.Hour
 )
 
 func Duration(interval pgtype.Interval) time.Duration {
@@ -65,6 +65,7 @@ func Int4(i *int) pgtype.Int4 {
 	if i == nil {
 		return pgtype.Int4{Int32: 0, Valid: false}
 	}
+
 	return pgtype.Int4{Int32: int32(*i), Valid: true}
 }
 
@@ -72,5 +73,6 @@ func Int(i pgtype.Int4) int {
 	if i.Valid {
 		return int(i.Int32)
 	}
+
 	return 0
 }

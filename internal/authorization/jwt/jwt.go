@@ -38,7 +38,7 @@ func (err UnexpectedSingingMethodError) Error() string {
 
 type tokenClaims struct {
 	jwt.Claims
-	UserID int `json:"userID"`
+	UserID int `json:"user_id"`
 }
 
 // CreateToken function generate token with provided TTL and user id.
@@ -63,7 +63,6 @@ func (g *Gen) ParseToken(tokenString string) (userID int, err error) {
 
 		return []byte(g.signedKey), nil
 	})
-
 	if err != nil {
 		return 0, fmt.Errorf("parse token: %w", err)
 	}

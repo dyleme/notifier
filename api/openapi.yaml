@@ -506,17 +506,12 @@ components:
     CreateTaskReqBody:
       required:
         - message
-        - requiredTime
         - periodic
       type: object
       properties:
         message:
           type: string
           example: Task text
-        requiredTime:
-          type: integer
-          description: Required time for task in minutes
-          minimum: 1
         periodic:
           type: boolean
 
@@ -596,9 +591,7 @@ components:
       required:
         - id
         - message
-        - requiredTime
         - periodic
-        - done
         - archived
       type: object
       properties:
@@ -610,25 +603,15 @@ components:
           example: Task text
         periodic:
           type: boolean
-        done:
-          type: boolean
         archived:
           type: boolean
-        requiredTime:
-          type: integer
-          description: Required time for task in minutes
-          minimum: 1
-          example: 5
-
 
     Event:
       required:
         - id
         - text
         - start
-        - finish
         - done
-        - task_id
       type: object
       properties:
         id:
@@ -643,14 +626,8 @@ components:
         start:
           type: string
           format: date-time
-        finish:
-          type: string
-          format: date-time
         done:
           type: boolean
-        task_id:
-          type: integer
-          example: 1234
 
     NotificationParams:
       type: object
@@ -663,6 +640,9 @@ components:
           description: Required time for task in minutes
           minimum: 1
           example: 5
+        delayedTill:
+          type: string
+          format: date-time
         info:
           $ref: '#/components/schemas/NotificationInfo'
 

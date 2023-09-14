@@ -15,14 +15,15 @@ type Event struct {
 }
 
 type Notification struct {
-	Sended bool                `json:"sended"`
-	Params *NotificationParams `json:"notification_params"`
+	Sended             bool                `json:"sended"`
+	NotificationParams *NotificationParams `json:"notification_params"`
 }
 
 func (e *Event) IsGettingDone(newDone bool) bool {
 	if !e.Done && newDone {
 		return true
 	}
+
 	return false
 }
 

@@ -19,55 +19,44 @@ linters-settings:
   nolintlint:
     require-explanation: true
     require-specific: true
+  tagliatelle:
+    case:
+      use-field-name: true
+      rules:
+        json: snake
+  gci:
+    custom-order: true
+    sections:
+      - standard
+      - default
+      - prefix(github.com/Dyleme/Notifier)
+      - blank
+      - dot
 
 linters:
-  disable-all: true
-  enable:
-    - asciicheck
-    - bodyclose
-    - cyclop
-#    - deadcode
-#    - depguard
-    - dogsled
-    - dupl
-    - errcheck
-    - errname
-    - errorlint
-    - exportloopref
-    - exhaustive
-    - exhaustruct
-    - goconst
-    - gocritic
-    - gofmt
-    - goimports
-    - gomnd
-    - gocyclo
-    - gocognit
-    - godot
-    - gosec
-    - gosimple
-    - govet
-#    - ifshort
+  enable-all: true
+  disable:
+    - deadcode # deprecated since 1.49
+    - ifshort  # deprecated since 1.48
+    - structcheck # deprecated since 1.49
+    - varcheck  # deprecated since 1.49
+    - nosnakecase # deprecated since 1.48
+    - scopelint # deprecated since 1.39
+    - exhaustivestruct # deprecated since 1.46
+    - interfacer # deprecate since 1.38
+    - maligned # deprecated since 1.38
+    - golint # deprecated since 1.41
+    - varnamelen # short variable names is normal for go
+    - wrapcheck
+    - nosprintfhostport
+    - nonamedreturns
     - ineffassign
-#    - lll
-    - misspell
-    - nolintlint
-    - nakedret
-    - prealloc
-    - predeclared
-    - revive
-    - staticcheck
-#    - structcheck
-    - stylecheck
-    - thelper
-    - tparallel
-    - typecheck
-    - unconvert
-    - unparam
-    - unused
-#    - varcheck
-    - whitespace
-#    - wsl
-
+    - exhaustruct
+    - ireturn
+    - goerr113 # not possible to use errors.As()
+    - depguard # not necessary for small project
+    - gochecknoglobals # global variables are widely used in go code
+    - wsl # to many empty lines
+    - lll # long lines is not always bad
 run:
   issues-exit-code: 1

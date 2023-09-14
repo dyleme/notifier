@@ -1,10 +1,10 @@
 -- name: AddTask :one
 INSERT INTO tasks (user_id,
                    message,
-                   required_time)
+                   periodic )
 VALUES (@user_id,
         @message,
-        @required_time)
+        @periodic)
 RETURNING *;
 
 -- name: GetTask :one
@@ -15,10 +15,8 @@ WHERE id = @id
 
 -- name: UpdateTask :exec
 UPDATE tasks
-SET required_time = @required_time,
-    message       = @message,
+SET message       = @message,
     periodic      = @periodic,
-    done          = @done,
     archived      = @archived
 WHERE id = @id
   AND user_id = @user_id;

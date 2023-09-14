@@ -2,14 +2,12 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	"golang.org/x/sync/errgroup"
 
 	"github.com/Dyleme/Notifier/internal/lib/log"
-	"github.com/Dyleme/Notifier/internal/lib/serverrors"
 	"github.com/Dyleme/Notifier/internal/lib/utils/dto"
 	"github.com/Dyleme/Notifier/internal/timetable-service/domains"
 )
@@ -27,6 +25,7 @@ func (s *Service) RunJob(ctx context.Context) {
 			s.notify(ctx)
 		case <-ctx.Done():
 			ticker.Stop()
+
 			return
 		}
 	}
@@ -34,36 +33,36 @@ func (s *Service) RunJob(ctx context.Context) {
 
 func getNotifParams(ctx context.Context, r Repository, t *domains.Event, defaultParams map[int]domains.NotificationParams) (domains.NotificationParams, error) {
 	op := "getNotifParams: %w"
-	if t.Notification.Params == nil {
+	if t.Notification.NotificationParams == nil {
 		userParam, ok := defaultParams[t.UserID]
 		if !ok {
 			var err error
 			userParam, err = r.DefaultNotificationParams().Get(ctx, t.UserID)
 			if err != nil {
-				var notFoundErr serverrors.NotFoundError
-				if errors.As(err, &notFoundErr) {
-					return domains.NotificationParams{}, fmt.Errorf(op, err)
-				}
 				return domains.NotificationParams{}, fmt.Errorf(op, err)
 			}
 			defaultParams[t.UserID] = userParam
 		}
-		t.Notification.Params = &userParam
+		t.Notification.NotificationParams = &userParam
+
 		return userParam, nil
 	}
-	return *t.Notification.Params, nil
+
+	return *t.Notification.NotificationParams, nil
 }
 
-func mapNotifications(ctx context.Context, r Repository, Events []domains.Event) ([]domains.SendingNotification, error) {
+func mapNotifications(ctx context.Context, r Repository, events []domains.Event) ([]domains.SendingNotification, error) {
 	op := "mapNotifications: %w"
 	defaultParams := make(map[int]domains.NotificationParams)
 
-	notifs, err := dto.ErrorContinueSlice(Events, func(t domains.Event) (domains.SendingNotification, error) {
+	notifs, err := dto.ErrorContinueSlice(events, func(t domains.Event) (domains.SendingNotification, error) {
 		notifParams, err := getNotifParams(ctx, r, &t, defaultParams)
 		if err != nil {
 			log.Ctx(ctx).Error("get_notif_params_error", log.Err(err))
+
 			return domains.SendingNotification{}, err
 		}
+
 		return domains.SendingNotification{
 			EventID:          t.ID,
 			UserID:           t.UserID,
@@ -103,6 +102,7 @@ func (s *Service) notify(ctx context.Context) {
 			}
 
 			log.Ctx(ctx).Debug("add_notifications", "notifs", notifs)
+
 			return s.notifier.Add(wgCtx, notifs)
 		})
 

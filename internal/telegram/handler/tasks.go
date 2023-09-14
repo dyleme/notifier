@@ -64,7 +64,7 @@ func (l *ListTasks) list(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Ha
 
 	tasks, err := l.serv.ListUserTasks(ctx, userID, service.ListParams{
 		Offset: 0,
-		Limit:  100,
+		Limit:  defaultListLimit,
 	})
 	if err != nil {
 		return nil, fmt.Errorf(op, err)
@@ -84,8 +84,9 @@ func (l *ListTasks) list(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Ha
 	return kb.Show(ctx, b, chatID)
 }
 
-func (l *ListTasks) Post(ctx context.Context, b *bot.Bot, update *models.Update) (tgwf.Action, error) {
+func (l *ListTasks) Post(ctx context.Context, _ *bot.Bot, _ *models.Update) (tgwf.Action, error) {
 	log.Ctx(ctx).Error("not implemented", "action", "ListTasks")
+
 	return nil, nil
 }
 
@@ -103,8 +104,8 @@ func (tc *TaskCreation) create(ctx context.Context, b *bot.Bot, chatID int64) (t
 	_, err = tc.serv.AddTask(ctx, domains.Task{
 		UserID:   userID,
 		Text:     tc.text,
-		Done:     false,
 		Archived: false,
+		Periodic: false,
 	})
 	if err != nil {
 		return nil, err
@@ -140,6 +141,7 @@ func (tc *TaskCreation) SetText(_ context.Context, _ *bot.Bot, update *models.Up
 		return nil, err
 	}
 	tc.text = message.Text
+
 	return tc.create, nil
 }
 
@@ -164,6 +166,7 @@ func (te *TaskEdit) Menu(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Ha
 	menu := tgwf.NewMenuAction(message).Row().
 		Btn("Edit", te.MessageSetText).
 		Btn("Delete", te.Delete)
+
 	return menu.Show(ctx, b, chatID)
 }
 
@@ -180,7 +183,7 @@ func (te *TaskEdit) MessageSetText(ctx context.Context, b *bot.Bot, chatID int64
 	return te.SetText, nil
 }
 
-func (te *TaskEdit) Delete(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
+func (te *TaskEdit) Delete(ctx context.Context, _ *bot.Bot, _ int64) (tgwf.Handler, error) {
 	userID, err := UserIDFromCtx(ctx)
 	if err != nil {
 		return nil, err
@@ -200,6 +203,7 @@ func (te *TaskEdit) SetText(_ context.Context, _ *bot.Bot, update *models.Update
 		return nil, err
 	}
 	te.text = message.Text
+
 	return te.save, nil
 }
 
@@ -213,8 +217,8 @@ func (te *TaskEdit) save(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Ha
 		ID:       te.id,
 		UserID:   userID,
 		Text:     te.text,
-		Done:     false,
 		Archived: false,
+		Periodic: false,
 	})
 	if err != nil {
 		return nil, err

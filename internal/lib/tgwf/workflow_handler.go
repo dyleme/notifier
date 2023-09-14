@@ -66,6 +66,7 @@ func (wh *WorkflowHandler) Start(ctx context.Context, chatID int64, action Actio
 
 	wh.lastActions.StoreDefDur(chatID, handler)
 	log.Ctx(ctx).Debug("store", "type", fmt.Sprintf("%T", handler))
+
 	return nil
 }
 
@@ -78,6 +79,7 @@ func (wh *WorkflowHandler) handleAction(ctx context.Context, handler Handler, up
 		if wh.defaultAction == nil {
 			wh.lastActions.Delete(chatID)
 			log.Ctx(ctx).Debug("delete", "chatID", chatID)
+
 			return nil
 		}
 
@@ -92,7 +94,7 @@ func (wh *WorkflowHandler) handleAction(ctx context.Context, handler Handler, up
 	return nil
 }
 
-func (wh *WorkflowHandler) ForgotForChat(ctx context.Context, chatID int64) {
+func (wh *WorkflowHandler) ForgotForChat(_ context.Context, chatID int64) {
 	wh.lastActions.Delete(chatID)
 }
 
@@ -115,5 +117,6 @@ func (wh *WorkflowHandler) chatID(update *models.Update) (int64, error) {
 			return update.CallbackQuery.Message.Chat.ID, nil
 		}
 	}
+
 	return 0, fmt.Errorf("no chat id")
 }

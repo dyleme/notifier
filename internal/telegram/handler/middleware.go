@@ -15,18 +15,21 @@ func (th *TelegramHandler) UserIDMiddleware(next bot.HandlerFunc) bot.HandlerFun
 		chatID, err := th.chatID(update)
 		if err != nil {
 			th.handleError(ctx, 0, err)
+
 			return
 		}
 
 		tgUserID, err := th.tgUserID(update)
 		if err != nil {
 			th.handleError(ctx, chatID, err)
+
 			return
 		}
 
-		userID, err := th.userRepo.GetID(ctx, int(tgUserID), int(chatID))
+		userID, err := th.userRepo.GetID(ctx, int(tgUserID))
 		if err != nil {
 			th.handleError(ctx, chatID, err)
+
 			return
 		}
 
@@ -40,9 +43,7 @@ type ctxKey string
 
 const userIDCtxKey ctxKey = "userID"
 
-var (
-	ErrNoUserIDInCtx = errors.New("no user id in context")
-)
+var ErrNoUserIDInCtx = errors.New("no user id in context")
 
 func UserIDFromCtx(ctx context.Context) (int, error) {
 	userID, ok := ctx.Value(userIDCtxKey).(int)

@@ -24,5 +24,6 @@ type Config struct {
 
 func New(_ context.Context, repo Repository, notifier Notifier, cfg Config) *Service {
 	s := &Service{repo: repo, notifier: notifier, checkTaskPeriod: cfg.CheckTasksPeriod}
+
 	return s
 }

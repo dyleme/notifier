@@ -1,7 +1,6 @@
 package responses
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,7 +11,7 @@ import (
 )
 
 type errorResponse struct {
-	Err string `json:"error_message"`
+	ErrorMessage string `json:"error_message"`
 }
 
 var errServer = errors.New("server error")
@@ -48,9 +47,8 @@ func Error(w http.ResponseWriter, statusCode int, err error) {
 	(w).Header().Set("X-Content-Type-Options", "nosniff")
 
 	js, err := json.Marshal(errorResponse{err.Error()})
-
 	if err != nil {
-		log.Ctx(context.TODO()).Error(err.Error())
+		log.Default().Error(err.Error())
 		statusCode = http.StatusInternalServerError
 	}
 
@@ -63,6 +61,7 @@ func JSON(w http.ResponseWriter, statusCode int, obj any) {
 	js, err := json.Marshal(obj)
 	if err != nil {
 		Error(w, http.StatusInternalServerError, err)
+
 		return
 	}
 

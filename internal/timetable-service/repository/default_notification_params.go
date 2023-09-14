@@ -28,6 +28,7 @@ func (nr *NotificationParamsRepository) Get(ctx context.Context, userID int) (do
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domains.NotificationParams{}, fmt.Errorf(op, serverrors.NewNotFoundError(err, "default notification params"))
 		}
+
 		return domains.NotificationParams{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 

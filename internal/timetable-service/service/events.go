@@ -36,9 +36,9 @@ func (s *Service) CreateEvent(ctx context.Context, event domains.Event) (domains
 
 		return nil
 	})
-
 	if err != nil {
 		logError(ctx, fmt.Errorf(op, err))
+
 		return domains.Event{}, err
 	}
 
@@ -54,9 +54,6 @@ func (s *Service) AddTaskToEvent(ctx context.Context, userID, taskID int, start 
 		if err != nil {
 			return err
 		}
-		if !task.CanUse() {
-			return serverrors.NewBusinessLogicError("task is already used")
-		}
 
 		event = domains.EventFromTask(task, start, description)
 		event, err = r.Events().Add(ctx, event)
@@ -64,18 +61,12 @@ func (s *Service) AddTaskToEvent(ctx context.Context, userID, taskID int, start 
 			return err
 		}
 
-		updatedTask := task.UsedTask()
-		err = r.Tasks().Update(ctx, updatedTask)
-		if err != nil {
-			return err
-		}
-
 		return nil
 	})
-
 	if err != nil {
 		err = fmt.Errorf(op, err)
 		logError(ctx, err)
+
 		return domains.Event{}, err
 	}
 
@@ -87,6 +78,7 @@ func (s *Service) GetEvent(ctx context.Context, userID, eventID int) (domains.Ev
 	tt, err := s.repo.Events().Get(ctx, eventID, userID)
 	if err != nil {
 		logError(ctx, fmt.Errorf(op, err))
+
 		return domains.Event{}, err
 	}
 
@@ -98,6 +90,7 @@ func (s *Service) ListEvents(ctx context.Context, userID int, listParams ListPar
 	tts, err := s.repo.Events().List(ctx, userID, listParams)
 	if err != nil {
 		logError(ctx, fmt.Errorf(op, err))
+
 		return nil, err
 	}
 
@@ -109,6 +102,7 @@ func (s *Service) ListEventsInPeriod(ctx context.Context, userID int, from, to t
 	tts, err := s.repo.Events().ListInPeriod(ctx, userID, from, to, listParams)
 	if err != nil {
 		logError(ctx, fmt.Errorf(op, err))
+
 		return nil, err
 	}
 
@@ -152,6 +146,7 @@ func (s *Service) UpdateEvent(ctx context.Context, params UpdateEventParams) (do
 	})
 	if err != nil {
 		logError(ctx, fmt.Errorf(op, err))
+
 		return domains.Event{}, err
 	}
 
@@ -163,6 +158,7 @@ func (s *Service) DeleteEvent(ctx context.Context, userID, eventID int) error {
 	err := s.repo.Events().Delete(ctx, eventID, userID)
 	if err != nil {
 		logError(ctx, fmt.Errorf(op, err))
+
 		return err
 	}
 

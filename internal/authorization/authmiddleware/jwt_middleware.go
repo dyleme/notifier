@@ -20,9 +20,7 @@ const (
 	bearerToken authorizationToken = "Bearer"
 )
 
-var (
-	ErrNoUserIDInCtx = errors.New("no user id in context")
-)
+var ErrNoUserIDInCtx = errors.New("no user id in context")
 
 type JWTMiddleware struct {
 	gen *jwt.Gen
@@ -44,12 +42,14 @@ func (am *JWTMiddleware) Handle(next http.Handler) http.Handler {
 		authJWT, err := getAuthorizationTokens(r, bearerToken)
 		if err != nil {
 			responses.Error(w, http.StatusUnauthorized, fmt.Errorf("jwt token: %w", err))
+
 			return
 		}
 
 		userID, err := am.gen.ParseToken(authJWT)
 		if err != nil {
 			responses.Error(w, http.StatusUnauthorized, fmt.Errorf("middleware: %w", err))
+
 			return
 		}
 

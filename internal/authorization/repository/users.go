@@ -25,13 +25,8 @@ func (r *Repository) Create(ctx context.Context, input service.CreateUserInput) 
 		TgID:         pgxconv.Int4(input.TGID),
 	})
 	if err != nil {
-		var pgerr *pgconn.PgError
-		if errors.As(err, &pgerr) {
-			if pgerr.Code == pgerrcode.UniqueViolation {
-				if strings.Contains(pgerr.Detail, "email") {
-					return models.User{}, fmt.Errorf(op, serverrors.NewUniqueError("email", input.Email))
-				}
-			}
+		if intersection, isUnique := uniqueError(err); isUnique {
+			return models.User{}, fmt.Errorf(op, serverrors.NewUniqueError(intersection, input.Email))
 		}
 
 		return models.User{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
@@ -45,6 +40,21 @@ func (r *Repository) Create(ctx context.Context, input service.CreateUserInput) 
 	}, nil
 }
 
+func uniqueError(err error) (string, bool) {
+	var pgerr *pgconn.PgError
+	if errors.As(err, &pgerr) {
+		if pgerr.Code == pgerrcode.UniqueViolation {
+			if strings.Contains(pgerr.Detail, "email") {
+				return "email", true
+			}
+
+			return "", true
+		}
+	}
+
+	return "", false
+}
+
 func (r *Repository) Get(ctx context.Context, email string, tgID *int) (models.User, error) {
 	out, err := r.q.FindUser(ctx, queries.FindUserParams{
 		Email: pgxconv.Text(email),
@@ -54,6 +64,7 @@ func (r *Repository) Get(ctx context.Context, email string, tgID *int) (models.U
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.User{}, serverrors.NewNotFoundError(err, "user") //nolint:exhaustruct // return error
 		}
+
 		return models.User{}, err
 	}
 

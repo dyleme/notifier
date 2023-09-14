@@ -23,6 +23,7 @@ type HashGen struct{}
 // GeneratePasswordHash generates hash from the password.
 func (h *HashGen) GeneratePasswordHash(password string) string {
 	hash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.MinCost)
+
 	return string(hash)
 }
 
@@ -38,7 +39,6 @@ type CreateUserInput struct {
 	Email    string
 	Password string
 	TGID     *int
-	TGChatID *int
 }
 
 type ValidateUserInput struct {

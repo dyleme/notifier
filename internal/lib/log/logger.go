@@ -28,3 +28,7 @@ func Err(err error) slog.Attr {
 		Value: slog.StringValue(err.Error()),
 	}
 }
+
+func Default() *slog.Logger {
+	return slog.Default()
+}

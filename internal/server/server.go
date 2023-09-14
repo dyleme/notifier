@@ -42,7 +42,6 @@ func New(handler http.Handler, cfg *Config) Server {
 // After Run method Server starts to listen port and response to  the reqeusts.
 // Run function provide the abitility of the gracefule shutdown.
 func (s *Server) Run(ctx context.Context) error {
-
 	servError := make(chan error, 1)
 
 	go func() {
@@ -55,6 +54,7 @@ func (s *Server) Run(ctx context.Context) error {
 	select {
 	case err := <-servError:
 		log.Ctx(ctx).Error("server error", log.Err(err))
+
 		return err
 	case <-ctx.Done():
 		gsStart := time.Now()

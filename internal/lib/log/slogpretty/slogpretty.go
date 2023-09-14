@@ -68,21 +68,6 @@ func (h *PrettyHandler) Handle(_ context.Context, r slog.Record) error {
 			delete(fields, errField)
 		}
 	}
-	// var errMsg string
-	// var callPathMsg string
-	// if val, ok := fields[errField]; ok {
-	// 	errMsg, ok = val.(string)
-	// 	if ok {
-	// 		delete(fields, errField)
-	// 	}
-	// 	callPath := strings.Split(errMsg, ": ")
-	// 	if len(callPath) > 1 {
-	// 		errMsg = callPath[len(callPath)-1]
-	// 		callPath = callPath[:len(callPath)-1]
-	// 		callPathMsg = fmt.Sprintf("\n%v", callPath)
-	// 	}
-	// 	errMsg = "\n" + errMsg
-	// }
 
 	var fieldsMsg string
 	if len(fields) > 0 {
