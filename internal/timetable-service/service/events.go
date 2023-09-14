@@ -11,10 +11,10 @@ import (
 
 type EventRepository interface {
 	Add(context.Context, domains.Event) (domains.Event, error)
-	List(ctx context.Context, userID int) ([]domains.Event, error)
+	List(ctx context.Context, userID int, params ListParams) ([]domains.Event, error)
 	Update(ctx context.Context, event domains.Event) (domains.Event, error)
 	Delete(ctx context.Context, eventID, userID int) error
-	ListInPeriod(ctx context.Context, userID int, from, to time.Time) ([]domains.Event, error)
+	ListInPeriod(ctx context.Context, userID int, from, to time.Time, params ListParams) ([]domains.Event, error)
 	Get(ctx context.Context, eventID, userID int) (domains.Event, error)
 	GetNotNotified(ctx context.Context) ([]domains.Event, error)
 	MarkNotified(ctx context.Context, ids []int) error
@@ -93,9 +93,9 @@ func (s *Service) GetEvent(ctx context.Context, userID, eventID int) (domains.Ev
 	return tt, nil
 }
 
-func (s *Service) ListEvents(ctx context.Context, userID int) ([]domains.Event, error) {
+func (s *Service) ListEvents(ctx context.Context, userID int, listParams ListParams) ([]domains.Event, error) {
 	op := "Service.ListEvents: %w"
-	tts, err := s.repo.Events().List(ctx, userID)
+	tts, err := s.repo.Events().List(ctx, userID, listParams)
 	if err != nil {
 		logError(ctx, fmt.Errorf(op, err))
 		return nil, err
@@ -104,9 +104,9 @@ func (s *Service) ListEvents(ctx context.Context, userID int) ([]domains.Event, 
 	return tts, nil
 }
 
-func (s *Service) ListEventsInPeriod(ctx context.Context, userID int, from, to time.Time) ([]domains.Event, error) {
+func (s *Service) ListEventsInPeriod(ctx context.Context, userID int, from, to time.Time, listParams ListParams) ([]domains.Event, error) {
 	op := "Service.ListEventsInPeriod: %w"
-	tts, err := s.repo.Events().ListInPeriod(ctx, userID, from, to)
+	tts, err := s.repo.Events().ListInPeriod(ctx, userID, from, to, listParams)
 	if err != nil {
 		logError(ctx, fmt.Errorf(op, err))
 		return nil, err

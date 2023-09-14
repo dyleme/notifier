@@ -3,6 +3,7 @@ package tgwf
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
@@ -37,6 +38,14 @@ func (ma *MenuAction) Btn(text string, action Action) *MenuAction {
 
 func (ma *MenuAction) Row() *MenuAction {
 	ma.Fields = append(ma.Fields, []MenuActionField{})
+	return ma
+}
+
+func AddSliceToMenu[T any](ma *MenuAction, ts []T, btnText func(t T) string, action Action) *MenuAction {
+	for i, t := range ts {
+		text := strconv.Itoa(i) + "." + btnText(t)
+		ma = ma.Row().Btn(text, action)
+	}
 	return ma
 }
 
@@ -79,10 +88,6 @@ func (ma *MenuAction) Post(ctx context.Context, b *bot.Bot, update *models.Updat
 	for i := 0; i < len(ma.Fields); i++ {
 		for j := 0; j < len(ma.Fields[i]); j++ {
 			if ma.Fields[i][j].Text == message.Text {
-				_, err := b.SendMessage(ctx, &bot.SendMessageParams{ChatID: message.Chat.ID, Text: fmt.Sprintf("Selected %q", message.Text)})
-				if err != nil {
-					return nil, err
-				}
 				return ma.Fields[i][j].NextAction, nil
 			}
 		}

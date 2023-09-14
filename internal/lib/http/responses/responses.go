@@ -20,25 +20,25 @@ var errServer = errors.New("server error")
 func KnownError(w http.ResponseWriter, err error) {
 	unwrappedErr := errors.Unwrap(err)
 	if unwrappedErr != nil {
-		err = unwrappedErr
+		unwrappedErr = err
 	}
 
-	if _, ok := err.(serverrors.InternalError); ok { //nolint:errorlint //error is already unwrapped
+	if _, ok := unwrappedErr.(serverrors.InternalError); ok { //nolint:errorlint //error is already unwrapped
 		Error(w, http.StatusInternalServerError, errServer)
 	} else {
-		switch err.(type) { //nolint:errorlint //error is already unwrapped
+		switch unwrappedErr.(type) { //nolint:errorlint //error is already unwrapped
 		case serverrors.NotFoundError:
-			Error(w, http.StatusNotFound, err)
+			Error(w, http.StatusNotFound, unwrappedErr)
 		case serverrors.NoDeletionsError:
-			Error(w, http.StatusUnprocessableEntity, err)
+			Error(w, http.StatusUnprocessableEntity, unwrappedErr)
 		case serverrors.UniqueError:
-			Error(w, http.StatusConflict, err)
+			Error(w, http.StatusConflict, unwrappedErr)
 		case serverrors.InvalidAuthError:
-			Error(w, http.StatusUnauthorized, err)
+			Error(w, http.StatusUnauthorized, unwrappedErr)
 		case serverrors.BusinessLogicError:
-			Error(w, http.StatusUnprocessableEntity, err)
+			Error(w, http.StatusUnprocessableEntity, unwrappedErr)
 		default:
-			Error(w, http.StatusInternalServerError, err)
+			Error(w, http.StatusInternalServerError, unwrappedErr)
 		}
 	}
 }

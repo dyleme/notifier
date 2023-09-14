@@ -54,9 +54,13 @@ func (tr *EventRepository) Add(ctx context.Context, tt domains.Event) (domains.E
 	return dtoEvent(addedEvent)
 }
 
-func (tr *EventRepository) List(ctx context.Context, userID int) ([]domains.Event, error) {
+func (tr *EventRepository) List(ctx context.Context, userID int, listParams service.ListParams) ([]domains.Event, error) {
 	op := fmt.Sprintf("list timetable tasks userID{%v} %%w", userID)
-	tt, err := tr.q.ListEvents(ctx, int32(userID))
+	tt, err := tr.q.ListEvents(ctx, queries.ListEventsParams{
+		UserID: int32(userID),
+		Off:    int32(listParams.Offset),
+		Lim:    int32(listParams.Limit),
+	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
@@ -84,12 +88,14 @@ func (tr *EventRepository) Delete(ctx context.Context, eventID, userID int) erro
 	return nil
 }
 
-func (tr *EventRepository) ListInPeriod(ctx context.Context, userID int, from, to time.Time) ([]domains.Event, error) {
+func (tr *EventRepository) ListInPeriod(ctx context.Context, userID int, from, to time.Time, params service.ListParams) ([]domains.Event, error) {
 	op := fmt.Sprintf("list timetable tasks userID{%v} from{%v} to{%v}: %%w", userID, from, to)
 	tts, err := tr.q.GetEventsInPeriod(ctx, queries.GetEventsInPeriodParams{
 		UserID:   int32(userID),
 		FromTime: pgxconv.Timestamp(from),
 		ToTime:   pgxconv.Timestamp(to),
+		Off:      int32(params.Offset),
+		Lim:      int32(params.Limit),
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

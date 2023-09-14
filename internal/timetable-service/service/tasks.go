@@ -12,7 +12,7 @@ type TaskRepository interface {
 	Get(ctx context.Context, taskID, userID int) (domains.Task, error)
 	Delete(ctx context.Context, taskID, userID int) error
 	Update(ctx context.Context, task domains.Task) error
-	List(ctx context.Context, userID int) ([]domains.Task, error)
+	List(ctx context.Context, userID int, listParams ListParams) ([]domains.Task, error)
 }
 
 func (s *Service) AddTask(ctx context.Context, task domains.Task) (domains.Task, error) {
@@ -48,9 +48,9 @@ func (s *Service) UpdateTask(ctx context.Context, task domains.Task) error {
 	return nil
 }
 
-func (s *Service) ListUserTasks(ctx context.Context, userID int) ([]domains.Task, error) {
+func (s *Service) ListUserTasks(ctx context.Context, userID int, listParams ListParams) ([]domains.Task, error) {
 	op := "Service.ListUserTasks: %w"
-	tasks, err := s.repo.Tasks().List(ctx, userID)
+	tasks, err := s.repo.Tasks().List(ctx, userID, listParams)
 	if err != nil {
 		logError(ctx, fmt.Errorf(op, err))
 		return nil, err

@@ -62,7 +62,10 @@ func (l *ListTasks) list(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Ha
 		return nil, fmt.Errorf(op, err)
 	}
 
-	tasks, err := l.serv.ListUserTasks(ctx, userID)
+	tasks, err := l.serv.ListUserTasks(ctx, userID, service.ListParams{
+		Offset: 0,
+		Limit:  100,
+	})
 	if err != nil {
 		return nil, fmt.Errorf(op, err)
 	}

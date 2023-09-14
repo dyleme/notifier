@@ -22,10 +22,29 @@ WHERE id = @id
 -- name: ListEvents :many
 SELECT *
 FROM events
+WHERE user_id = @user_id
+ORDER BY id DESC
+LIMIT @lim
+OFFSET @off;
+
+-- name: CountListEvents :one
+SELECT count(*)
+FROM events
 WHERE user_id = @user_id;
+
 
 -- name: GetEventsInPeriod :many
 SELECT *
+FROM events
+WHERE user_id = @user_id
+  AND start BETWEEN @from_time AND @to_time
+ORDER BY id DESC
+LIMIT @lim
+OFFSET @off;
+
+
+-- name: CountGetEventsInPeriod :one
+SELECT count(*)
 FROM events
 WHERE user_id = @user_id
   AND start BETWEEN @from_time AND @to_time;

@@ -8,7 +8,7 @@ package queries
 import (
 	"context"
 
-	models "github.com/Dyleme/Notifier/internal/timetable-service/domains"
+	domains "github.com/Dyleme/Notifier/internal/timetable-service/domains"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -25,7 +25,7 @@ VALUES ($1,
         $4,
         $5,
         $6)
-RETURNING id, created_at, text, description, user_id, start, finish, done, notification
+RETURNING id, created_at, text, description, user_id, start, done, notification
 `
 
 type AddEventParams struct {
@@ -34,7 +34,7 @@ type AddEventParams struct {
 	Start        pgtype.Timestamp
 	Description  pgtype.Text
 	Done         bool
-	Notification models.Notification
+	Notification domains.Notification
 }
 
 func (q *Queries) AddEvent(ctx context.Context, arg AddEventParams) (Event, error) {
@@ -54,11 +54,43 @@ func (q *Queries) AddEvent(ctx context.Context, arg AddEventParams) (Event, erro
 		&i.Description,
 		&i.UserID,
 		&i.Start,
-		&i.Finish,
 		&i.Done,
 		&i.Notification,
 	)
 	return i, err
+}
+
+const countGetEventsInPeriod = `-- name: CountGetEventsInPeriod :one
+SELECT count(*)
+FROM events
+WHERE user_id = $1
+  AND start BETWEEN $2 AND $3
+`
+
+type CountGetEventsInPeriodParams struct {
+	UserID   int32
+	FromTime pgtype.Timestamp
+	ToTime   pgtype.Timestamp
+}
+
+func (q *Queries) CountGetEventsInPeriod(ctx context.Context, arg CountGetEventsInPeriodParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countGetEventsInPeriod, arg.UserID, arg.FromTime, arg.ToTime)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countListEvents = `-- name: CountListEvents :one
+SELECT count(*)
+FROM events
+WHERE user_id = $1
+`
+
+func (q *Queries) CountListEvents(ctx context.Context, userID int32) (int64, error) {
+	row := q.db.QueryRow(ctx, countListEvents, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const delayEvent = `-- name: DelayEvent :exec
@@ -100,7 +132,7 @@ func (q *Queries) DeleteEvent(ctx context.Context, arg DeleteEventParams) (int64
 }
 
 const getEvent = `-- name: GetEvent :one
-SELECT id, created_at, text, description, user_id, start, finish, done, notification
+SELECT id, created_at, text, description, user_id, start, done, notification
 FROM events
 WHERE id = $1
   AND user_id = $2
@@ -121,7 +153,6 @@ func (q *Queries) GetEvent(ctx context.Context, arg GetEventParams) (Event, erro
 		&i.Description,
 		&i.UserID,
 		&i.Start,
-		&i.Finish,
 		&i.Done,
 		&i.Notification,
 	)
@@ -129,7 +160,7 @@ func (q *Queries) GetEvent(ctx context.Context, arg GetEventParams) (Event, erro
 }
 
 const getEventReadyTasks = `-- name: GetEventReadyTasks :many
-SELECT id, created_at, text, description, user_id, start, finish, done, notification
+SELECT id, created_at, text, description, user_id, start, done, notification
 FROM events AS t
 WHERE t.start <= NOW()
   AND t.done = FALSE
@@ -156,7 +187,6 @@ func (q *Queries) GetEventReadyTasks(ctx context.Context) ([]Event, error) {
 			&i.Description,
 			&i.UserID,
 			&i.Start,
-			&i.Finish,
 			&i.Done,
 			&i.Notification,
 		); err != nil {
@@ -171,20 +201,31 @@ func (q *Queries) GetEventReadyTasks(ctx context.Context) ([]Event, error) {
 }
 
 const getEventsInPeriod = `-- name: GetEventsInPeriod :many
-SELECT id, created_at, text, description, user_id, start, finish, done, notification
+SELECT id, created_at, text, description, user_id, start, done, notification
 FROM events
 WHERE user_id = $1
   AND start BETWEEN $2 AND $3
+ORDER BY id DESC
+LIMIT $5
+OFFSET $4
 `
 
 type GetEventsInPeriodParams struct {
 	UserID   int32
 	FromTime pgtype.Timestamp
 	ToTime   pgtype.Timestamp
+	Off      int32
+	Lim      int32
 }
 
 func (q *Queries) GetEventsInPeriod(ctx context.Context, arg GetEventsInPeriodParams) ([]Event, error) {
-	rows, err := q.db.Query(ctx, getEventsInPeriod, arg.UserID, arg.FromTime, arg.ToTime)
+	rows, err := q.db.Query(ctx, getEventsInPeriod,
+		arg.UserID,
+		arg.FromTime,
+		arg.ToTime,
+		arg.Off,
+		arg.Lim,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +240,6 @@ func (q *Queries) GetEventsInPeriod(ctx context.Context, arg GetEventsInPeriodPa
 			&i.Description,
 			&i.UserID,
 			&i.Start,
-			&i.Finish,
 			&i.Done,
 			&i.Notification,
 		); err != nil {
@@ -214,13 +254,22 @@ func (q *Queries) GetEventsInPeriod(ctx context.Context, arg GetEventsInPeriodPa
 }
 
 const listEvents = `-- name: ListEvents :many
-SELECT id, created_at, text, description, user_id, start, finish, done, notification
+SELECT id, created_at, text, description, user_id, start, done, notification
 FROM events
 WHERE user_id = $1
+ORDER BY id DESC
+LIMIT $3
+OFFSET $2
 `
 
-func (q *Queries) ListEvents(ctx context.Context, userID int32) ([]Event, error) {
-	rows, err := q.db.Query(ctx, listEvents, userID)
+type ListEventsParams struct {
+	UserID int32
+	Off    int32
+	Lim    int32
+}
+
+func (q *Queries) ListEvents(ctx context.Context, arg ListEventsParams) ([]Event, error) {
+	rows, err := q.db.Query(ctx, listEvents, arg.UserID, arg.Off, arg.Lim)
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +284,6 @@ func (q *Queries) ListEvents(ctx context.Context, userID int32) ([]Event, error)
 			&i.Description,
 			&i.UserID,
 			&i.Start,
-			&i.Finish,
 			&i.Done,
 			&i.Notification,
 		); err != nil {
@@ -268,7 +316,7 @@ SET start       = $1,
     done        = $4
 WHERE id = $5
   AND user_id = $6
-RETURNING id, created_at, text, description, user_id, start, finish, done, notification
+RETURNING id, created_at, text, description, user_id, start, done, notification
 `
 
 type UpdateEventParams struct {
@@ -297,7 +345,6 @@ func (q *Queries) UpdateEvent(ctx context.Context, arg UpdateEventParams) (Event
 		&i.Description,
 		&i.UserID,
 		&i.Start,
-		&i.Finish,
 		&i.Done,
 		&i.Notification,
 	)
@@ -318,9 +365,9 @@ type UpdateNotificationParamsParams struct {
 	UserID int32
 }
 
-func (q *Queries) UpdateNotificationParams(ctx context.Context, arg UpdateNotificationParamsParams) (models.Notification, error) {
+func (q *Queries) UpdateNotificationParams(ctx context.Context, arg UpdateNotificationParamsParams) (domains.Notification, error) {
 	row := q.db.QueryRow(ctx, updateNotificationParams, arg.Params, arg.ID, arg.UserID)
-	var notification models.Notification
+	var notification domains.Notification
 	err := row.Scan(&notification)
 	return notification, err
 }

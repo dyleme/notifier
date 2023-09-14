@@ -8,7 +8,7 @@ package queries
 import (
 	"context"
 
-	models "github.com/Dyleme/Notifier/internal/timetable-service/domains"
+	domains "github.com/Dyleme/Notifier/internal/timetable-service/domains"
 )
 
 const getDefaultUserNotificationsParams = `-- name: GetDefaultUserNotificationsParams :one
@@ -38,7 +38,7 @@ RETURNING user_id, created_at, params
 
 type SetDefaultUserNotificationParamsParams struct {
 	UserID int32
-	Params models.NotificationParams
+	Params domains.NotificationParams
 }
 
 func (q *Queries) SetDefaultUserNotificationParams(ctx context.Context, arg SetDefaultUserNotificationParamsParams) (DefaultUserNotificationParam, error) {

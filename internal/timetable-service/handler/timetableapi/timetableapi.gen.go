@@ -95,10 +95,31 @@ type UpdateTaskReqBody struct {
 	RequiredTime int `json:"requiredTime"`
 }
 
+// LimitParam defines model for limitParam.
+type LimitParam = int32
+
+// OffsetParam defines model for offsetParam.
+type OffsetParam = int32
+
 // ListEventsParams defines parameters for ListEvents.
 type ListEventsParams struct {
 	From *time.Time `form:"from,omitempty" json:"from,omitempty"`
 	To   *time.Time `form:"to,omitempty" json:"to,omitempty"`
+
+	// Limit Limits the number of returned results
+	Limit *LimitParam `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Offset from which start returned results
+	Offset *OffsetParam `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
+// ListTasksParams defines parameters for ListTasks.
+type ListTasksParams struct {
+	// Limit Limits the number of returned results
+	Limit *LimitParam `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Offset from which start returned results
+	Offset *OffsetParam `form:"offset,omitempty" json:"offset,omitempty"`
 }
 
 // CreateEventJSONRequestBody defines body for CreateEvent for application/json ContentType.
@@ -153,7 +174,7 @@ type ServerInterface interface {
 	SetDefaultNotificationParams(w http.ResponseWriter, r *http.Request)
 	// List user tasks
 	// (GET /task)
-	ListTasks(w http.ResponseWriter, r *http.Request)
+	ListTasks(w http.ResponseWriter, r *http.Request, params ListTasksParams)
 	// Add a new task
 	// (POST /task)
 	AddTask(w http.ResponseWriter, r *http.Request)
@@ -198,6 +219,22 @@ func (siw *ServerInterfaceWrapper) ListEvents(w http.ResponseWriter, r *http.Req
 	err = runtime.BindQueryParameter("form", true, false, "to", r.URL.Query(), &params.To)
 	if err != nil {
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "limit", r.URL.Query(), &params.Limit)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "offset", r.URL.Query(), &params.Offset)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
 		return
 	}
 
@@ -407,10 +444,31 @@ func (siw *ServerInterfaceWrapper) SetDefaultNotificationParams(w http.ResponseW
 func (siw *ServerInterfaceWrapper) ListTasks(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
+	var err error
+
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListTasksParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "limit", r.URL.Query(), &params.Limit)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "offset", r.URL.Query(), &params.Offset)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		return
+	}
+
 	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListTasks(w, r)
+		siw.Handler.ListTasks(w, r, params)
 	})
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -423,8 +481,6 @@ func (siw *ServerInterfaceWrapper) ListTasks(w http.ResponseWriter, r *http.Requ
 // AddTask operation middleware
 func (siw *ServerInterfaceWrapper) AddTask(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.AddTask(w, r)

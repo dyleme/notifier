@@ -20,9 +20,10 @@ var ErrCantParseMessage = errors.New("cant parse message")
 func (th *TelegramHandler) EventsMenu() tgwf.Action {
 	listEvents := ListEvents{serv: th.serv}
 	createEvents := EventCreation{serv: th.serv}
-	menu := tgwf.NewMenuAction("Tasks action").
-		Row().Btn("List tasks", listEvents.list).
-		Row().Btn("Create task", createEvents.MessageSetText)
+	menu := tgwf.NewMenuAction("Events actions").
+		Row().Btn("List events", listEvents.list).
+		Row().Btn("Create event", createEvents.MessageSetText).
+		Row().Btn("Create event from task", createEvents.MessageSetText)
 
 	return menu.Show
 }
@@ -32,14 +33,17 @@ type ListEvents struct {
 }
 
 func (l *ListEvents) list(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
-	op := "TelegramHandler.listTasks: %w"
+	op := "TelegramHandler.listEvents: %w"
 
 	userID, err := UserIDFromCtx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf(op, err)
 	}
 
-	tasks, err := l.serv.ListEvents(ctx, userID)
+	tasks, err := l.serv.ListEvents(ctx, userID, service.ListParams{
+		Offset: 0,
+		Limit:  100,
+	})
 	if err != nil {
 		return nil, fmt.Errorf(op, err)
 	}
@@ -57,7 +61,7 @@ func (l *ListEvents) list(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.H
 		return nil, nil
 	}
 
-	kb := tgwf.NewMenuAction("Tasks")
+	kb := tgwf.NewMenuAction("Events")
 	for _, t := range tasks {
 		kb.Row().Btn(t.Text, nil)
 	}
@@ -73,11 +77,50 @@ type EventCreation struct {
 	time         time.Time
 }
 
+func (ec *EventCreation) MessageChooseTask(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
+	op := "SetTextAction.Show: %w"
+
+	userID, err := UserIDFromCtx(ctx)
+	if err != nil {
+		return nil, fmt.Errorf(op, err)
+	}
+
+	tasks, err := ec.serv.ListUserTasks(ctx, userID, service.ListParams{
+		Offset: 0,
+		Limit:  100,
+	})
+
+	menu := tgwf.NewMenuAction("Tasks")
+	tgwf.AddSliceToMenu(menu, tasks, func(t domains.Task) string {
+		return t.Text
+	}, nil)
+	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID: chatID,
+		Text:   "Choose task",
+	})
+	if err != nil {
+		return nil, fmt.Errorf(op, err)
+	}
+
+	return menu.Show(ctx, b, chatID)
+
+	return ec.SetText, nil
+}
+
+func (ec *EventCreation) SetChosenTask(_ context.Context, _ *bot.Bot, update *models.Update) (tgwf.Action, error) {
+	message, err := tgwf.GetMessage(update)
+	if err != nil {
+		return nil, err
+	}
+	ec.text = message.Text
+	return ec.MessageSetStartDay, nil
+}
+
 func (ec *EventCreation) MessageSetText(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
 	op := "SetTextAction.Show: %w"
 	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID: chatID,
-		Text:   "Enter task text",
+		Text:   "Enter event text",
 	})
 	if err != nil {
 		return nil, fmt.Errorf(op, err)
@@ -249,7 +292,7 @@ func (ec *EventCreation) create(ctx context.Context, b *bot.Bot, chatID int64) (
 
 	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID: chatID,
-		Text:   "Task successfully created",
+		Text:   "Event successfully created",
 	})
 	if err != nil {
 		return nil, fmt.Errorf(op, err)

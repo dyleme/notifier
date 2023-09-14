@@ -43,6 +43,20 @@ func (q *Queries) AddTask(ctx context.Context, arg AddTaskParams) (Task, error) 
 	return i, err
 }
 
+const countListTasks = `-- name: CountListTasks :one
+SELECT count(*)
+FROM tasks
+WHERE user_id = $1
+  AND archived = FALSE
+`
+
+func (q *Queries) CountListTasks(ctx context.Context, userID int32) (int64, error) {
+	row := q.db.QueryRow(ctx, countListTasks, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const deleteTask = `-- name: DeleteTask :execrows
 DELETE
 FROM tasks
@@ -91,15 +105,24 @@ func (q *Queries) GetTask(ctx context.Context, arg GetTaskParams) (Task, error) 
 	return i, err
 }
 
-const listUserTasks = `-- name: ListUserTasks :many
+const listTasks = `-- name: ListTasks :many
 SELECT id, created_at, message, user_id, required_time, periodic, done, archived
 FROM tasks
 WHERE user_id = $1
   AND archived = FALSE
+ORDER BY id DESC
+LIMIT $3
+OFFSET $2
 `
 
-func (q *Queries) ListUserTasks(ctx context.Context, userID int32) ([]Task, error) {
-	rows, err := q.db.Query(ctx, listUserTasks, userID)
+type ListTasksParams struct {
+	UserID int32
+	Off    int32
+	Lim    int32
+}
+
+func (q *Queries) ListTasks(ctx context.Context, arg ListTasksParams) ([]Task, error) {
+	rows, err := q.db.Query(ctx, listTasks, arg.UserID, arg.Off, arg.Lim)
 	if err != nil {
 		return nil, err
 	}

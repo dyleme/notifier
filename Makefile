@@ -60,3 +60,12 @@ gen.api:
 lint:
 	@echo "----------- Lint project ----------------"
 	@$(LINTER) run
+
+
+.PHONY: docker.build
+docker.build:
+	docker build -t dyleme/schedudler .
+
+.PHONY: docker.push
+docker.push: docker.build
+	docker push dyleme/schedudler
