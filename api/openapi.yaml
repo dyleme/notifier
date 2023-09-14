@@ -89,7 +89,7 @@ paths:
       summary: Add a new task
       tags:
         - Tasks
-      security:
+      securityCount:
         - bearerAuth: []
       description: Add a task
       operationId: addTask
@@ -117,6 +117,9 @@ paths:
         - bearerAuth: []
       description: List tasks
       operationId: listTasks
+      parameters:
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/offsetParam"
       responses:
         '200':
           description: Successful operation
@@ -233,6 +236,8 @@ paths:
           schema:
             type: string
             format: date-time
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/offsetParam"
       responses:
         '200':
           description: Successful operation
@@ -429,6 +434,25 @@ paths:
 
 
 components:
+
+# define reusable parameters:
+  parameters:
+    limitParam:
+      name: limit
+      in: query
+      description: Limits the number of returned results
+      required: false
+      schema:
+        type: integer
+        format: int32
+    offsetParam:
+      name: offset
+      in: query
+      description: Offset from which start returned results
+      required: false
+      schema:
+        type: integer
+        format: int32
   schemas:
     RegistrationBody:
       required:

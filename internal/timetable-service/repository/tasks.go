@@ -84,9 +84,13 @@ func (tr *TaskRepository) Update(ctx context.Context, task domains.Task) error {
 	return nil
 }
 
-func (tr *TaskRepository) List(ctx context.Context, userID int) ([]domains.Task, error) {
+func (tr *TaskRepository) List(ctx context.Context, userID int, listParams service.ListParams) ([]domains.Task, error) {
 	op := fmt.Sprintf("list tasks userID{%v}: %%w", userID)
-	tasks, err := tr.q.ListUserTasks(ctx, int32(userID))
+	tasks, err := tr.q.ListTasks(ctx, queries.ListTasksParams{
+		UserID: int32(userID),
+		Off:    int32(listParams.Offset),
+		Lim:    int32(listParams.Limit),
+	})
 	if err != nil {
 		return nil, err
 	}

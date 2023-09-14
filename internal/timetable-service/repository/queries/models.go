@@ -5,14 +5,14 @@
 package queries
 
 import (
-	models "github.com/Dyleme/Notifier/internal/timetable-service/domains"
+	domains "github.com/Dyleme/Notifier/internal/timetable-service/domains"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type DefaultUserNotificationParam struct {
 	UserID    int32
 	CreatedAt pgtype.Timestamp
-	Params    models.NotificationParams
+	Params    domains.NotificationParams
 }
 
 type Event struct {
@@ -22,9 +22,8 @@ type Event struct {
 	Description  pgtype.Text
 	UserID       int32
 	Start        pgtype.Timestamp
-	Finish       pgtype.Timestamp
 	Done         bool
-	Notification models.Notification
+	Notification domains.Notification
 }
 
 type Task struct {

@@ -29,7 +29,9 @@ func (t EventHandler) ListEvents(w http.ResponseWriter, r *http.Request, params 
 		to = time.Now().Add(30 * 24 * time.Hour)
 	}
 
-	tasks, err := t.serv.ListEventsInPeriod(r.Context(), userID, from, to)
+	listParams := parseListParams(params.Offset, params.Limit)
+
+	tasks, err := t.serv.ListEventsInPeriod(r.Context(), userID, from, to, listParams)
 	if err != nil {
 		responses.KnownError(w, err)
 		return

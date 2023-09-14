@@ -3,6 +3,7 @@
 ALTER TABLE timetable_tasks RENAME TO events;
 ALTER TABLE events DROP CONSTRAINT fk_events_user;
 ALTER TABLE events DROP COLUMN task_id;
+ALTER TABLE events DROP COLUMN finish;
 -- +goose StatementEnd
 
 -- +goose Down

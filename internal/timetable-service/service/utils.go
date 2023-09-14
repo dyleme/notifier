@@ -14,3 +14,8 @@ func logError(ctx context.Context, err error) {
 		log.Ctx(ctx).Error("server error", log.Err(err))
 	}
 }
+
+type ListParams struct {
+	Offset int
+	Limit  int
+}

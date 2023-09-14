@@ -12,14 +12,16 @@ import (
 	"github.com/Dyleme/Notifier/internal/timetable-service/handler/timetableapi"
 )
 
-func (t EventHandler) ListTasks(w http.ResponseWriter, r *http.Request) {
+func (t EventHandler) ListTasks(w http.ResponseWriter, r *http.Request, params timetableapi.ListTasksParams) {
 	userID, err := authmiddleware.UserIDFromCtx(r.Context())
 	if err != nil {
 		responses.Error(w, http.StatusInternalServerError, err)
 		return
 	}
 
-	tasks, err := t.serv.ListUserTasks(r.Context(), userID)
+	listParams := parseListParams(params.Offset, params.Limit)
+
+	tasks, err := t.serv.ListUserTasks(r.Context(), userID, listParams)
 	if err != nil {
 		responses.KnownError(w, err)
 		return

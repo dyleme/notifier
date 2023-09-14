@@ -20,11 +20,11 @@ sql:
           overrides:
             - column: events.notification
               go_type:
-                import: "github.com/Dyleme/Notifier/internal/timetable-service/models"
-                package: "models"
+                import: "github.com/Dyleme/Notifier/internal/timetable-service/domains"
+                package: "domains"
                 type: Notification
             - column: default_user_notification_params.params
               go_type:
-                import: "github.com/Dyleme/Notifier/internal/timetable-service/models"
-                package: "models"
+                import: "github.com/Dyleme/Notifier/internal/timetable-service/domains"
+                package: "domains"
                 type: NotificationParams

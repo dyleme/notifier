@@ -59,7 +59,10 @@ func Load() (Config, error) {
 	var collectConfigs collectableConfig
 	err := cleanenv.ReadConfig(".env", &collectConfigs)
 	if err != nil {
-		return Config{}, err
+		err = cleanenv.ReadEnv(&collectConfigs)
+		if err != nil {
+			return Config{}, err
+		}
 	}
 	return mapConfig(&collectConfigs), nil
 }

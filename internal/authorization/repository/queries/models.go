@@ -21,7 +21,6 @@ type Event struct {
 	Description  pgtype.Text
 	UserID       int32
 	Start        pgtype.Timestamp
-	Finish       pgtype.Timestamp
 	Done         bool
 	Notification []byte
 }
