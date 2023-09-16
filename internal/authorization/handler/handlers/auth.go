@@ -22,12 +22,14 @@ func (ah AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	err := requests.Bind(r, &loginInput)
 	if err != nil {
 		responses.Error(w, http.StatusBadRequest, err)
+
 		return
 	}
 
 	accessKey, err := ah.serv.AuthUser(r.Context(), mapValidateUser(loginInput))
 	if err != nil {
 		responses.KnownError(w, err)
+
 		return
 	}
 
@@ -54,12 +56,14 @@ func (ah AuthHandler) Registration(w http.ResponseWriter, r *http.Request) {
 	err := requests.Bind(r, &regInput)
 	if err != nil {
 		responses.Error(w, http.StatusBadRequest, err)
+
 		return
 	}
 
 	accessKey, err := ah.serv.CreateUser(r.Context(), mapCreateUserInput(regInput))
 	if err != nil {
 		responses.KnownError(w, err)
+
 		return
 	}
 
@@ -71,5 +75,6 @@ func mapCreateUserInput(reg authapi.RegistrationBody) service.CreateUserInput {
 	return service.CreateUserInput{
 		Email:    string(reg.Email),
 		Password: reg.Password,
+		TGID:     nil,
 	}
 }

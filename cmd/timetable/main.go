@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -30,11 +31,12 @@ import (
 	timetableService "github.com/Dyleme/Notifier/internal/timetable-service/service"
 )
 
-func main() {
+func main() { //nolint:funlen // main can be long
 	cfg, err := config.Load()
 	logger := setupLogger(cfg.Env)
 	if err != nil {
 		logger.Error("configuration loading error", log.Err(err))
+
 		return
 	}
 	ctx := log.InCtx(context.Background(), logger)
@@ -43,6 +45,7 @@ func main() {
 	db, err := sqldatabase.NewPGX(ctx, cfg.Database.ConnectionString())
 	if err != nil {
 		logger.Error("db init error", log.Err(err))
+
 		return
 	}
 
@@ -75,6 +78,7 @@ func main() {
 	tg, err := handler.New(timetableServ, handler.NewUserRepoCache(authRepo), cfg.Telegram)
 	if err != nil {
 		logger.Error("tg init error", log.Err(err))
+
 		return
 	}
 
@@ -86,10 +90,11 @@ func main() {
 
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.Go(func() error {
-		return serv.Run(ctx)
+		return fmt.Errorf("server: %w", serv.Run(ctx))
 	})
 	wg.Go(func() error {
 		tg.Run(ctx)
+
 		return nil
 	})
 	err = wg.Wait()
@@ -108,6 +113,7 @@ func cancelOnInterruption(ctx context.Context) context.Context {
 		<-c
 		cancel()
 	}()
+
 	return ctx
 }
 

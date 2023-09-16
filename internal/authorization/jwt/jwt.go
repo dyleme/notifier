@@ -38,11 +38,12 @@ func (err UnexpectedSingingMethodError) Error() string {
 
 type tokenClaims struct {
 	jwt.Claims
-	UserID int `json:"userID"`
+	UserID int `json:"user_id"`
 }
 
 // CreateToken function generate token with provided TTL and user id.
 func (g *Gen) CreateToken(userID int) (string, error) {
+	op := "Gen.CreateToken: %w"
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, &tokenClaims{
 		Claims: jwt.StandardClaims{ //nolint:exhaustruct // no need to fill
 			IssuedAt:  time.Now().Unix(),
@@ -51,11 +52,16 @@ func (g *Gen) CreateToken(userID int) (string, error) {
 		UserID: userID,
 	})
 
-	return jwtToken.SignedString([]byte(g.signedKey))
+	token, err := jwtToken.SignedString([]byte(g.signedKey))
+	if err != nil {
+		return "", fmt.Errorf(op, err)
+	}
+
+	return token, nil
 }
 
 // ParseToken function returns user id from JWT token, if this token is liquid.
-func (g *Gen) ParseToken(tokenString string) (userID int, err error) {
+func (g *Gen) ParseToken(tokenString string) (userID int, err error) { //nolint:nonamedreturns //better reading
 	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return 0, UnexpectedSingingMethodError{t.Header["alg"]}
@@ -63,7 +69,6 @@ func (g *Gen) ParseToken(tokenString string) (userID int, err error) {
 
 		return []byte(g.signedKey), nil
 	})
-
 	if err != nil {
 		return 0, fmt.Errorf("parse token: %w", err)
 	}

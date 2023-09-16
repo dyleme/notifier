@@ -26,14 +26,12 @@ type Event struct {
 }
 
 type Task struct {
-	ID           int32
-	CreatedAt    pgtype.Timestamp
-	Message      string
-	UserID       int32
-	RequiredTime pgtype.Interval
-	Periodic     bool
-	Done         bool
-	Archived     bool
+	ID        int32
+	CreatedAt pgtype.Timestamp
+	Message   string
+	UserID    int32
+	Periodic  bool
+	Archived  bool
 }
 
 type User struct {

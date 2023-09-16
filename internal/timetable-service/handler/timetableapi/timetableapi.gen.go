@@ -28,19 +28,14 @@ type CreateEventReqBody struct {
 type CreateTaskReqBody struct {
 	Message  string `json:"message"`
 	Periodic bool   `json:"periodic"`
-
-	// RequiredTime Required time for task in minutes
-	RequiredTime int `json:"requiredTime"`
 }
 
 // Event defines model for Event.
 type Event struct {
 	Description *string   `json:"description,omitempty"`
 	Done        bool      `json:"done"`
-	Finish      time.Time `json:"finish"`
 	Id          int       `json:"id"`
 	Start       time.Time `json:"start"`
-	TaskId      int       `json:"task_id"`
 	Text        string    `json:"text"`
 }
 
@@ -53,7 +48,8 @@ type NotificationInfo struct {
 
 // NotificationParams defines model for NotificationParams.
 type NotificationParams struct {
-	Info NotificationInfo `json:"info"`
+	DelayedTill *time.Time       `json:"delayedTill,omitempty"`
+	Info        NotificationInfo `json:"info"`
 
 	// Period Required time for task in minutes
 	Period int `json:"period"`
@@ -68,13 +64,9 @@ type SetEventReqBody struct {
 // Task defines model for Task.
 type Task struct {
 	Archived bool   `json:"archived"`
-	Done     bool   `json:"done"`
 	Id       int    `json:"id"`
 	Message  string `json:"message"`
 	Periodic bool   `json:"periodic"`
-
-	// RequiredTime Required time for task in minutes
-	RequiredTime int `json:"requiredTime"`
 }
 
 // UpdateEventReqBody defines model for UpdateEventReqBody.

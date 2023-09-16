@@ -40,12 +40,15 @@ func dtoEvent(t queries.Event) (domains.Event, error) {
 func (tr *EventRepository) Add(ctx context.Context, tt domains.Event) (domains.Event, error) {
 	op := "add timetable task: %w"
 	addedEvent, err := tr.q.AddEvent(ctx, queries.AddEventParams{
-		UserID:       int32(tt.UserID),
-		Text:         tt.Text,
-		Done:         tt.Done,
-		Description:  pgxconv.Text(tt.Description),
-		Start:        pgxconv.Timestamp(tt.Start),
-		Notification: domains.Notification{Sended: false, Params: nil},
+		UserID:      int32(tt.UserID),
+		Text:        tt.Text,
+		Done:        tt.Done,
+		Description: pgxconv.Text(tt.Description),
+		Start:       pgxconv.Timestamp(tt.Start),
+		Notification: domains.Notification{
+			Sended:             tt.Notification.Sended,
+			NotificationParams: tt.Notification.NotificationParams,
+		},
 	})
 	if err != nil {
 		return domains.Event{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
@@ -65,10 +68,16 @@ func (tr *EventRepository) List(ctx context.Context, userID int, listParams serv
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
+
 		return nil, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
-	return dto.ErrorSlice(tt, dtoEvent)
+	events, err := dto.ErrorSlice(tt, dtoEvent)
+	if err != nil {
+		return nil, fmt.Errorf(op, err)
+	}
+
+	return events, nil
 }
 
 func (tr *EventRepository) Delete(ctx context.Context, eventID, userID int) error {
@@ -77,7 +86,6 @@ func (tr *EventRepository) Delete(ctx context.Context, eventID, userID int) erro
 		ID:     int32(eventID),
 		UserID: int32(userID),
 	})
-
 	if err != nil {
 		return fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
@@ -101,10 +109,16 @@ func (tr *EventRepository) ListInPeriod(ctx context.Context, userID int, from, t
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
+
 		return nil, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
-	return dto.ErrorSlice(tts, dtoEvent)
+	events, err := dto.ErrorSlice(tts, dtoEvent)
+	if err != nil {
+		return nil, fmt.Errorf(op, err)
+	}
+
+	return events, nil
 }
 
 func (tr *EventRepository) Get(ctx context.Context, eventID, userID int) (domains.Event, error) {
@@ -117,6 +131,7 @@ func (tr *EventRepository) Get(ctx context.Context, eventID, userID int) (domain
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domains.Event{}, fmt.Errorf(op, serverrors.NewNotFoundError(err, "timetable task"))
 		}
+
 		return domains.Event{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
@@ -179,15 +194,15 @@ func (tr *EventRepository) UpdateNotificationParams(ctx context.Context, eventID
 		ID:     int32(eventID),
 		UserID: int32(userID),
 	})
-
 	if err != nil {
 		return domains.NotificationParams{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
-	if p.Params == nil {
+	if p.NotificationParams == nil {
 		return domains.NotificationParams{}, fmt.Errorf(op, serverrors.NewRepositoryError(fmt.Errorf("params are nil after update")))
 	}
-	return *p.Params, nil
+
+	return *p.NotificationParams, nil
 }
 
 func (tr *EventRepository) Delay(ctx context.Context, eventID, userID int, till time.Time) error {

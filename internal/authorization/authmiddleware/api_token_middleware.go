@@ -18,20 +18,20 @@ func NewAPIToken(apiToken string) APITokenMiddleware {
 
 const apiKeyHeader string = "Api_key"
 
-var (
-	ErrInvalidAuthKey = errors.New("invalid auth key")
-)
+var ErrInvalidAuthKey = errors.New("invalid auth key")
 
 func (am *APITokenMiddleware) Handle(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token, err := getAPIKey(r)
 		if err != nil {
 			responses.Error(w, http.StatusUnauthorized, err)
+
 			return
 		}
 
 		if token != am.apiToken {
 			responses.Error(w, http.StatusUnauthorized, ErrInvalidAuthKey)
+
 			return
 		}
 

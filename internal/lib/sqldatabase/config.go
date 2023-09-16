@@ -2,6 +2,8 @@ package sqldatabase
 
 import (
 	"fmt"
+	"net"
+	"strconv"
 )
 
 type Config struct {
@@ -14,5 +16,7 @@ type Config struct {
 }
 
 func (c *Config) ConnectionString() string {
-	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s", c.User, c.Password, c.Host, c.Port, c.Database)
+	address := net.JoinHostPort(c.Host, strconv.Itoa(c.Port))
+
+	return fmt.Sprintf("postgres://%s:%s@%s/%s", c.User, c.Password, address, c.Database)
 }

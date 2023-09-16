@@ -16,12 +16,14 @@ func (t EventHandler) GetDefaultNotificationParams(w http.ResponseWriter, r *htt
 	userID, err := authmiddleware.UserIDFromCtx(r.Context())
 	if err != nil {
 		responses.Error(w, http.StatusInternalServerError, err)
+
 		return
 	}
 
 	defParams, err := t.serv.GetDefaultNotificationParams(r.Context(), userID)
 	if err != nil {
 		responses.KnownError(w, err)
+
 		return
 	}
 
@@ -32,6 +34,7 @@ func (t EventHandler) SetDefaultNotificationParams(w http.ResponseWriter, r *htt
 	userID, err := authmiddleware.UserIDFromCtx(r.Context())
 	if err != nil {
 		responses.Error(w, http.StatusInternalServerError, err)
+
 		return
 	}
 
@@ -39,6 +42,7 @@ func (t EventHandler) SetDefaultNotificationParams(w http.ResponseWriter, r *htt
 	err = requests.Bind(r, &reqParamsBody)
 	if err != nil {
 		responses.KnownError(w, err)
+
 		return
 	}
 
@@ -47,6 +51,7 @@ func (t EventHandler) SetDefaultNotificationParams(w http.ResponseWriter, r *htt
 	defParams, err := t.serv.SetDefaultNotificationParams(r.Context(), params, userID)
 	if err != nil {
 		responses.KnownError(w, err)
+
 		return
 	}
 
@@ -60,7 +65,8 @@ func mapNotificationParamsResp(p domains.NotificationParams) timetableapi.Notifi
 			Telegram: &p.Params.Telegram,
 			Webhook:  &p.Params.Webhook,
 		},
-		Period: int(p.Period.Minutes()),
+		Period:      int(p.Period.Minutes()),
+		DelayedTill: p.DalayedTill,
 	}
 }
 
@@ -82,7 +88,9 @@ func mapNotificationParams(req timetableapi.NotificationParams) domains.Notifica
 			Webhook:  webhook,
 			Cmd:      "",
 		},
+		DalayedTill: req.DelayedTill,
 	}
+
 	return params
 }
 
@@ -90,12 +98,14 @@ func (t EventHandler) GetEventNotificationParams(w http.ResponseWriter, r *http.
 	userID, err := authmiddleware.UserIDFromCtx(r.Context())
 	if err != nil {
 		responses.Error(w, http.StatusInternalServerError, err)
+
 		return
 	}
 
 	params, err := t.serv.GetNotificationParams(r.Context(), eventID, userID)
 	if err != nil {
 		responses.KnownError(w, err)
+
 		return
 	}
 
@@ -106,6 +116,7 @@ func (t EventHandler) SetEventNotificationParams(w http.ResponseWriter, r *http.
 	userID, err := authmiddleware.UserIDFromCtx(r.Context())
 	if err != nil {
 		responses.Error(w, http.StatusInternalServerError, err)
+
 		return
 	}
 
@@ -113,6 +124,7 @@ func (t EventHandler) SetEventNotificationParams(w http.ResponseWriter, r *http.
 	err = requests.Bind(r, &reqParamsBody)
 	if err != nil {
 		responses.KnownError(w, err)
+
 		return
 	}
 
@@ -121,6 +133,7 @@ func (t EventHandler) SetEventNotificationParams(w http.ResponseWriter, r *http.
 	res, err := t.serv.SetNotificationParams(r.Context(), eventID, params, userID)
 	if err != nil {
 		responses.KnownError(w, err)
+
 		return
 	}
 

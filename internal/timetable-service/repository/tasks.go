@@ -8,7 +8,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/Dyleme/Notifier/internal/lib/serverrors"
-	"github.com/Dyleme/Notifier/internal/lib/sql/pgxconv"
 	"github.com/Dyleme/Notifier/internal/lib/utils/dto"
 	"github.com/Dyleme/Notifier/internal/timetable-service/domains"
 	"github.com/Dyleme/Notifier/internal/timetable-service/repository/queries"
@@ -17,13 +16,11 @@ import (
 
 func dtoTask(task queries.Task) domains.Task {
 	return domains.Task{
-		ID:           int(task.ID),
-		UserID:       int(task.UserID),
-		RequiredTime: pgxconv.Duration(task.RequiredTime),
-		Text:         task.Message,
-		Periodic:     task.Periodic,
-		Done:         task.Done,
-		Archived:     task.Archived,
+		ID:       int(task.ID),
+		UserID:   int(task.UserID),
+		Text:     task.Message,
+		Periodic: task.Periodic,
+		Archived: task.Archived,
 	}
 }
 
@@ -45,39 +42,41 @@ func (tr *TaskRepository) Get(ctx context.Context, id, userID int) (domains.Task
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domains.Task{}, fmt.Errorf(op, serverrors.NewNotFoundError(err, "task"))
 		}
+
 		return domains.Task{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
+
 	return dtoTask(task), nil
 }
 
 func (tr *TaskRepository) Add(ctx context.Context, task domains.Task) (domains.Task, error) {
 	op := "add task: %%w"
 	addedTask, err := tr.q.AddTask(ctx, queries.AddTaskParams{
-		UserID:       int32(task.UserID),
-		RequiredTime: pgxconv.Interval(task.RequiredTime),
-		Message:      task.Text,
+		UserID:   int32(task.UserID),
+		Message:  task.Text,
+		Periodic: task.Periodic,
 	})
 	if err != nil {
 		return domains.Task{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
+
 	return dtoTask(addedTask), nil
 }
 
 func (tr *TaskRepository) Update(ctx context.Context, task domains.Task) error {
-	op := "update task: %%w"
+	op := "update task: %w"
 	err := tr.q.UpdateTask(ctx, queries.UpdateTaskParams{
-		ID:           int32(task.ID),
-		UserID:       int32(task.UserID),
-		RequiredTime: pgxconv.Interval(task.RequiredTime),
-		Message:      task.Text,
-		Periodic:     task.Periodic,
-		Done:         task.Done,
-		Archived:     task.Archived,
+		ID:       int32(task.ID),
+		UserID:   int32(task.UserID),
+		Message:  task.Text,
+		Periodic: task.Periodic,
+		Archived: task.Archived,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf(op, serverrors.NewNotFoundError(err, "task"))
 		}
+
 		return fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
@@ -92,13 +91,14 @@ func (tr *TaskRepository) List(ctx context.Context, userID int, listParams servi
 		Lim:    int32(listParams.Limit),
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(op, err)
 	}
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf(op, serverrors.NewNotFoundError(err, "task"))
 		}
+
 		return nil, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 

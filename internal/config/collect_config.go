@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
@@ -18,24 +19,24 @@ type collectableConfig struct {
 }
 
 type serverConfig struct {
-	Port                    int           `env:"APP_PORT" env-required:"true"`
-	MaxHeaderBytes          int           `env:"MAX_HEADER" env-required:"true"`
-	ReadTimeout             time.Duration `env:"READ_TIMEOUT" env-required:"true"`
-	WriteTimeout            time.Duration `env:"WRITE_TIMEOUT" env-required:"true"`
+	Port                    int           `env:"APP_PORT"               env-required:"true"`
+	MaxHeaderBytes          int           `env:"MAX_HEADER"             env-required:"true"`
+	ReadTimeout             time.Duration `env:"READ_TIMEOUT"           env-required:"true"`
+	WriteTimeout            time.Duration `env:"WRITE_TIMEOUT"          env-required:"true"`
 	TimeForGracefulShutdown time.Duration `env:"GRACEFUL_SHUTDOWN_TIME" env-required:"true"`
 }
 
 type databaseConfig struct {
-	Port     int    `env:"DB_PORT" env-required:"true"`
-	Host     string `env:"DB_HOST" env-required:"true"`
-	SSLMode  string `env:"DB_SSL_MODE" env-required:"true"`
-	User     string `env:"POSTGRES_USER" env-required:"true"`
-	Database string `env:"POSTGRES_DB" env-required:"true"`
+	Port     int    `env:"DB_PORT"           env-required:"true"`
+	Host     string `env:"DB_HOST"           env-required:"true"`
+	SSLMode  string `env:"DB_SSL_MODE"       env-required:"true"`
+	User     string `env:"POSTGRES_USER"     env-required:"true"`
+	Database string `env:"POSTGRES_DB"       env-required:"true"`
 	Password string `env:"POSTGRES_PASSWORD" env-required:"true"`
 }
 
 type jwtConfig struct {
-	TokenTTL  time.Duration `env:"TOKEN_TTL" env-required:"true"`
+	TokenTTL  time.Duration `env:"TOKEN_TTL"  env-required:"true"`
 	SignedKey string        `env:"SIGNED_KEY" env-required:"true"`
 }
 
@@ -56,13 +57,15 @@ type telegramConfig struct {
 }
 
 func Load() (Config, error) {
+	op := "Load: %w"
 	var collectConfigs collectableConfig
 	err := cleanenv.ReadConfig(".env", &collectConfigs)
 	if err != nil {
 		err = cleanenv.ReadEnv(&collectConfigs)
 		if err != nil {
-			return Config{}, err
+			return Config{}, fmt.Errorf(op, err)
 		}
 	}
+
 	return mapConfig(&collectConfigs), nil
 }

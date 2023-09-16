@@ -16,7 +16,7 @@ import (
 func (th *TelegramHandler) Notify(ctx context.Context, notif domains.SendingNotification) error {
 	op := "TelegramHandler.Notify: %w"
 	kb := inline.New(th.bot.Bot).Button("Done", []byte(strconv.Itoa(notif.EventID)), th.markDone)
-	_, err := th.bot.SendMessage(ctx, &bot.SendMessageParams{
+	_, err := th.bot.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
 		ChatID:      notif.Params.Params.Telegram,
 		Text:        notif.Message,
 		ReplyMarkup: kb,
@@ -28,36 +28,50 @@ func (th *TelegramHandler) Notify(ctx context.Context, notif domains.SendingNoti
 	return nil
 }
 
-func (th *TelegramHandler) markDone(ctx context.Context, b *bot.Bot, mes *models.Message, data []byte) {
+func (th *TelegramHandler) markDone(ctx context.Context, _ *bot.Bot, mes *models.Message, data []byte) {
 	op := "TelegramHandler.markDone: %w"
 	chatID := mes.Chat.ID
 	userID, err := UserIDFromCtx(ctx)
 	if err != nil {
 		th.handleError(ctx, chatID, fmt.Errorf(op, err))
+
 		return
 	}
 	eventID, err := strconv.Atoi(string(data))
 	if err != nil {
 		th.handleError(ctx, chatID, fmt.Errorf(op, err))
+
 		return
 	}
+
+	event, err := th.serv.GetEvent(ctx, userID, eventID)
+	if err != nil {
+		th.handleError(ctx, chatID, fmt.Errorf(op, err))
+
+		return
+	}
+
 	_, err = th.serv.UpdateEvent(ctx, service.UpdateEventParams{
-		ID:     eventID,
-		UserID: userID,
-		Done:   true,
+		ID:          eventID,
+		UserID:      userID,
+		Start:       event.Start,
+		Description: event.Description,
+		Done:        true,
 	})
 
 	if err != nil {
 		th.handleError(ctx, chatID, fmt.Errorf(op, err))
+
 		return
 	}
 
-	_, err = th.bot.SendMessage(ctx, &bot.SendMessageParams{
+	_, err = th.bot.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
 		ChatID: mes.Chat.ID,
 		Text:   "Event is done",
 	})
 	if err != nil {
 		th.handleError(ctx, chatID, fmt.Errorf(op, err))
+
 		return
 	}
 }

@@ -25,6 +25,7 @@ type Service struct {
 func New(ctx context.Context, notifier Notifier, cfg Config) *Service {
 	s := &Service{notifier: notifier, period: cfg.Period, notifications: make(map[int]*Notification)}
 	go s.RunJob(ctx)
+
 	return s
 }
 
@@ -45,6 +46,7 @@ func (s *Service) RunJob(ctx context.Context) {
 			s.notify(ctx)
 		case <-ctx.Done():
 			ticker.Stop()
+
 			return
 		}
 	}
@@ -70,10 +72,12 @@ func (s *Service) Add(_ context.Context, ns []domains.SendingNotification) error
 	for i := 0; i < len(ns); i++ {
 		s.notifications[ns[i].EventID] = &Notification{notification: ns[i], timePassed: 0}
 	}
+
 	return nil
 }
 
 func (s *Service) Delete(_ context.Context, eventID int) error {
 	delete(s.notifications, eventID)
+
 	return nil
 }

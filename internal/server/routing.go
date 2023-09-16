@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -28,12 +27,4 @@ func Route(
 	timetableapi.HandlerFromMux(timetableHandler, bearerTokenRouter)
 
 	return router
-}
-
-type DefLogger struct{}
-
-func (dl *DefLogger) Print(vs ...any) {
-	for _, v := range vs {
-		fmt.Printf("%#v\n", v)
-	}
 }

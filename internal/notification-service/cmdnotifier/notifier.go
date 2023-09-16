@@ -14,6 +14,7 @@ type Notifier struct {
 
 func (n Notifier) Notify(_ context.Context, ns domains.SendingNotification) error {
 	log.Printf("%+v\n", ns)
+
 	return nil
 }
 

@@ -26,7 +26,7 @@ type EnableNotifications struct {
 
 const defaultNotificationPeriod = 5 * time.Minute
 
-func (en *EnableNotifications) Enable(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
+func (en *EnableNotifications) Enable(ctx context.Context, _ *bot.Bot, chatID int64) (tgwf.Handler, error) {
 	op := "EnableNotifications.Enable: %w"
 	userID, err := UserIDFromCtx(ctx)
 	if err != nil {
@@ -37,7 +37,10 @@ func (en *EnableNotifications) Enable(ctx context.Context, b *bot.Bot, chatID in
 		Period: defaultNotificationPeriod,
 		Params: domains.Params{
 			Telegram: int(chatID),
+			Webhook:  "",
+			Cmd:      "",
 		},
+		DalayedTill: nil,
 	}, userID)
 	if err != nil {
 		return nil, fmt.Errorf(op, err)

@@ -16,11 +16,10 @@ func (t EventHandler) ListEvents(w http.ResponseWriter, r *http.Request, params 
 	userID, err := authmiddleware.UserIDFromCtx(r.Context())
 	if err != nil {
 		responses.Error(w, http.StatusInternalServerError, err)
+
 		return
 	}
-	var (
-		from, to time.Time
-	)
+	var from, to time.Time
 
 	if params.From == nil {
 		from = time.Time{}
@@ -34,6 +33,7 @@ func (t EventHandler) ListEvents(w http.ResponseWriter, r *http.Request, params 
 	tasks, err := t.serv.ListEventsInPeriod(r.Context(), userID, from, to, listParams)
 	if err != nil {
 		responses.KnownError(w, err)
+
 		return
 	}
 
@@ -44,6 +44,7 @@ func (t EventHandler) PostEventSetTaskID(w http.ResponseWriter, r *http.Request,
 	userID, err := authmiddleware.UserIDFromCtx(r.Context())
 	if err != nil {
 		responses.Error(w, http.StatusInternalServerError, err)
+
 		return
 	}
 
@@ -51,6 +52,7 @@ func (t EventHandler) PostEventSetTaskID(w http.ResponseWriter, r *http.Request,
 	err = requests.Bind(r, &setEvent)
 	if err != nil {
 		responses.Error(w, http.StatusBadRequest, err)
+
 		return
 	}
 	description := ""
@@ -61,6 +63,7 @@ func (t EventHandler) PostEventSetTaskID(w http.ResponseWriter, r *http.Request,
 	event, err := t.serv.AddTaskToEvent(r.Context(), userID, taskID, setEvent.Start, description)
 	if err != nil {
 		responses.KnownError(w, err)
+
 		return
 	}
 
@@ -83,12 +86,14 @@ func (t EventHandler) GetEvent(w http.ResponseWriter, r *http.Request, eventID i
 	userID, err := authmiddleware.UserIDFromCtx(r.Context())
 	if err != nil {
 		responses.Error(w, http.StatusInternalServerError, err)
+
 		return
 	}
 
 	event, err := t.serv.GetEvent(r.Context(), userID, eventID)
 	if err != nil {
 		responses.KnownError(w, err)
+
 		return
 	}
 
@@ -101,6 +106,7 @@ func (t EventHandler) UpdateEvent(w http.ResponseWriter, r *http.Request, eventI
 	userID, err := authmiddleware.UserIDFromCtx(r.Context())
 	if err != nil {
 		responses.Error(w, http.StatusInternalServerError, err)
+
 		return
 	}
 
@@ -108,6 +114,7 @@ func (t EventHandler) UpdateEvent(w http.ResponseWriter, r *http.Request, eventI
 	err = requests.Bind(r, &updateBody)
 	if err != nil {
 		responses.KnownError(w, err)
+
 		return
 	}
 	description := ""
@@ -124,6 +131,7 @@ func (t EventHandler) UpdateEvent(w http.ResponseWriter, r *http.Request, eventI
 	})
 	if err != nil {
 		responses.Error(w, http.StatusInternalServerError, err)
+
 		return
 	}
 
@@ -144,6 +152,10 @@ func mapCreateEvent(body timetableapi.CreateEventReqBody, userID int) domains.Ev
 		Description: description,
 		Start:       body.Start,
 		Done:        false,
+		Notification: domains.Notification{
+			Sended:             false,
+			NotificationParams: nil,
+		},
 	}
 
 	return event
@@ -153,6 +165,7 @@ func (t EventHandler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 	userID, err := authmiddleware.UserIDFromCtx(r.Context())
 	if err != nil {
 		responses.Error(w, http.StatusInternalServerError, err)
+
 		return
 	}
 
@@ -160,12 +173,14 @@ func (t EventHandler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 	err = requests.Bind(r, &createBody)
 	if err != nil {
 		responses.KnownError(w, err)
+
 		return
 	}
 	event := mapCreateEvent(createBody, userID)
 	createdEvent, err := t.serv.CreateEvent(r.Context(), event)
 	if err != nil {
 		responses.Error(w, http.StatusInternalServerError, err)
+
 		return
 	}
 
