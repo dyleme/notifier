@@ -19,7 +19,8 @@ func (s *Service) AddTask(ctx context.Context, task domains.Task) (domains.Task,
 	op := "Service.AddTask: %w"
 	createdTask, err := s.repo.Tasks().Add(ctx, task)
 	if err != nil {
-		logError(ctx, fmt.Errorf(op, err))
+		err = fmt.Errorf(op, err)
+		logError(ctx, err)
 
 		return domains.Task{}, err
 	}
@@ -31,7 +32,8 @@ func (s *Service) GetTask(ctx context.Context, taskID, userID int) (domains.Task
 	op := "Service.GetTask: %w"
 	task, err := s.repo.Tasks().Get(ctx, taskID, userID)
 	if err != nil {
-		logError(ctx, fmt.Errorf(op, err))
+		err = fmt.Errorf(op, err)
+		logError(ctx, err)
 
 		return domains.Task{}, err
 	}
@@ -45,7 +47,7 @@ func (s *Service) UpdateTask(ctx context.Context, task domains.Task) error {
 	if err != nil {
 		logError(ctx, fmt.Errorf(op, err))
 
-		return err
+		return fmt.Errorf(op, err)
 	}
 
 	return nil
@@ -57,7 +59,7 @@ func (s *Service) ListUserTasks(ctx context.Context, userID int, listParams List
 	if err != nil {
 		logError(ctx, fmt.Errorf(op, err))
 
-		return nil, err
+		return nil, fmt.Errorf(op, err)
 	}
 
 	return tasks, nil
@@ -70,7 +72,7 @@ func (s *Service) DeleteTask(ctx context.Context, taskID, userID int) error {
 	if err != nil {
 		logError(ctx, fmt.Errorf(op, err))
 
-		return err
+		return fmt.Errorf(op, err)
 	}
 
 	return nil

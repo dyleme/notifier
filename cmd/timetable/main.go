@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -89,7 +90,7 @@ func main() { //nolint:funlen // main can be long
 
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.Go(func() error {
-		return serv.Run(ctx)
+		return fmt.Errorf("server: %w", serv.Run(ctx))
 	})
 	wg.Go(func() error {
 		tg.Run(ctx)

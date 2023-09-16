@@ -81,16 +81,17 @@ func NewAuth(repo UserRepo, hashGen HashGenerator, jwtGen JwtGenerator) *AuthSer
 // CreateUser function returns the id of the created user or error if any occures.
 // Function get password hash of the user and creates user and calls CreateUser method of repository.
 func (s *AuthService) CreateUser(ctx context.Context, input CreateUserInput) (string, error) {
+	op := "AuthService.CreateUser: %w"
 	input.Password = s.hashGen.GeneratePasswordHash(input.Password)
 
 	user, err := s.repo.Create(ctx, input)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf(op, err)
 	}
 
 	accessToken, err := s.jwtGen.CreateToken(user.ID)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf(op, err)
 	}
 
 	return accessToken, nil
@@ -103,14 +104,20 @@ var ErrWrongPassword = errors.New("wrong password")
 // Method get password and if calling repo.Get then validates it with the hashGen.IsValidPassword,
 // and create token with the help jwtGen.CreateToken.
 func (s *AuthService) AuthUser(ctx context.Context, input ValidateUserInput) (string, error) {
+	op := "AuthService.AuthUser: %w"
 	user, err := s.repo.Get(ctx, input.AuthName, nil)
 	if err != nil {
-		return "", fmt.Errorf("get user: %w", err)
+		return "", fmt.Errorf(op, err)
 	}
 
 	if !s.hashGen.IsValidPassword(input.Password, user.PasswordHash) {
 		return "", ErrWrongPassword
 	}
 
-	return s.jwtGen.CreateToken(user.ID)
+	token, err := s.jwtGen.CreateToken(user.ID)
+	if err != nil {
+		return "", fmt.Errorf(op, err)
+	}
+
+	return token, nil
 }

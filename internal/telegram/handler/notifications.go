@@ -37,6 +37,8 @@ func (en *EnableNotifications) Enable(ctx context.Context, _ *bot.Bot, chatID in
 		Period: defaultNotificationPeriod,
 		Params: domains.Params{
 			Telegram: int(chatID),
+			Webhook:  "",
+			Cmd:      "",
 		},
 		DalayedTill: nil,
 	}, userID)

@@ -19,7 +19,7 @@ var ErrCantParseMessage = errors.New("cant parse message")
 
 func (th *TelegramHandler) EventsMenu() tgwf.Action {
 	listEvents := ListEvents{serv: th.serv}
-	createEvents := EventCreation{serv: th.serv}
+	createEvents := NewEventCreation(th.serv)
 	menu := tgwf.NewMenuAction("Events actions").
 		Row().Btn("List events", listEvents.list).
 		Row().Btn("Create event", createEvents.MessageSetText).
@@ -49,13 +49,13 @@ func (l *ListEvents) list(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.H
 	}
 
 	if len(tasks) == 0 {
-		_, err = b.SendMessage(ctx, &bot.SendMessageParams{
+		_, err = b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
 			ChatID: chatID,
 			Text:   "No events",
 		})
 
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf(op, err)
 		}
 
 		return nil, nil
@@ -66,7 +66,22 @@ func (l *ListEvents) list(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.H
 		kb.Row().Btn(t.Text, nil)
 	}
 
-	return kb.Show(ctx, b, chatID)
+	kbHandler, err := kb.Show(ctx, b, chatID)
+	if err != nil {
+		return nil, fmt.Errorf(op, err)
+	}
+
+	return kbHandler, nil
+}
+
+func NewEventCreation(serv *service.Service) EventCreation {
+	return EventCreation{
+		serv:         serv,
+		text:         "",
+		requiredTime: 0,
+		day:          time.Time{},
+		time:         time.Time{},
+	}
 }
 
 type EventCreation struct {
@@ -97,7 +112,7 @@ func (ec *EventCreation) MessageChooseTask(ctx context.Context, b *bot.Bot, chat
 	tgwf.AddSliceToMenu(menu, tasks, func(t domains.Task) string {
 		return t.Text
 	}, nil)
-	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
+	_, err = b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
 		ChatID: chatID,
 		Text:   "Choose task",
 	})
@@ -105,13 +120,19 @@ func (ec *EventCreation) MessageChooseTask(ctx context.Context, b *bot.Bot, chat
 		return nil, fmt.Errorf(op, err)
 	}
 
-	return menu.Show(ctx, b, chatID)
+	menuHandler, err := menu.Show(ctx, b, chatID)
+	if err != nil {
+		return nil, fmt.Errorf(op, err)
+	}
+
+	return menuHandler, nil
 }
 
 func (ec *EventCreation) SetChosenTask(_ context.Context, _ *bot.Bot, update *models.Update) (tgwf.Action, error) {
+	op := "EventCreation.SetChosenTask: %w"
 	message, err := tgwf.GetMessage(update)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(op, err)
 	}
 	ec.text = message.Text
 
@@ -120,7 +141,7 @@ func (ec *EventCreation) SetChosenTask(_ context.Context, _ *bot.Bot, update *mo
 
 func (ec *EventCreation) MessageSetText(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
 	op := "EventCreation.MessageSetText: %w"
-	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
+	_, err := b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
 		ChatID: chatID,
 		Text:   "Enter event text",
 	})
@@ -132,9 +153,10 @@ func (ec *EventCreation) MessageSetText(ctx context.Context, b *bot.Bot, chatID 
 }
 
 func (ec *EventCreation) SetText(_ context.Context, _ *bot.Bot, update *models.Update) (tgwf.Action, error) {
+	op := "EventCreation.SetText: %w"
 	message, err := tgwf.GetMessage(update)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(op, err)
 	}
 	ec.text = message.Text
 
@@ -143,7 +165,7 @@ func (ec *EventCreation) SetText(_ context.Context, _ *bot.Bot, update *models.U
 
 func (ec *EventCreation) MessageSetStartDay(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
 	op := "EventCreation.MessageSetStartDay: %w"
-	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
+	_, err := b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
 		ChatID: chatID,
 		Text:   "Set start day (in form 18.04)",
 	})
@@ -158,7 +180,7 @@ func (ec *EventCreation) SetStartDay(_ context.Context, _ *bot.Bot, update *mode
 	op := "EventCreation.SetStartDay: %w"
 	message, err := tgwf.GetMessage(update)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(op, err)
 	}
 
 	day, err := parseDay(message.Text)
@@ -201,7 +223,7 @@ func parseDay(dayString string) (time.Time, error) {
 
 func (ec *EventCreation) MessageSetStartTime(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
 	op := "EventCreation.MessageSetStartDTime: %w"
-	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
+	_, err := b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
 		ChatID: chatID,
 		Text:   "Set start time (in format 18 04)",
 	})
@@ -216,7 +238,7 @@ func (ec *EventCreation) SetStartTime(_ context.Context, _ *bot.Bot, update *mod
 	op := "EventCreation.SetStartTime: %w"
 	message, err := tgwf.GetMessage(update)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(op, err)
 	}
 
 	t, err := parseTime(message.Text)
@@ -248,7 +270,7 @@ func parseTime(dayString string) (time.Time, error) {
 
 func (ec *EventCreation) MessageSetRequiredTime(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
 	op := "EventCreation.MessageSetRequiredTime: %w"
-	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
+	_, err := b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
 		ChatID: chatID,
 		Text:   "Provide required time in minutes",
 	})
@@ -282,11 +304,16 @@ func (ec *EventCreation) create(ctx context.Context, b *bot.Bot, chatID int64) (
 		return nil, fmt.Errorf(op, err)
 	}
 
-	event := domains.Event{
+	event := domains.Event{ //nolint:exhaustruct // don't know id on creation
 		UserID:      userID,
 		Text:        ec.text,
 		Description: "",
 		Start:       time.Date(ec.day.Year(), ec.day.Month(), ec.day.Day(), ec.time.Hour(), ec.time.Minute(), 0, 0, time.UTC),
+		Done:        false,
+		Notification: domains.Notification{
+			Sended:             false,
+			NotificationParams: nil,
+		},
 	}
 
 	_, err = ec.serv.CreateEvent(ctx, event)
@@ -294,7 +321,7 @@ func (ec *EventCreation) create(ctx context.Context, b *bot.Bot, chatID int64) (
 		return nil, fmt.Errorf(op, err)
 	}
 
-	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
+	_, err = b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
 		ChatID: chatID,
 		Text:   "Event successfully created",
 	})

@@ -56,16 +56,17 @@ func uniqueError(err error) (string, bool) {
 }
 
 func (r *Repository) Get(ctx context.Context, email string, tgID *int) (models.User, error) {
+	op := "Repository.Get: %w"
 	out, err := r.q.FindUser(ctx, queries.FindUserParams{
 		Email: pgxconv.Text(email),
 		TgID:  pgxconv.Int4(tgID),
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return models.User{}, serverrors.NewNotFoundError(err, "user") //nolint:exhaustruct // return error
+			return models.User{}, fmt.Errorf(op, serverrors.NewNotFoundError(err, "user"))
 		}
 
-		return models.User{}, err
+		return models.User{}, fmt.Errorf(op, err)
 	}
 
 	return models.User{

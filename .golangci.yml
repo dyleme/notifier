@@ -47,16 +47,11 @@ linters:
     - maligned # deprecated since 1.38
     - golint # deprecated since 1.41
     - varnamelen # short variable names is normal for go
-    - wrapcheck
-    - nosprintfhostport
-    - nonamedreturns
-    - ineffassign
-    - exhaustruct
-    - ireturn
     - goerr113 # not possible to use errors.As()
     - depguard # not necessary for small project
     - gochecknoglobals # global variables are widely used in go code
     - wsl # to many empty lines
     - lll # long lines is not always bad
+    - ireturn
 run:
   issues-exit-code: 1

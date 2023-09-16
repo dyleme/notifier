@@ -3,6 +3,7 @@ package slogpretty
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	stdLog "log"
 	"log/slog"
@@ -35,6 +36,7 @@ const (
 )
 
 func (h *PrettyHandler) Handle(_ context.Context, r slog.Record) error {
+	op := "PrettyHandler.Handle: %w"
 	level := r.Level.String() + ":"
 
 	switch r.Level {
@@ -73,7 +75,7 @@ func (h *PrettyHandler) Handle(_ context.Context, r slog.Record) error {
 	if len(fields) > 0 {
 		fieldsBytes, err := json.MarshalIndent(fields, "", "  ")
 		if err != nil {
-			return err
+			return fmt.Errorf(op, err)
 		}
 		fieldsMsg = "\n" + string(fieldsBytes)
 	}
@@ -84,7 +86,6 @@ func (h *PrettyHandler) Handle(_ context.Context, r slog.Record) error {
 		timeStr,
 		level,
 		color.CyanString(r.Message),
-		// color.HiRedString(callPathMsg),
 		color.RedString(errMsg),
 		color.WhiteString(fieldsMsg),
 	)

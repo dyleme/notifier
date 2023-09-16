@@ -58,25 +58,26 @@ func (ma *MenuAction) SetHide(hide bool) *MenuAction {
 }
 
 func (ma *MenuAction) Show(ctx context.Context, b *bot.Bot, chatID int64) (Handler, error) {
+	op := "MenuAction.Show: %w"
 	keyboard := make([][]models.KeyboardButton, 0, len(ma.fields))
 	for _, row := range ma.fields {
 		keysRow := make([]models.KeyboardButton, 0, len(row))
 		for _, btn := range row {
-			keysRow = append(keysRow, models.KeyboardButton{Text: btn.Text})
+			keysRow = append(keysRow, models.KeyboardButton{Text: btn.Text}) //nolint:exhaustruct //no need to specify
 		}
 		keyboard = append(keyboard, keysRow)
 	}
 
-	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
+	_, err := b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
 		ChatID: chatID,
 		Text:   ma.Text,
-		ReplyMarkup: models.ReplyKeyboardMarkup{
+		ReplyMarkup: models.ReplyKeyboardMarkup{ //nolint:exhaustruct //no need to specify
 			Keyboard:        keyboard,
 			OneTimeKeyboard: ma.hide,
 		},
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(op, err)
 	}
 
 	return ma.Post, nil

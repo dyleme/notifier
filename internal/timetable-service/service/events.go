@@ -31,13 +31,14 @@ func (s *Service) CreateEvent(ctx context.Context, event domains.Event) (domains
 
 		createdEvent, err = r.Events().Add(ctx, event)
 		if err != nil {
-			return err
+			return err //nolint:wrapcheck //wrapping later
 		}
 
 		return nil
 	})
 	if err != nil {
-		logError(ctx, fmt.Errorf(op, err))
+		err = fmt.Errorf(op, err)
+		logError(ctx, err)
 
 		return domains.Event{}, err
 	}
@@ -52,13 +53,13 @@ func (s *Service) AddTaskToEvent(ctx context.Context, userID, taskID int, start 
 	err := s.repo.Atomic(ctx, func(ctx context.Context, r Repository) error {
 		task, err := r.Tasks().Get(ctx, taskID, userID)
 		if err != nil {
-			return err
+			return err //nolint:wrapcheck //wrapping later
 		}
 
 		event = domains.EventFromTask(task, start, description)
 		event, err = r.Events().Add(ctx, event)
 		if err != nil {
-			return err
+			return err //nolint:wrapcheck //wrapping later
 		}
 
 		return nil
@@ -77,7 +78,8 @@ func (s *Service) GetEvent(ctx context.Context, userID, eventID int) (domains.Ev
 	op := "Service.GetEvent: %w"
 	tt, err := s.repo.Events().Get(ctx, eventID, userID)
 	if err != nil {
-		logError(ctx, fmt.Errorf(op, err))
+		err = fmt.Errorf(op, err)
+		logError(ctx, err)
 
 		return domains.Event{}, err
 	}
@@ -89,7 +91,8 @@ func (s *Service) ListEvents(ctx context.Context, userID int, listParams ListPar
 	op := "Service.ListEvents: %w"
 	tts, err := s.repo.Events().List(ctx, userID, listParams)
 	if err != nil {
-		logError(ctx, fmt.Errorf(op, err))
+		err = fmt.Errorf(op, err)
+		logError(ctx, err)
 
 		return nil, err
 	}
@@ -101,7 +104,8 @@ func (s *Service) ListEventsInPeriod(ctx context.Context, userID int, from, to t
 	op := "Service.ListEventsInPeriod: %w"
 	tts, err := s.repo.Events().ListInPeriod(ctx, userID, from, to, listParams)
 	if err != nil {
-		logError(ctx, fmt.Errorf(op, err))
+		err = fmt.Errorf(op, err)
+		logError(ctx, err)
 
 		return nil, err
 	}
@@ -123,7 +127,7 @@ func (s *Service) UpdateEvent(ctx context.Context, params UpdateEventParams) (do
 	err := s.repo.Atomic(ctx, func(ctx context.Context, repo Repository) error {
 		e, err := repo.Events().Get(ctx, params.ID, params.UserID)
 		if err != nil {
-			return err
+			return err //nolint:wrapcheck //wrapping later
 		}
 
 		if e.IsGettingDone(params.Done) {
@@ -139,13 +143,14 @@ func (s *Service) UpdateEvent(ctx context.Context, params UpdateEventParams) (do
 
 		res, err = s.repo.Events().Update(ctx, e)
 		if err != nil {
-			return err
+			return err //nolint:wrapcheck //wrapping later
 		}
 
 		return nil
 	})
 	if err != nil {
-		logError(ctx, fmt.Errorf(op, err))
+		err = fmt.Errorf(op, err)
+		logError(ctx, err)
 
 		return domains.Event{}, err
 	}
@@ -157,7 +162,8 @@ func (s *Service) DeleteEvent(ctx context.Context, userID, eventID int) error {
 	op := "Service.DeleteEvent: %w"
 	err := s.repo.Events().Delete(ctx, eventID, userID)
 	if err != nil {
-		logError(ctx, fmt.Errorf(op, err))
+		err = fmt.Errorf(op, err)
+		logError(ctx, err)
 
 		return err
 	}
@@ -170,12 +176,12 @@ func (s *Service) DelayEvent(ctx context.Context, userID, eventID int, till time
 	err := s.repo.Atomic(ctx, func(ctx context.Context, repo Repository) error {
 		err := repo.Events().Delay(ctx, eventID, userID, till)
 		if err != nil {
-			return err
+			return err //nolint:wrapcheck //wraping later
 		}
 
 		err = s.notifier.Delete(ctx, eventID)
 		if err != nil {
-			return err
+			return err //nolint:wrapcheck //wraping later
 		}
 
 		return nil

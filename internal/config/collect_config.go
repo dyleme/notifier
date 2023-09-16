@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
@@ -56,12 +57,13 @@ type telegramConfig struct {
 }
 
 func Load() (Config, error) {
+	op := "Load: %w"
 	var collectConfigs collectableConfig
 	err := cleanenv.ReadConfig(".env", &collectConfigs)
 	if err != nil {
 		err = cleanenv.ReadEnv(&collectConfigs)
 		if err != nil {
-			return Config{}, err
+			return Config{}, fmt.Errorf(op, err)
 		}
 	}
 

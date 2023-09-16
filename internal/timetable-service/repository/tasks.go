@@ -52,8 +52,9 @@ func (tr *TaskRepository) Get(ctx context.Context, id, userID int) (domains.Task
 func (tr *TaskRepository) Add(ctx context.Context, task domains.Task) (domains.Task, error) {
 	op := "add task: %%w"
 	addedTask, err := tr.q.AddTask(ctx, queries.AddTaskParams{
-		UserID:  int32(task.UserID),
-		Message: task.Text,
+		UserID:   int32(task.UserID),
+		Message:  task.Text,
+		Periodic: task.Periodic,
 	})
 	if err != nil {
 		return domains.Task{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
@@ -69,6 +70,7 @@ func (tr *TaskRepository) Update(ctx context.Context, task domains.Task) error {
 		UserID:   int32(task.UserID),
 		Message:  task.Text,
 		Periodic: task.Periodic,
+		Archived: task.Archived,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -89,7 +91,7 @@ func (tr *TaskRepository) List(ctx context.Context, userID int, listParams servi
 		Lim:    int32(listParams.Limit),
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(op, err)
 	}
 
 	if err != nil {

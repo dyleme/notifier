@@ -18,7 +18,8 @@ func (s *Service) SetDefaultNotificationParams(ctx context.Context, params domai
 	op := "Service.SetDefaultNotificationParams: %w"
 	defParams, err := s.repo.DefaultNotificationParams().Set(ctx, userID, params)
 	if err != nil {
-		logError(ctx, fmt.Errorf(op, err))
+		err = fmt.Errorf(op, err)
+		logError(ctx, err)
 
 		return domains.NotificationParams{}, err
 	}
@@ -30,7 +31,8 @@ func (s *Service) GetDefaultNotificationParams(ctx context.Context, userID int) 
 	op := "Service.GetDefaultNotificationParams: %w"
 	defParams, err := s.repo.DefaultNotificationParams().Get(ctx, userID)
 	if err != nil {
-		logError(ctx, fmt.Errorf(op, err))
+		err = fmt.Errorf(op, err)
+		logError(ctx, err)
 
 		return domains.NotificationParams{}, err
 	}
@@ -44,7 +46,7 @@ func (s *Service) GetNotificationParams(ctx context.Context, eventID, userID int
 	err := s.repo.Atomic(ctx, func(ctx context.Context, repo Repository) error {
 		tt, err := repo.Events().Get(ctx, eventID, userID)
 		if err != nil {
-			return err
+			return err //nolint:wrapcheck //wrapping later
 		}
 
 		if tt.Notification.NotificationParams != nil {
@@ -57,10 +59,10 @@ func (s *Service) GetNotificationParams(ctx context.Context, eventID, userID int
 		if err != nil {
 			var notFoundErr serverrors.NotFoundError
 			if errors.As(err, &notFoundErr) {
-				return err
+				return err //nolint:wrapcheck //wrapping later
 			}
 
-			return err
+			return err //nolint:wrapcheck //wrapping later
 		}
 
 		notifParams = defaultParams
@@ -68,7 +70,8 @@ func (s *Service) GetNotificationParams(ctx context.Context, eventID, userID int
 		return nil
 	})
 	if err != nil {
-		logError(ctx, fmt.Errorf(op, err))
+		err = fmt.Errorf(op, err)
+		logError(ctx, err)
 
 		return nil, err
 	}
@@ -80,7 +83,8 @@ func (s *Service) SetNotificationParams(ctx context.Context, eventID int, params
 	op := "Service.SetNotificationParams: %w"
 	updatedParams, err := s.repo.Events().UpdateNotificationParams(ctx, eventID, userID, params)
 	if err != nil {
-		logError(ctx, fmt.Errorf(op, err))
+		err = fmt.Errorf(op, err)
+		logError(ctx, err)
 
 		return domains.NotificationParams{}, err
 	}

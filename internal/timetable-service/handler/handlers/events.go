@@ -152,6 +152,10 @@ func mapCreateEvent(body timetableapi.CreateEventReqBody, userID int) domains.Ev
 		Description: description,
 		Start:       body.Start,
 		Done:        false,
+		Notification: domains.Notification{
+			Sended:             false,
+			NotificationParams: nil,
+		},
 	}
 
 	return event

@@ -20,9 +20,11 @@ type Config struct {
 const defaultListLimit = 100
 
 func New(service *timetableService.Service, userRepo UserRepo, cfg Config) (*TelegramHandler, error) {
+	op := "New: %w"
 	tgHandler := TelegramHandler{
 		serv:     service,
 		userRepo: userRepo,
+		bot:      nil, // set this field later by calling SetBot method
 	}
 	opts := []bot.Option{
 		bot.WithMiddlewares(loggingMiddleware, tgHandler.UserIDMiddleware),
@@ -34,7 +36,7 @@ func New(service *timetableService.Service, userRepo UserRepo, cfg Config) (*Tel
 
 	b, err := bot.New(cfg.Token, opts...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(op, err)
 	}
 
 	tgHandler.bot = tgwf.New(b, tgHandler.MainMenuAction())
@@ -171,7 +173,7 @@ func (th *TelegramHandler) Cancel(ctx context.Context, _ *bot.Bot, update *model
 
 	th.bot.ForgotForChat(ctx, chatID)
 
-	_, err = th.bot.SendMessage(ctx, &bot.SendMessageParams{
+	_, err = th.bot.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
 		ChatID: chatID,
 		Text:   "Return basic state",
 	})
@@ -199,7 +201,7 @@ func handleError(ctx context.Context, b *tgwf.WorkflowHandler, chatID int64, err
 		return
 	}
 
-	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
+	_, err = b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
 		ChatID: chatID,
 		Text:   "Server error occurred",
 	})

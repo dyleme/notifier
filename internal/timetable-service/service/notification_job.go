@@ -84,7 +84,7 @@ func (s *Service) notify(ctx context.Context) {
 	err := s.repo.Atomic(ctx, func(ctx context.Context, r Repository) error {
 		Events, err := r.Events().GetNotNotified(ctx)
 		if err != nil {
-			return err
+			return err //nolint:wrapcheck //wraping later
 		}
 		log.Ctx(ctx).Info("not_notified_from_database", "amount", len(Events))
 
@@ -103,18 +103,18 @@ func (s *Service) notify(ctx context.Context) {
 
 			log.Ctx(ctx).Debug("add_notifications", "notifs", notifs)
 
-			return s.notifier.Add(wgCtx, notifs)
+			return s.notifier.Add(wgCtx, notifs) //nolint:wrapcheck //wraping later
 		})
 
 		wg.Go(func() error {
-			return r.Events().MarkNotified(wgCtx, dto.Slice(Events, func(t domains.Event) int {
+			return r.Events().MarkNotified(wgCtx, dto.Slice(Events, func(t domains.Event) int { //nolint:wrapcheck //wraping later
 				return t.ID
 			}))
 		})
 
 		err = wg.Wait()
 		if err != nil {
-			return err
+			return err //nolint:wrapcheck //wraping later
 		}
 
 		return nil

@@ -32,7 +32,7 @@ func (nr *NotificationParamsRepository) Get(ctx context.Context, userID int) (do
 		return domains.NotificationParams{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
-	return params.Params, err
+	return params.Params, nil
 }
 
 func (nr *NotificationParamsRepository) Set(ctx context.Context, userID int, params domains.NotificationParams) (domains.NotificationParams, error) {

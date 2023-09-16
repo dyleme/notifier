@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/Dyleme/timecache"
@@ -20,12 +21,17 @@ func NewUserRepoCache(userRepo service.UserRepo) *UserRepoCache {
 	return &UserRepoCache{
 		userRepo: userRepo,
 		cache: timecache.NewWithConfig[int, int](timecache.Config{
+			JanitorConfig: timecache.JanitorConfig{
+				CleanPeriod:      time.Hour,
+				StopJanitorEvery: 0,
+			},
 			StoreTime: time.Hour,
 		}),
 	}
 }
 
 func (u *UserRepoCache) GetID(ctx context.Context, tgID int) (int, error) {
+	op := "UserRepoCache.GetID: %w"
 	userID, err := u.cache.Get(tgID)
 	if err == nil { // err equal nil
 		return userID, nil
@@ -41,7 +47,7 @@ func (u *UserRepoCache) GetID(ctx context.Context, tgID int) (int, error) {
 
 		var notFoundErr serverrors.NotFoundError
 		if !errors.As(err, &notFoundErr) {
-			return err
+			return err //nolint:wrapcheck // wrapping later
 		}
 
 		user, err = userRepo.Create(ctx, service.CreateUserInput{
@@ -50,14 +56,14 @@ func (u *UserRepoCache) GetID(ctx context.Context, tgID int) (int, error) {
 			TGID:     &tgID,
 		})
 		if err != nil {
-			return err
+			return err //nolint:wrapcheck // wrapping later
 		}
 		userID = user.ID
 
 		return nil
 	})
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf(op, err)
 	}
 
 	u.cache.StoreDefDur(tgID, userID)

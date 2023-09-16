@@ -42,7 +42,7 @@ import (
 
 func (th *TelegramHandler) TaskMenu() tgwf.Action {
 	listTasks := ListTasks{serv: th.serv}
-	createTask := TaskCreation{serv: th.serv}
+	createTask := TaskCreation{serv: th.serv, text: ""}
 	menu := tgwf.NewMenuAction("Tasks action").
 		Row().Btn("List tasks", listTasks.list).
 		Row().Btn("Create task", createTask.MessageSetText)
@@ -73,7 +73,7 @@ func (l *ListTasks) list(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Ha
 	kb := tgwf.NewMenuAction("Tasks")
 	for i, t := range tasks {
 		text := strconv.Itoa(i+1) + ". " + t.Text
-		te := TaskEdit{serv: l.serv, id: t.ID}
+		te := TaskEdit{serv: l.serv, id: t.ID, text: t.Text}
 		kb.Row().Btn(text, te.Menu)
 	}
 
@@ -81,7 +81,12 @@ func (l *ListTasks) list(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Ha
 		kb = kb.Row().Btn("No tasks. Create new task", nil)
 	}
 
-	return kb.Show(ctx, b, chatID)
+	kbHandler, err := kb.Show(ctx, b, chatID)
+	if err != nil {
+		return nil, fmt.Errorf(op, err)
+	}
+
+	return kbHandler, nil
 }
 
 func (l *ListTasks) Post(ctx context.Context, _ *bot.Bot, _ *models.Update) (tgwf.Action, error) {
@@ -96,27 +101,28 @@ type TaskCreation struct {
 }
 
 func (tc *TaskCreation) create(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
+	op := "TaskCreation.create: %w"
 	userID, err := UserIDFromCtx(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(op, err)
 	}
 
-	_, err = tc.serv.AddTask(ctx, domains.Task{
+	_, err = tc.serv.AddTask(ctx, domains.Task{ //nolint:exhaustruct //object creation request
 		UserID:   userID,
 		Text:     tc.text,
 		Archived: false,
 		Periodic: false,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(op, err)
 	}
 
-	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
+	_, err = b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
 		ChatID: chatID,
 		Text:   "Task successfully created",
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(op, err)
 	}
 
 	return nil, nil
@@ -124,7 +130,7 @@ func (tc *TaskCreation) create(ctx context.Context, b *bot.Bot, chatID int64) (t
 
 func (tc *TaskCreation) MessageSetText(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
 	op := "SetTextAction.Show: %w"
-	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
+	_, err := b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
 		ChatID: chatID,
 		Text:   "Enter task text",
 	})
@@ -136,9 +142,10 @@ func (tc *TaskCreation) MessageSetText(ctx context.Context, b *bot.Bot, chatID i
 }
 
 func (tc *TaskCreation) SetText(_ context.Context, _ *bot.Bot, update *models.Update) (tgwf.Action, error) {
+	op := "TaskCreation.SetText: %w"
 	message, err := tgwf.GetMessage(update)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(op, err)
 	}
 	tc.text = message.Text
 
@@ -152,14 +159,15 @@ type TaskEdit struct {
 }
 
 func (te *TaskEdit) Menu(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
+	op := "TaskEdit.Menu: %w"
 	userID, err := UserIDFromCtx(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(op, err)
 	}
 
 	t, err := te.serv.GetTask(ctx, te.id, userID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(op, err)
 	}
 
 	message := fmt.Sprintf("Task:\n%s", t.Text)
@@ -167,12 +175,17 @@ func (te *TaskEdit) Menu(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Ha
 		Btn("Edit", te.MessageSetText).
 		Btn("Delete", te.Delete)
 
-	return menu.Show(ctx, b, chatID)
+	menuHandler, err := menu.Show(ctx, b, chatID)
+	if err != nil {
+		return nil, fmt.Errorf(op, err)
+	}
+
+	return menuHandler, nil
 }
 
 func (te *TaskEdit) MessageSetText(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
 	op := "SetTextAction.Show: %w"
-	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
+	_, err := b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
 		ChatID: chatID,
 		Text:   "Enter task text",
 	})
@@ -184,6 +197,7 @@ func (te *TaskEdit) MessageSetText(ctx context.Context, b *bot.Bot, chatID int64
 }
 
 func (te *TaskEdit) Delete(ctx context.Context, _ *bot.Bot, _ int64) (tgwf.Handler, error) {
+	op := "TaskEdit.Delete: %w"
 	userID, err := UserIDFromCtx(ctx)
 	if err != nil {
 		return nil, err
@@ -191,16 +205,17 @@ func (te *TaskEdit) Delete(ctx context.Context, _ *bot.Bot, _ int64) (tgwf.Handl
 
 	err = te.serv.DeleteTask(ctx, te.id, userID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(op, err)
 	}
 
 	return nil, nil
 }
 
 func (te *TaskEdit) SetText(_ context.Context, _ *bot.Bot, update *models.Update) (tgwf.Action, error) {
+	op := "TaskEdit.SetText: %w"
 	message, err := tgwf.GetMessage(update)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(op, err)
 	}
 	te.text = message.Text
 
@@ -208,9 +223,10 @@ func (te *TaskEdit) SetText(_ context.Context, _ *bot.Bot, update *models.Update
 }
 
 func (te *TaskEdit) save(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
+	op := "TaskEdit.save: %w"
 	userID, err := UserIDFromCtx(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(op, err)
 	}
 
 	err = te.serv.UpdateTask(ctx, domains.Task{
@@ -221,15 +237,15 @@ func (te *TaskEdit) save(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Ha
 		Periodic: false,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(op, err)
 	}
 
-	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
+	_, err = b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
 		ChatID: chatID,
 		Text:   "Task successfully created",
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(op, err)
 	}
 
 	return nil, nil

@@ -34,5 +34,9 @@ func EventFromTask(t Task, start time.Time, description string) Event {
 		Start:       start,
 		Done:        false,
 		Description: description,
+		Notification: Notification{
+			Sended:             false,
+			NotificationParams: nil,
+		},
 	}
 }
