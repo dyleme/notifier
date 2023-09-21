@@ -1,0 +1,40 @@
+name: Deploying
+
+on:
+  push:
+    branches:
+      - main
+      - add-auto-deploying
+
+jobs:
+  push-docker:
+    name: Build and push docker image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log in to Docker Hub
+        uses: docker/login-action@latest
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push Docker handler image
+        uses: docker/build-push-action@latest
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: dyleme/schedudler:latest
+
+  deploy:
+    name: Build
+    needs: push-docker
+    runs-on: ubuntu-latest
+    steps:
+      - name: executing remote ssh commands using password
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PASSWORD }}
+          port: ${{ secrets.PORT }}
+          script: whoami
