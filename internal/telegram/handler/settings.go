@@ -15,7 +15,7 @@ import (
 )
 
 func (th *TelegramHandler) SettingsMenu() tgwf.Action {
-	timezoneSetting := &TimezoneSettings{userRepo: th.userRepo}
+	timezoneSetting := &TimezoneSettings{userRepo: th.userRepo, zone: 0, isDST: false}
 	menu := tgwf.NewMenuAction("Settings").
 		Row().Btn("Notifications", th.NotificationMenu()).
 		Row().Btn("Timezone", timezoneSetting.CurrentTime)
@@ -56,7 +56,7 @@ func (ts *TimezoneSettings) CurrentTime(ctx context.Context, b *bot.Bot, chatID 
 func (ts *TimezoneSettings) SpecifyTimeMessage(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
 	op := "TimezoneSettings.Enable: %w"
 
-	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
+	_, err := b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
 		ChatID: chatID,
 		Text:   "Write your current time (18:04)",
 	})
@@ -94,10 +94,10 @@ func (ts *TimezoneSettings) IsDSTMessage(ctx context.Context, b *bot.Bot, chatID
 		ReplyMarkup: models.ReplyKeyboardMarkup{ //nolint:exhaustruct //no need to specify
 			Keyboard: [][]models.KeyboardButton{
 				{
-					{
+					{ //nolint:exhaustruct //no need to specify
 						Text: "true",
 					},
-					{
+					{ //nolint:exhaustruct //no need to specify
 						Text: "false",
 					},
 				},
@@ -164,7 +164,6 @@ func getTimezone(utcTime time.Time, userHours, userMinutes int) int {
 
 	if diff := absDur(utcTime.Sub(userTomorrow)); diff < minDiff {
 		realUserTime = userTomorrow
-		minDiff = diff
 	}
 
 	realUserTime = realUserTime.Round(time.Hour)

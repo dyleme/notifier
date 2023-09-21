@@ -66,7 +66,7 @@ func (u *UserRepoCache) GetUserInfo(ctx context.Context, tgID int) (User, error)
 	return userID, nil
 }
 
-func (u *UserRepoCache) UpdateUserTime(ctx context.Context, tgID int, tzOffset int, isDST bool) error {
+func (u *UserRepoCache) UpdateUserTime(ctx context.Context, tgID, tzOffset int, isDST bool) error {
 	op := "UserRepoCache.UpdateUserTime: %w"
 	user, err := u.GetUserInfo(ctx, tgID)
 	if err != nil {

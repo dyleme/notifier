@@ -129,8 +129,8 @@ func (s *AuthService) GetTGUserInfo(ctx context.Context, tgID int) (models.User,
 	op := "AuthService.GetTGUserInfo: %w"
 	var tgUser models.User
 	err := s.repo.Atomic(ctx, func(ctx context.Context, userRepo UserRepo) error {
-		user, err := userRepo.Get(ctx, "", &tgID) //nolint:govet //just err in tx
-		if err == nil {                           // err equal nil
+		user, err := userRepo.Get(ctx, "", &tgID)
+		if err == nil { // err equal nil
 			tgUser = user
 		}
 
@@ -158,19 +158,19 @@ func (s *AuthService) GetTGUserInfo(ctx context.Context, tgID int) (models.User,
 	return tgUser, nil
 }
 
-var InvalidOffsetErr = errors.New("invalid offset")
+var ErrInvalidOffset = errors.New("invalid offset")
 
 func (s *AuthService) UpdateUserTime(ctx context.Context, id int, tzOffset models.TimeZoneOffset, isDst bool) error {
 	op := "AuthService.UpdateUserTime: %w"
 
 	if !tzOffset.IsValid() {
-		return fmt.Errorf(op, InvalidOffsetErr)
+		return fmt.Errorf(op, ErrInvalidOffset)
 	}
 
 	err := s.repo.Atomic(ctx, func(ctx context.Context, repo UserRepo) error {
 		err := repo.UpdateTime(ctx, id, tzOffset, isDst)
 		if err != nil {
-			return err
+			return err //nolint:wrapcheck //wrapping later
 		}
 
 		return nil

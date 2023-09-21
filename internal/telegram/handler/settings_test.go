@@ -6,6 +6,7 @@ import (
 )
 
 func Test_getTimezone(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		utcTime     time.Time
@@ -64,7 +65,9 @@ func Test_getTimezone(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			if got := getTimezone(tt.utcTime, tt.userHours, tt.userMinutes); got != tt.want {
 				t.Errorf("getTimezone() = %v, want %v", got, tt.want)
 			}

@@ -33,6 +33,14 @@ linters-settings:
       - blank
       - dot
 
+
+issues:
+  exclude-rules:
+    # disable funlen for all _test.go files
+    - path: _test.go
+      linters:
+        - funlen
+
 linters:
   enable-all: true
   disable:
@@ -52,6 +60,7 @@ linters:
     - gochecknoglobals # global variables are widely used in go code
     - wsl # to many empty lines
     - lll # long lines is not always bad
+    - testpackage # I want to test logic in not exported functions
     - ireturn
 run:
   issues-exit-code: 1

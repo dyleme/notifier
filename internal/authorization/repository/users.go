@@ -33,10 +33,12 @@ func (r *Repository) Create(ctx context.Context, input service.CreateUserInput) 
 	}
 
 	return models.User{
-		ID:           int(user.ID),
-		Email:        pgxconv.String(user.Email),
-		PasswordHash: pgxconv.ByteSlice(user.PasswordHash),
-		TGID:         pgxconv.Int(user.TgID),
+		ID:             int(user.ID),
+		Email:          pgxconv.String(user.Email),
+		PasswordHash:   pgxconv.ByteSlice(user.PasswordHash),
+		TGID:           pgxconv.Int(user.TgID),
+		TimeZoneOffset: 0,
+		IsTimeZoneDST:  false,
 	}, nil
 }
 

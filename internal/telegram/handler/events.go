@@ -63,12 +63,6 @@ func (l *ListEvents) list(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.H
 
 	kb := tgwf.NewMenuAction("Events")
 	for _, event := range events {
-		// eventEdit := EventEdit{
-		// 	serv: l.serv,
-		// 	id:   event.ID,
-		// 	text: event.Text,
-		// 	time: time.Time{},
-		// }
 		kb.Row().Btn(event.Text, nil)
 	}
 
@@ -171,11 +165,11 @@ func (ec *EventCreation) MessageSetStartDay(ctx context.Context, b *bot.Bot, cha
 	_, err := b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
 		ChatID: chatID,
 		Text:   "Set start day (in form 18.04)",
-		ReplyMarkup: models.ReplyKeyboardMarkup{
+		ReplyMarkup: models.ReplyKeyboardMarkup{ //nolint:exhaustruct //no need to specify
 			Keyboard: [][]models.KeyboardButton{
 				{
-					models.KeyboardButton{Text: fmt.Sprintf("%02d.%02d", now.Day(), int(now.Month()))},
-					models.KeyboardButton{Text: fmt.Sprintf("%02d.%02d", tomorrow.Day(), int(tomorrow.Month()))},
+					models.KeyboardButton{Text: fmt.Sprintf("%02d.%02d", now.Day(), int(now.Month()))},           //nolint:exhaustruct //no need to specify
+					models.KeyboardButton{Text: fmt.Sprintf("%02d.%02d", tomorrow.Day(), int(tomorrow.Month()))}, //nolint:exhaustruct //no need to specify
 				},
 			},
 			ResizeKeyboard: true,
@@ -276,7 +270,6 @@ type EventEdit struct {
 	serv *service.Service
 	id   int
 	text string
-	day  time.Time
 	time time.Time
 }
 
@@ -326,7 +319,7 @@ func (ee *EventEdit) EditMenu(ctx context.Context, b *bot.Bot, chatID int64) (tg
 }
 
 func (ee *EventEdit) MessageSetText(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
-	op := "SetTextAction.Show: %w"
+	op := "EventEdit.MessageSetTesxt: %w"
 	_, err := b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
 		ChatID: chatID,
 		Text:   "Enter task text",
