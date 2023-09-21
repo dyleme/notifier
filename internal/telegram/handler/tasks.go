@@ -57,12 +57,12 @@ type ListTasks struct {
 func (l *ListTasks) list(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
 	op := "TelegramHandler.listTasks: %w"
 
-	userID, err := UserIDFromCtx(ctx)
+	user, err := UserFromCtx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf(op, err)
 	}
 
-	tasks, err := l.serv.ListUserTasks(ctx, userID, service.ListParams{
+	tasks, err := l.serv.ListUserTasks(ctx, user.ID, service.ListParams{
 		Offset: 0,
 		Limit:  defaultListLimit,
 	})
@@ -102,13 +102,13 @@ type TaskCreation struct {
 
 func (tc *TaskCreation) create(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
 	op := "TaskCreation.create: %w"
-	userID, err := UserIDFromCtx(ctx)
+	user, err := UserFromCtx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf(op, err)
 	}
 
 	_, err = tc.serv.AddTask(ctx, domains.Task{ //nolint:exhaustruct //object creation request
-		UserID:   userID,
+		UserID:   user.ID,
 		Text:     tc.text,
 		Archived: false,
 		Periodic: false,
@@ -160,12 +160,12 @@ type TaskEdit struct {
 
 func (te *TaskEdit) Menu(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
 	op := "TaskEdit.Menu: %w"
-	userID, err := UserIDFromCtx(ctx)
+	user, err := UserFromCtx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf(op, err)
 	}
 
-	t, err := te.serv.GetTask(ctx, te.id, userID)
+	t, err := te.serv.GetTask(ctx, te.id, user.ID)
 	if err != nil {
 		return nil, fmt.Errorf(op, err)
 	}
@@ -198,12 +198,12 @@ func (te *TaskEdit) MessageSetText(ctx context.Context, b *bot.Bot, chatID int64
 
 func (te *TaskEdit) Delete(ctx context.Context, _ *bot.Bot, _ int64) (tgwf.Handler, error) {
 	op := "TaskEdit.Delete: %w"
-	userID, err := UserIDFromCtx(ctx)
+	user, err := UserFromCtx(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	err = te.serv.DeleteTask(ctx, te.id, userID)
+	err = te.serv.DeleteTask(ctx, te.id, user.ID)
 	if err != nil {
 		return nil, fmt.Errorf(op, err)
 	}
@@ -224,14 +224,14 @@ func (te *TaskEdit) SetText(_ context.Context, _ *bot.Bot, update *models.Update
 
 func (te *TaskEdit) save(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
 	op := "TaskEdit.save: %w"
-	userID, err := UserIDFromCtx(ctx)
+	user, err := UserFromCtx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf(op, err)
 	}
 
 	err = te.serv.UpdateTask(ctx, domains.Task{
 		ID:       te.id,
-		UserID:   userID,
+		UserID:   user.ID,
 		Text:     te.text,
 		Archived: false,
 		Periodic: false,

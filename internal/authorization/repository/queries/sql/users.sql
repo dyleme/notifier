@@ -22,3 +22,9 @@ SELECT id,
        password_hash
 FROM users
 WHERE email = @email;
+
+-- name: UpdateTime :exec
+UPDATE users
+SET timezone_offset = @timezone_offset,
+    timezone_dst = @is_dst
+WHERE id = @id;

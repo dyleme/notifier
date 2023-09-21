@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-telegram/bot"
@@ -23,7 +23,7 @@ func (th *TelegramHandler) EventsMenu() tgwf.Action {
 	menu := tgwf.NewMenuAction("Events actions").
 		Row().Btn("List events", listEvents.list).
 		Row().Btn("Create event", createEvents.MessageSetText).
-		Row().Btn("Create event from task", createEvents.MessageSetText)
+		Row().Btn("Create event from task", createEvents.MessageChooseTask)
 
 	return menu.Show
 }
@@ -35,12 +35,12 @@ type ListEvents struct {
 func (l *ListEvents) list(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
 	op := "TelegramHandler.listEvents: %w"
 
-	userID, err := UserIDFromCtx(ctx)
+	userInfo, err := UserFromCtx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf(op, err)
 	}
 
-	tasks, err := l.serv.ListEvents(ctx, userID, service.ListParams{
+	events, err := l.serv.ListEvents(ctx, userInfo.ID, service.ListParams{
 		Offset: 0,
 		Limit:  defaultListLimit,
 	})
@@ -48,7 +48,7 @@ func (l *ListEvents) list(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.H
 		return nil, fmt.Errorf(op, err)
 	}
 
-	if len(tasks) == 0 {
+	if len(events) == 0 {
 		_, err = b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
 			ChatID: chatID,
 			Text:   "No events",
@@ -62,8 +62,14 @@ func (l *ListEvents) list(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.H
 	}
 
 	kb := tgwf.NewMenuAction("Events")
-	for _, t := range tasks {
-		kb.Row().Btn(t.Text, nil)
+	for _, event := range events {
+		// eventEdit := EventEdit{
+		// 	serv: l.serv,
+		// 	id:   event.ID,
+		// 	text: event.Text,
+		// 	time: time.Time{},
+		// }
+		kb.Row().Btn(event.Text, nil)
 	}
 
 	kbHandler, err := kb.Show(ctx, b, chatID)
@@ -76,31 +82,29 @@ func (l *ListEvents) list(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.H
 
 func NewEventCreation(serv *service.Service) EventCreation {
 	return EventCreation{
-		serv:         serv,
-		text:         "",
-		requiredTime: 0,
-		day:          time.Time{},
-		time:         time.Time{},
+		serv: serv,
+		text: "",
+		day:  time.Time{},
+		time: time.Time{},
 	}
 }
 
 type EventCreation struct {
-	serv         *service.Service
-	text         string
-	requiredTime time.Duration
-	day          time.Time
-	time         time.Time
+	serv *service.Service
+	text string
+	day  time.Time
+	time time.Time
 }
 
 func (ec *EventCreation) MessageChooseTask(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
 	op := "EventCreation.MessageChooseTask: %w"
 
-	userID, err := UserIDFromCtx(ctx)
+	user, err := UserFromCtx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf(op, err)
 	}
 
-	tasks, err := ec.serv.ListUserTasks(ctx, userID, service.ListParams{
+	tasks, err := ec.serv.ListUserTasks(ctx, user.ID, service.ListParams{
 		Offset: 0,
 		Limit:  defaultListLimit,
 	})
@@ -108,24 +112,17 @@ func (ec *EventCreation) MessageChooseTask(ctx context.Context, b *bot.Bot, chat
 		return nil, fmt.Errorf(op, err)
 	}
 
-	menu := tgwf.NewMenuAction("Tasks")
+	menu := tgwf.NewMenuAction("Choose task")
 	tgwf.AddSliceToMenu(menu, tasks, func(t domains.Task) string {
 		return t.Text
 	}, nil)
-	_, err = b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
-		ChatID: chatID,
-		Text:   "Choose task",
-	})
+
+	_, err = menu.Show(ctx, b, chatID)
 	if err != nil {
 		return nil, fmt.Errorf(op, err)
 	}
 
-	menuHandler, err := menu.Show(ctx, b, chatID)
-	if err != nil {
-		return nil, fmt.Errorf(op, err)
-	}
-
-	return menuHandler, nil
+	return ec.SetChosenTask, nil
 }
 
 func (ec *EventCreation) SetChosenTask(_ context.Context, _ *bot.Bot, update *models.Update) (tgwf.Action, error) {
@@ -134,7 +131,11 @@ func (ec *EventCreation) SetChosenTask(_ context.Context, _ *bot.Bot, update *mo
 	if err != nil {
 		return nil, fmt.Errorf(op, err)
 	}
-	ec.text = message.Text
+	_, afterPoint, ok := strings.Cut(message.Text, ".")
+	if !ok {
+		return nil, fmt.Errorf(op, fmt.Errorf("no point"))
+	}
+	ec.text = afterPoint
 
 	return ec.MessageSetStartDay, nil
 }
@@ -165,9 +166,20 @@ func (ec *EventCreation) SetText(_ context.Context, _ *bot.Bot, update *models.U
 
 func (ec *EventCreation) MessageSetStartDay(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
 	op := "EventCreation.MessageSetStartDay: %w"
+	now := time.Now()
+	tomorrow := time.Now().Add(day)
 	_, err := b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
 		ChatID: chatID,
 		Text:   "Set start day (in form 18.04)",
+		ReplyMarkup: models.ReplyKeyboardMarkup{
+			Keyboard: [][]models.KeyboardButton{
+				{
+					models.KeyboardButton{Text: fmt.Sprintf("%02d.%02d", now.Day(), int(now.Month()))},
+					models.KeyboardButton{Text: fmt.Sprintf("%02d.%02d", tomorrow.Day(), int(tomorrow.Month()))},
+				},
+			},
+			ResizeKeyboard: true,
+		},
 	})
 	if err != nil {
 		return nil, fmt.Errorf(op, err)
@@ -192,37 +204,8 @@ func (ec *EventCreation) SetStartDay(_ context.Context, _ *bot.Bot, update *mode
 	return ec.MessageSetStartTime, nil
 }
 
-const (
-	dayPointFormat         = "02.01"
-	daySpaceFormat         = "02 01"
-	dayPointWithYearFormat = "02.01.2006"
-	daySpaceWithYearFormat = "02 01 2006"
-)
-
-var dayFormats = []string{dayPointFormat, daySpaceFormat, dayPointWithYearFormat, daySpaceWithYearFormat}
-
-func parseDay(dayString string) (time.Time, error) {
-	for _, format := range dayFormats {
-		t, err := time.Parse(format, dayString)
-		if err != nil {
-			continue
-		}
-
-		if t.Year() == 0 {
-			t = t.AddDate(time.Now().Year(), 0, 0)
-			if t.Before(time.Now()) {
-				t = t.AddDate(1, 0, 0)
-			}
-		}
-
-		return t, nil
-	}
-
-	return time.Time{}, ErrCantParseMessage
-}
-
 func (ec *EventCreation) MessageSetStartTime(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
-	op := "EventCreation.MessageSetStartDTime: %w"
+	op := "EventCreation.MessageSetStartTime: %w"
 	_, err := b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
 		ChatID: chatID,
 		Text:   "Set start time (in format 18 04)",
@@ -247,68 +230,25 @@ func (ec *EventCreation) SetStartTime(_ context.Context, _ *bot.Bot, update *mod
 	}
 	ec.time = t
 
-	return ec.MessageSetRequiredTime, nil
-}
-
-const (
-	timeDoublePointsFormat = "15:04"
-	timeSpaceFormat        = "15 04"
-)
-
-var timeFormats = []string{timeDoublePointsFormat, timeSpaceFormat}
-
-func parseTime(dayString string) (time.Time, error) {
-	for _, format := range timeFormats {
-		t, err := time.Parse(format, dayString)
-		if err == nil { // err eq nil
-			return t, nil
-		}
-	}
-
-	return time.Time{}, ErrCantParseMessage
-}
-
-func (ec *EventCreation) MessageSetRequiredTime(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
-	op := "EventCreation.MessageSetRequiredTime: %w"
-	_, err := b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
-		ChatID: chatID,
-		Text:   "Provide required time in minutes",
-	})
-	if err != nil {
-		return nil, fmt.Errorf(op, err)
-	}
-
-	return ec.SetRequiredTime, nil
-}
-
-func (ec *EventCreation) SetRequiredTime(_ context.Context, _ *bot.Bot, update *models.Update) (tgwf.Action, error) {
-	op := "EventCreation.SetRequiredTime: %w"
-	message, err := tgwf.GetMessage(update)
-	if err != nil {
-		return nil, fmt.Errorf(op, err)
-	}
-	dur, err := strconv.Atoi(message.Text)
-	if err != nil {
-		return nil, fmt.Errorf(op, err)
-	}
-
-	ec.requiredTime = time.Duration(dur) * time.Minute
-
 	return ec.create, nil
+}
+
+func computeTime(day, hourMinutes time.Time, loc *time.Location) time.Time {
+	return time.Date(day.Year(), day.Month(), day.Day(), hourMinutes.Hour(), hourMinutes.Minute(), 0, 0, loc)
 }
 
 func (ec *EventCreation) create(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
 	op := "EventCreation.create: %w"
-	userID, err := UserIDFromCtx(ctx)
+	user, err := UserFromCtx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf(op, err)
 	}
 
 	event := domains.Event{ //nolint:exhaustruct // don't know id on creation
-		UserID:      userID,
+		UserID:      user.ID,
 		Text:        ec.text,
 		Description: "",
-		Start:       time.Date(ec.day.Year(), ec.day.Month(), ec.day.Day(), ec.time.Hour(), ec.time.Minute(), 0, 0, time.UTC),
+		Start:       computeTime(ec.day, ec.time, user.Location()),
 		Done:        false,
 		Notification: domains.Notification{
 			Sended:             false,
@@ -324,6 +264,127 @@ func (ec *EventCreation) create(ctx context.Context, b *bot.Bot, chatID int64) (
 	_, err = b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
 		ChatID: chatID,
 		Text:   "Event successfully created",
+	})
+	if err != nil {
+		return nil, fmt.Errorf(op, err)
+	}
+
+	return nil, nil
+}
+
+type EventEdit struct {
+	serv *service.Service
+	id   int
+	text string
+	day  time.Time
+	time time.Time
+}
+
+func (ee *EventEdit) Menu(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
+	op := "EventEdit.Menu: %w"
+	user, err := UserFromCtx(ctx)
+	if err != nil {
+		return nil, fmt.Errorf(op, err)
+	}
+
+	t, err := ee.serv.GetEvent(ctx, ee.id, user.ID)
+	if err != nil {
+		return nil, fmt.Errorf(op, err)
+	}
+
+	message := fmt.Sprintf("Task:%s\nTime:%v", t.Text, t.Start.In(user.Location()).Format(time.DateTime))
+	menu := tgwf.NewMenuAction(message).Row().
+		Btn("Edit", ee.EditMenu).
+		Btn("Delete", ee.Delete)
+
+	menuHandler, err := menu.Show(ctx, b, chatID)
+	if err != nil {
+		return nil, fmt.Errorf(op, err)
+	}
+
+	return menuHandler, nil
+}
+
+func (ee *EventEdit) EditMenu(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
+	op := "EventEdit.EditMenu: %w"
+	user, err := UserFromCtx(ctx)
+	if err != nil {
+		return nil, fmt.Errorf(op, err)
+	}
+
+	message := fmt.Sprintf("Task:%s\nTime:%v", ee.text, ee.time.In(user.Location()).Format(time.DateTime))
+	menu := tgwf.NewMenuAction(message).Row().
+		Btn("Edit text", ee.MessageSetText).
+		Btn("Save", ee.save)
+
+	menuHandler, err := menu.Show(ctx, b, chatID)
+	if err != nil {
+		return nil, fmt.Errorf(op, err)
+	}
+
+	return menuHandler, nil
+}
+
+func (ee *EventEdit) MessageSetText(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
+	op := "SetTextAction.Show: %w"
+	_, err := b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
+		ChatID: chatID,
+		Text:   "Enter task text",
+	})
+	if err != nil {
+		return nil, fmt.Errorf(op, err)
+	}
+
+	return ee.SetText, nil
+}
+
+func (ee *EventEdit) SetText(_ context.Context, _ *bot.Bot, update *models.Update) (tgwf.Action, error) {
+	op := "TaskEdit.SetText: %w"
+	message, err := tgwf.GetMessage(update)
+	if err != nil {
+		return nil, fmt.Errorf(op, err)
+	}
+	ee.text = message.Text
+
+	return ee.save, nil
+}
+
+func (ee *EventEdit) Delete(ctx context.Context, _ *bot.Bot, _ int64) (tgwf.Handler, error) {
+	op := "EventEdit.Delete: %w"
+	user, err := UserFromCtx(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	err = ee.serv.DeleteEvent(ctx, ee.id, user.ID)
+	if err != nil {
+		return nil, fmt.Errorf(op, err)
+	}
+
+	return nil, nil
+}
+
+func (ee *EventEdit) save(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
+	op := "TaskEdit.save: %w"
+	user, err := UserFromCtx(ctx)
+	if err != nil {
+		return nil, fmt.Errorf(op, err)
+	}
+
+	_, err = ee.serv.UpdateEvent(ctx, service.UpdateEventParams{
+		ID:          ee.id,
+		UserID:      user.ID,
+		Description: "",
+		Start:       computeTime(ee.time, ee.time, user.Location()),
+		Done:        false,
+	})
+	if err != nil {
+		return nil, fmt.Errorf(op, err)
+	}
+
+	_, err = b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
+		ChatID: chatID,
+		Text:   "Task successfully created",
 	})
 	if err != nil {
 		return nil, fmt.Errorf(op, err)

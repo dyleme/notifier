@@ -31,7 +31,7 @@ func (th *TelegramHandler) Notify(ctx context.Context, notif domains.SendingNoti
 func (th *TelegramHandler) markDone(ctx context.Context, _ *bot.Bot, mes *models.Message, data []byte) {
 	op := "TelegramHandler.markDone: %w"
 	chatID := mes.Chat.ID
-	userID, err := UserIDFromCtx(ctx)
+	user, err := UserFromCtx(ctx)
 	if err != nil {
 		th.handleError(ctx, chatID, fmt.Errorf(op, err))
 
@@ -44,7 +44,7 @@ func (th *TelegramHandler) markDone(ctx context.Context, _ *bot.Bot, mes *models
 		return
 	}
 
-	event, err := th.serv.GetEvent(ctx, userID, eventID)
+	event, err := th.serv.GetEvent(ctx, user.ID, eventID)
 	if err != nil {
 		th.handleError(ctx, chatID, fmt.Errorf(op, err))
 
@@ -53,7 +53,7 @@ func (th *TelegramHandler) markDone(ctx context.Context, _ *bot.Bot, mes *models
 
 	_, err = th.serv.UpdateEvent(ctx, service.UpdateEventParams{
 		ID:          eventID,
-		UserID:      userID,
+		UserID:      user.ID,
 		Start:       event.Start,
 		Description: event.Description,
 		Done:        true,

@@ -10,6 +10,7 @@ import (
 
 	"github.com/Dyleme/Notifier/internal/lib/log"
 	"github.com/Dyleme/Notifier/internal/lib/tgwf"
+	"github.com/Dyleme/Notifier/internal/telegram/userinfo"
 	timetableService "github.com/Dyleme/Notifier/internal/timetable-service/service"
 )
 
@@ -27,7 +28,7 @@ func New(service *timetableService.Service, userRepo UserRepo, cfg Config) (*Tel
 		bot:      nil, // set this field later by calling SetBot method
 	}
 	opts := []bot.Option{
-		bot.WithMiddlewares(loggingMiddleware, tgHandler.UserIDMiddleware),
+		bot.WithMiddlewares(loggingMiddleware, tgHandler.UserMiddleware),
 		bot.WithMessageTextHandler("/start", bot.MatchTypeExact, tgHandler.MainMenu),
 		bot.WithMessageTextHandler("/info", bot.MatchTypeExact, tgHandler.Info),
 		bot.WithMessageTextHandler("/cancel", bot.MatchTypeExact, tgHandler.Cancel),
@@ -56,7 +57,8 @@ func (th *TelegramHandler) Run(ctx context.Context) {
 }
 
 type UserRepo interface {
-	GetID(ctx context.Context, tgID int) (userID int, err error)
+	GetUserInfo(ctx context.Context, tgID int) (userinfo.User, error)
+	UpdateUserTime(ctx context.Context, tgID int, timezoneOffset int, isDST bool) error
 }
 
 func (th *TelegramHandler) SetBot(b *bot.Bot) {
@@ -145,7 +147,7 @@ func (th *TelegramHandler) MainMenuAction() tgwf.Action {
 		Row().Btn("Info", th.ShowInfo).
 		Row().Btn("Tasks", th.TaskMenu()).
 		Row().Btn("Events", th.EventsMenu()).
-		Row().Btn("Notifications", th.NotificationMenu())
+		Row().Btn("Settings", th.SettingsMenu())
 
 	return menu.Show
 }

@@ -38,6 +38,18 @@ func Time(timestamp pgtype.Timestamp) time.Time {
 	return timestamp.Time
 }
 
+func Timestamptz(t time.Time) pgtype.Timestamptz {
+	return pgtype.Timestamptz{
+		Time:             t,
+		InfinityModifier: pgtype.Finite,
+		Valid:            true,
+	}
+}
+
+func TimeWithZone(timestamps pgtype.Timestamptz) time.Time {
+	return timestamps.Time
+}
+
 func Text(s string) pgtype.Text {
 	return pgtype.Text{
 		String: s,
@@ -75,4 +87,11 @@ func Int(i pgtype.Int4) int {
 	}
 
 	return 0
+}
+
+func PgBool(b bool) pgtype.Bool {
+	return pgtype.Bool{
+		Bool:  b,
+		Valid: true,
+	}
 }

@@ -8,6 +8,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/Dyleme/Notifier/internal/authorization/models"
+	"github.com/Dyleme/Notifier/internal/lib/serverrors"
 )
 
 // HashGenerator interface providing you the ability to generate password hash
@@ -54,6 +55,8 @@ type UserRepo interface {
 
 	// GetPasswordHashAndID returns user password hash and id.
 	Get(ctx context.Context, authName string, tgID *int) (models.User, error)
+
+	UpdateTime(ctx context.Context, id int, tzOffset models.TimeZoneOffset, isDST bool) error
 }
 
 type NotifcationService interface {
@@ -120,4 +123,61 @@ func (s *AuthService) AuthUser(ctx context.Context, input ValidateUserInput) (st
 	}
 
 	return token, nil
+}
+
+func (s *AuthService) GetTGUserInfo(ctx context.Context, tgID int) (models.User, error) {
+	op := "AuthService.GetTGUserInfo: %w"
+	var tgUser models.User
+	err := s.repo.Atomic(ctx, func(ctx context.Context, userRepo UserRepo) error {
+		user, err := userRepo.Get(ctx, "", &tgID) //nolint:govet //just err in tx
+		if err == nil {                           // err equal nil
+			tgUser = user
+		}
+
+		var notFoundErr serverrors.NotFoundError
+		if !errors.As(err, &notFoundErr) {
+			return err //nolint:wrapcheck // wrapping later
+		}
+
+		user, err = userRepo.Create(ctx, CreateUserInput{
+			Email:    "",
+			Password: "",
+			TGID:     &tgID,
+		})
+		if err != nil {
+			return err //nolint:wrapcheck // wrapping later
+		}
+		tgUser = user
+
+		return nil
+	})
+	if err != nil {
+		return models.User{}, fmt.Errorf(op, err)
+	}
+
+	return tgUser, nil
+}
+
+var InvalidOffsetErr = errors.New("invalid offset")
+
+func (s *AuthService) UpdateUserTime(ctx context.Context, id int, tzOffset models.TimeZoneOffset, isDst bool) error {
+	op := "AuthService.UpdateUserTime: %w"
+
+	if !tzOffset.IsValid() {
+		return fmt.Errorf(op, InvalidOffsetErr)
+	}
+
+	err := s.repo.Atomic(ctx, func(ctx context.Context, repo UserRepo) error {
+		err := repo.UpdateTime(ctx, id, tzOffset, isDst)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+
+	return nil
 }

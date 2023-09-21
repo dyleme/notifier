@@ -8,9 +8,10 @@ import (
 	"github.com/go-telegram/bot/models"
 
 	"github.com/Dyleme/Notifier/internal/lib/log"
+	"github.com/Dyleme/Notifier/internal/telegram/userinfo"
 )
 
-func (th *TelegramHandler) UserIDMiddleware(next bot.HandlerFunc) bot.HandlerFunc {
+func (th *TelegramHandler) UserMiddleware(next bot.HandlerFunc) bot.HandlerFunc {
 	return func(ctx context.Context, bot *bot.Bot, update *models.Update) {
 		chatID, err := th.chatID(update)
 		if err != nil {
@@ -26,14 +27,14 @@ func (th *TelegramHandler) UserIDMiddleware(next bot.HandlerFunc) bot.HandlerFun
 			return
 		}
 
-		userID, err := th.userRepo.GetID(ctx, int(tgUserID))
+		userInfo, err := th.userRepo.GetUserInfo(ctx, int(tgUserID))
 		if err != nil {
 			th.handleError(ctx, chatID, err)
 
 			return
 		}
 
-		ctx = context.WithValue(ctx, userIDCtxKey, userID)
+		ctx = context.WithValue(ctx, userCtxKey, userInfo)
 
 		next(ctx, bot, update)
 	}
@@ -41,14 +42,14 @@ func (th *TelegramHandler) UserIDMiddleware(next bot.HandlerFunc) bot.HandlerFun
 
 type ctxKey string
 
-const userIDCtxKey ctxKey = "userID"
+const userCtxKey ctxKey = "userID"
 
-var ErrNoUserIDInCtx = errors.New("no user id in context")
+var ErrNoUserInCtx = errors.New("no user id in context")
 
-func UserIDFromCtx(ctx context.Context) (int, error) {
-	userID, ok := ctx.Value(userIDCtxKey).(int)
+func UserFromCtx(ctx context.Context) (userinfo.User, error) {
+	userID, ok := ctx.Value(userCtxKey).(userinfo.User)
 	if !ok {
-		return 0, ErrNoUserIDInCtx
+		return userinfo.User{}, ErrNoUserInCtx
 	}
 
 	return userID, nil

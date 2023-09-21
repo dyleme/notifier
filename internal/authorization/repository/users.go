@@ -66,13 +66,30 @@ func (r *Repository) Get(ctx context.Context, email string, tgID *int) (models.U
 			return models.User{}, fmt.Errorf(op, serverrors.NewNotFoundError(err, "user"))
 		}
 
-		return models.User{}, fmt.Errorf(op, err)
+		return models.User{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
 	return models.User{
-		ID:           int(out.ID),
-		Email:        pgxconv.String(out.Email),
-		PasswordHash: pgxconv.ByteSlice(out.PasswordHash),
-		TGID:         pgxconv.Int(out.TgID),
+		ID:             int(out.ID),
+		Email:          pgxconv.String(out.Email),
+		PasswordHash:   pgxconv.ByteSlice(out.PasswordHash),
+		TGID:           pgxconv.Int(out.TgID),
+		TimeZoneOffset: int(out.TimezoneOffset),
+		IsTimeZoneDST:  out.TimezoneDst,
 	}, nil
+}
+
+func (r *Repository) UpdateTime(ctx context.Context, id int, tzOffset models.TimeZoneOffset, isDST bool) error {
+	op := "Repository.UpdateTime: %w"
+
+	err := r.q.UpdateTime(ctx, queries.UpdateTimeParams{
+		TimezoneOffset: int32(tzOffset),
+		IsDst:          isDST,
+		ID:             int32(id),
+	})
+	if err != nil {
+		return fmt.Errorf(op, serverrors.NewRepositoryError(err))
+	}
+
+	return nil
 }

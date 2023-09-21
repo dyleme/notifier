@@ -31,7 +31,7 @@ func dtoEvent(t queries.Event) (domains.Event, error) {
 		UserID:       int(t.UserID),
 		Text:         t.Text,
 		Description:  pgxconv.String(t.Description),
-		Start:        pgxconv.Time(t.Start),
+		Start:        pgxconv.TimeWithZone(t.Start),
 		Done:         t.Done,
 		Notification: t.Notification,
 	}, nil
@@ -44,7 +44,7 @@ func (tr *EventRepository) Add(ctx context.Context, tt domains.Event) (domains.E
 		Text:        tt.Text,
 		Done:        tt.Done,
 		Description: pgxconv.Text(tt.Description),
-		Start:       pgxconv.Timestamp(tt.Start),
+		Start:       pgxconv.Timestamptz(tt.Start),
 		Notification: domains.Notification{
 			Sended:             tt.Notification.Sended,
 			NotificationParams: tt.Notification.NotificationParams,
@@ -100,8 +100,8 @@ func (tr *EventRepository) ListInPeriod(ctx context.Context, userID int, from, t
 	op := fmt.Sprintf("list timetable tasks userID{%v} from{%v} to{%v}: %%w", userID, from, to)
 	tts, err := tr.q.GetEventsInPeriod(ctx, queries.GetEventsInPeriodParams{
 		UserID:   int32(userID),
-		FromTime: pgxconv.Timestamp(from),
-		ToTime:   pgxconv.Timestamp(to),
+		FromTime: pgxconv.Timestamptz(from),
+		ToTime:   pgxconv.Timestamptz(to),
 		Off:      int32(params.Offset),
 		Lim:      int32(params.Limit),
 	})
@@ -122,7 +122,7 @@ func (tr *EventRepository) ListInPeriod(ctx context.Context, userID int, from, t
 }
 
 func (tr *EventRepository) Get(ctx context.Context, eventID, userID int) (domains.Event, error) {
-	op := fmt.Sprintf("get timetable tasks eventID{%v} userID{%v} %%w", eventID, userID)
+	op := fmt.Sprintf("EventRepository.Get timetable tasks eventID{%v} userID{%v} %%w", eventID, userID)
 	tt, err := tr.q.GetEvent(ctx, queries.GetEventParams{
 		ID:     int32(eventID),
 		UserID: int32(userID),
@@ -145,7 +145,7 @@ func (tr *EventRepository) Update(ctx context.Context, tt domains.Event) (domain
 		UserID:      int32(tt.UserID),
 		Text:        tt.Text,
 		Description: pgxconv.Text(tt.Description),
-		Start:       pgxconv.Timestamp(tt.Start),
+		Start:       pgxconv.Timestamptz(tt.Start),
 		Done:        tt.Done,
 	})
 	if err != nil {
