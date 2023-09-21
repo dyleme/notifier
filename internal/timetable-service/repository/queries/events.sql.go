@@ -31,7 +31,7 @@ RETURNING id, created_at, text, description, user_id, start, done, notification
 type AddEventParams struct {
 	UserID       int32
 	Text         string
-	Start        pgtype.Timestamp
+	Start        pgtype.Timestamptz
 	Description  pgtype.Text
 	Done         bool
 	Notification domains.Notification
@@ -69,8 +69,8 @@ WHERE user_id = $1
 
 type CountGetEventsInPeriodParams struct {
 	UserID   int32
-	FromTime pgtype.Timestamp
-	ToTime   pgtype.Timestamp
+	FromTime pgtype.Timestamptz
+	ToTime   pgtype.Timestamptz
 }
 
 func (q *Queries) CountGetEventsInPeriod(ctx context.Context, arg CountGetEventsInPeriodParams) (int64, error) {
@@ -212,8 +212,8 @@ OFFSET $4
 
 type GetEventsInPeriodParams struct {
 	UserID   int32
-	FromTime pgtype.Timestamp
-	ToTime   pgtype.Timestamp
+	FromTime pgtype.Timestamptz
+	ToTime   pgtype.Timestamptz
 	Off      int32
 	Lim      int32
 }
@@ -320,7 +320,7 @@ RETURNING id, created_at, text, description, user_id, start, done, notification
 `
 
 type UpdateEventParams struct {
-	Start       pgtype.Timestamp
+	Start       pgtype.Timestamptz
 	Text        string
 	Description pgtype.Text
 	Done        bool

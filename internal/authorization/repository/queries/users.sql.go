@@ -22,7 +22,7 @@ VALUES (
         $2,
         $3
        )
-RETURNING id, email, password_hash, tg_id
+RETURNING id, email, password_hash, tg_id, timezone_offset, timezone_dst
 `
 
 type AddUserParams struct {
@@ -39,12 +39,14 @@ func (q *Queries) AddUser(ctx context.Context, arg AddUserParams) (User, error) 
 		&i.Email,
 		&i.PasswordHash,
 		&i.TgID,
+		&i.TimezoneOffset,
+		&i.TimezoneDst,
 	)
 	return i, err
 }
 
 const findUser = `-- name: FindUser :one
-SELECT id, email, password_hash, tg_id
+SELECT id, email, password_hash, tg_id, timezone_offset, timezone_dst
 FROM users
 WHERE email = $1
    OR tg_id = $2
@@ -63,6 +65,8 @@ func (q *Queries) FindUser(ctx context.Context, arg FindUserParams) (User, error
 		&i.Email,
 		&i.PasswordHash,
 		&i.TgID,
+		&i.TimezoneOffset,
+		&i.TimezoneDst,
 	)
 	return i, err
 }
@@ -84,4 +88,22 @@ func (q *Queries) GetLoginParameters(ctx context.Context, email pgtype.Text) (Ge
 	var i GetLoginParametersRow
 	err := row.Scan(&i.ID, &i.PasswordHash)
 	return i, err
+}
+
+const updateTime = `-- name: UpdateTime :exec
+UPDATE users
+SET timezone_offset = $1,
+    timezone_dst = $2
+WHERE id = $3
+`
+
+type UpdateTimeParams struct {
+	TimezoneOffset int32
+	IsDst          bool
+	ID             int32
+}
+
+func (q *Queries) UpdateTime(ctx context.Context, arg UpdateTimeParams) error {
+	_, err := q.db.Exec(ctx, updateTime, arg.TimezoneOffset, arg.IsDst, arg.ID)
+	return err
 }

@@ -21,7 +21,7 @@ type Event struct {
 	Text         string
 	Description  pgtype.Text
 	UserID       int32
-	Start        pgtype.Timestamp
+	Start        pgtype.Timestamptz
 	Done         bool
 	Notification domains.Notification
 }
@@ -36,8 +36,10 @@ type Task struct {
 }
 
 type User struct {
-	ID           int32
-	Email        pgtype.Text
-	PasswordHash pgtype.Text
-	TgID         pgtype.Int4
+	ID             int32
+	Email          pgtype.Text
+	PasswordHash   pgtype.Text
+	TgID           pgtype.Int4
+	TimezoneOffset int32
+	TimezoneDst    bool
 }

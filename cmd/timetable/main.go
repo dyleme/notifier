@@ -26,6 +26,7 @@ import (
 	"github.com/Dyleme/Notifier/internal/server"
 	"github.com/Dyleme/Notifier/internal/server/custmidlleware"
 	"github.com/Dyleme/Notifier/internal/telegram/handler"
+	"github.com/Dyleme/Notifier/internal/telegram/userinfo"
 	timetableHandler "github.com/Dyleme/Notifier/internal/timetable-service/handler/handlers"
 	timetableRepository "github.com/Dyleme/Notifier/internal/timetable-service/repository"
 	timetableService "github.com/Dyleme/Notifier/internal/timetable-service/service"
@@ -75,7 +76,7 @@ func main() { //nolint:funlen // main can be long
 		},
 	)
 
-	tg, err := handler.New(timetableServ, handler.NewUserRepoCache(authRepo), cfg.Telegram)
+	tg, err := handler.New(timetableServ, userinfo.NewUserRepoCache(authService), cfg.Telegram)
 	if err != nil {
 		logger.Error("tg init error", log.Err(err))
 
@@ -90,7 +91,11 @@ func main() { //nolint:funlen // main can be long
 
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.Go(func() error {
-		return fmt.Errorf("server: %w", serv.Run(ctx))
+		if err := serv.Run(ctx); err != nil { //nolint:govet //new error
+			return fmt.Errorf("server: %w", err)
+		}
+
+		return nil
 	})
 	wg.Go(func() error {
 		tg.Run(ctx)
@@ -99,7 +104,7 @@ func main() { //nolint:funlen // main can be long
 	})
 	err = wg.Wait()
 	if err != nil {
-		logger.Error("error", log.Err(err))
+		logger.Error("serve error", log.Err(err))
 	}
 }
 

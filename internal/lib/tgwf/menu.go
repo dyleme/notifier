@@ -44,7 +44,7 @@ func (ma *MenuAction) Row() *MenuAction {
 
 func AddSliceToMenu[T any](ma *MenuAction, ts []T, btnText func(t T) string, action Action) *MenuAction {
 	for i, t := range ts {
-		text := strconv.Itoa(i) + "." + btnText(t)
+		text := strconv.Itoa(i+1) + "." + btnText(t)
 		ma = ma.Row().Btn(text, action)
 	}
 
