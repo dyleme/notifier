@@ -14,6 +14,20 @@ services:
     ports:
      - "5432:5432"
 
+  migrations:
+    image: dyleme/goose:latest
+    container_name: migrations
+    env_file: .env
+    environment:
+      - GOOSE_DRIVER=postgres
+      - GOOSE_DBSTRING=user=${POSTGRES_USER} database=${POSTGRES_DB} sslmode=${DB_SSL_MODE} password=${POSTGRES_PASSWORD} host=${DB_HOST}
+    volumes:
+      - ./migrations:/data
+    command: up
+    depends_on:
+      - postgresql
+
+
   service:
     image: dyleme/schedudler
     restart: always
@@ -26,6 +40,7 @@ services:
       - "${APP_PORT}:${APP_PORT}"
     depends_on:
       - postgresql
+      - migrations
 
 #  adminer:
 #    image: adminer

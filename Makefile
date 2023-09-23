@@ -12,12 +12,18 @@ SQLC_FOLDER="pkg/repository"
 .PHONY: docker-compose.up
 docker-compose.up: 
 	@echo "----- deploy by docker -----"
-	@docker-compose up -d
+	@docker compose up -d
 
 
 .PHONY: docker-compose.down
 docker-compose.down:
-	docker-compose down
+	docker compose down
+
+.PHONY: redeploy
+redeploy:
+	docker compose pull service
+	docker compose down service
+	docker compose up -d
 
 .PHONY: migrate.up
 migrate.up:
@@ -69,3 +75,5 @@ docker.build:
 .PHONY: docker.push
 docker.push: docker.build
 	docker push dyleme/schedudler
+
+
