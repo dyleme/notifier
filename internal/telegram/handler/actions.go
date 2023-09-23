@@ -22,7 +22,7 @@ func (th *TelegramHandler) info(ctx context.Context, chatID int64) error {
 	op := "TelegramHandler.info: %w"
 	_, err := th.bot.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
 		ChatID: chatID,
-		Text:   "info",
+		Text:   "This is info from schedulder bot",
 	})
 	if err != nil {
 		return fmt.Errorf(op, err)
