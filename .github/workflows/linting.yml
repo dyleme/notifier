@@ -2,7 +2,6 @@ name: Linters
 
 on:
   push:
-  pull_request:
 
 jobs:
   golangci-lint:

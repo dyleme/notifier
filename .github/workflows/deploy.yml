@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - add-auto-deploying
 
 jobs:
   push-docker:
