@@ -2,8 +2,8 @@ version: '3.3'
 services:
   postgresql:
     image: postgres:latest
-    container_name: postgers
     restart: always
+    container_name: postgers
     env_file: .env
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
