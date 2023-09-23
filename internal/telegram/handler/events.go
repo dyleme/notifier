@@ -160,9 +160,15 @@ func (ec *EventCreation) SetText(_ context.Context, _ *bot.Bot, update *models.U
 
 func (ec *EventCreation) MessageSetStartDay(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
 	op := "EventCreation.MessageSetStartDay: %w"
-	now := time.Now()
-	tomorrow := time.Now().Add(day)
-	_, err := b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
+	user, err := UserFromCtx(ctx)
+	if err != nil {
+		return nil, fmt.Errorf(op, err)
+	}
+
+	now := time.Now().In(user.Location())
+	tomorrow := time.Now().Add(day).In(user.Location())
+
+	_, err = b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
 		ChatID: chatID,
 		Text:   "Set start day (in form 18.04)",
 		ReplyMarkup: models.ReplyKeyboardMarkup{ //nolint:exhaustruct //no need to specify

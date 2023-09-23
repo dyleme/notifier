@@ -40,7 +40,7 @@ func (ts *TimezoneSettings) CurrentTime(ctx context.Context, b *bot.Bot, chatID 
 	utcTime := time.Now().In(time.UTC)
 	userTime := utcTime.In(userLoc)
 	h, m, _ := userTime.Clock()
-	messageText := fmt.Sprintf("Your time: %d:%d,\nYour timezone: UTC%+02d\nDST:%v", h, m, user.Zone, user.IsDST)
+	messageText := fmt.Sprintf("Your time: %02d:%02d,\nYour timezone: UTC%+02d\nDST:%v", h, m, user.Zone, user.IsDST)
 	menu := tgwf.NewMenuAction(messageText).
 		Row().Btn("Update", ts.SpecifyTimeMessage).
 		Row().Btn("Ok", nil)
