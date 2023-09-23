@@ -19,6 +19,12 @@ docker-compose.up:
 docker-compose.down:
 	docker-compose down
 
+.PHONY: redeploy
+redeploy:
+	docker-compose pull service
+	docker-compose down service
+	docker-compose up -d
+
 .PHONY: migrate.up
 migrate.up:
 	@echo "----- running migrations up -----"
@@ -69,3 +75,5 @@ docker.build:
 .PHONY: docker.push
 docker.push: docker.build
 	docker push dyleme/schedudler
+
+
