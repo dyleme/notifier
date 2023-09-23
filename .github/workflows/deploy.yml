@@ -34,7 +34,7 @@ jobs:
           tags: dyleme/schedudler:latest
 
   redeploy:
-    name: run pull
+    name: Update service on server
     runs-on: ubuntu-latest
     needs: push-docker
     steps:
