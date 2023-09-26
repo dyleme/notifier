@@ -37,9 +37,9 @@ func dtoEvent(t queries.Event) (domains.Event, error) {
 	}, nil
 }
 
-func (tr *EventRepository) Add(ctx context.Context, tt domains.Event) (domains.Event, error) {
+func (er *EventRepository) Add(ctx context.Context, tt domains.Event) (domains.Event, error) {
 	op := "add timetable task: %w"
-	addedEvent, err := tr.q.AddEvent(ctx, queries.AddEventParams{
+	addedEvent, err := er.q.AddEvent(ctx, queries.AddEventParams{
 		UserID:      int32(tt.UserID),
 		Text:        tt.Text,
 		Done:        tt.Done,
@@ -57,9 +57,9 @@ func (tr *EventRepository) Add(ctx context.Context, tt domains.Event) (domains.E
 	return dtoEvent(addedEvent)
 }
 
-func (tr *EventRepository) List(ctx context.Context, userID int, listParams service.ListParams) ([]domains.Event, error) {
+func (er *EventRepository) List(ctx context.Context, userID int, listParams service.ListParams) ([]domains.Event, error) {
 	op := fmt.Sprintf("list timetable tasks userID{%v} %%w", userID)
-	tt, err := tr.q.ListEvents(ctx, queries.ListEventsParams{
+	tt, err := er.q.ListEvents(ctx, queries.ListEventsParams{
 		UserID: int32(userID),
 		Off:    int32(listParams.Offset),
 		Lim:    int32(listParams.Limit),
@@ -80,25 +80,25 @@ func (tr *EventRepository) List(ctx context.Context, userID int, listParams serv
 	return events, nil
 }
 
-func (tr *EventRepository) Delete(ctx context.Context, eventID, userID int) error {
+func (er *EventRepository) Delete(ctx context.Context, eventID, userID int) error {
 	op := fmt.Sprintf("delete timetable tasks eventID{%v} userID{%v} %%w", eventID, userID)
-	amount, err := tr.q.DeleteEvent(ctx, queries.DeleteEventParams{
+	deletedEvents, err := er.q.DeleteEvent(ctx, queries.DeleteEventParams{
 		ID:     int32(eventID),
 		UserID: int32(userID),
 	})
 	if err != nil {
 		return fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
-	if amount == 0 {
-		return fmt.Errorf(op, serverrors.NewNoDeletionsError("timetable task"))
+	if len(deletedEvents) == 0 {
+		return fmt.Errorf(op, serverrors.NewNoDeletionsError("events"))
 	}
 
 	return nil
 }
 
-func (tr *EventRepository) ListInPeriod(ctx context.Context, userID int, from, to time.Time, params service.ListParams) ([]domains.Event, error) {
+func (er *EventRepository) ListInPeriod(ctx context.Context, userID int, from, to time.Time, params service.ListParams) ([]domains.Event, error) {
 	op := fmt.Sprintf("list timetable tasks userID{%v} from{%v} to{%v}: %%w", userID, from, to)
-	tts, err := tr.q.GetEventsInPeriod(ctx, queries.GetEventsInPeriodParams{
+	tts, err := er.q.GetEventsInPeriod(ctx, queries.GetEventsInPeriodParams{
 		UserID:   int32(userID),
 		FromTime: pgxconv.Timestamptz(from),
 		ToTime:   pgxconv.Timestamptz(to),
@@ -121,9 +121,9 @@ func (tr *EventRepository) ListInPeriod(ctx context.Context, userID int, from, t
 	return events, nil
 }
 
-func (tr *EventRepository) Get(ctx context.Context, eventID, userID int) (domains.Event, error) {
+func (er *EventRepository) Get(ctx context.Context, eventID, userID int) (domains.Event, error) {
 	op := fmt.Sprintf("EventRepository.Get timetable tasks eventID{%v} userID{%v} %%w", eventID, userID)
-	tt, err := tr.q.GetEvent(ctx, queries.GetEventParams{
+	tt, err := er.q.GetEvent(ctx, queries.GetEventParams{
 		ID:     int32(eventID),
 		UserID: int32(userID),
 	})
@@ -138,9 +138,9 @@ func (tr *EventRepository) Get(ctx context.Context, eventID, userID int) (domain
 	return dtoEvent(tt)
 }
 
-func (tr *EventRepository) Update(ctx context.Context, tt domains.Event) (domains.Event, error) {
+func (er *EventRepository) Update(ctx context.Context, tt domains.Event) (domains.Event, error) {
 	op := "update timetable task: %w"
-	updatedTT, err := tr.q.UpdateEvent(ctx, queries.UpdateEventParams{
+	updatedTT, err := er.q.UpdateEvent(ctx, queries.UpdateEventParams{
 		ID:          int32(tt.ID),
 		UserID:      int32(tt.UserID),
 		Text:        tt.Text,
@@ -155,9 +155,9 @@ func (tr *EventRepository) Update(ctx context.Context, tt domains.Event) (domain
 	return dtoEvent(updatedTT)
 }
 
-func (tr *EventRepository) GetNotNotified(ctx context.Context) ([]domains.Event, error) {
+func (er *EventRepository) GetNotNotified(ctx context.Context) ([]domains.Event, error) {
 	op := "EventRepository.GetNotNotified: %w"
-	tasks, err := tr.q.GetEventReadyTasks(ctx)
+	tasks, err := er.q.GetEventReadyTasks(ctx)
 	if err != nil {
 		return nil, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
@@ -170,9 +170,9 @@ func (tr *EventRepository) GetNotNotified(ctx context.Context) ([]domains.Event,
 	return notNotified, nil
 }
 
-func (tr *EventRepository) MarkNotified(ctx context.Context, ids []int) error {
+func (er *EventRepository) MarkNotified(ctx context.Context, ids []int) error {
 	op := "EventRepository.MarkNotified: %w"
-	err := tr.q.MarkNotificationSended(ctx, dto.Slice(ids, func(i int) int32 {
+	err := er.q.MarkNotificationSended(ctx, dto.Slice(ids, func(i int) int32 {
 		return int32(i)
 	}))
 	if err != nil {
@@ -182,14 +182,14 @@ func (tr *EventRepository) MarkNotified(ctx context.Context, ids []int) error {
 	return nil
 }
 
-func (tr *EventRepository) UpdateNotificationParams(ctx context.Context, eventID, userID int, params domains.NotificationParams) (domains.NotificationParams, error) {
+func (er *EventRepository) UpdateNotificationParams(ctx context.Context, eventID, userID int, params domains.NotificationParams) (domains.NotificationParams, error) {
 	op := "EventRepository.UpdateNotificationParams: %w"
 	bts, err := json.Marshal(params)
 	if err != nil {
 		return domains.NotificationParams{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
-	p, err := tr.q.UpdateNotificationParams(ctx, queries.UpdateNotificationParamsParams{
+	p, err := er.q.UpdateNotificationParams(ctx, queries.UpdateNotificationParamsParams{
 		Params: bts,
 		ID:     int32(eventID),
 		UserID: int32(userID),
@@ -205,9 +205,9 @@ func (tr *EventRepository) UpdateNotificationParams(ctx context.Context, eventID
 	return *p.NotificationParams, nil
 }
 
-func (tr *EventRepository) Delay(ctx context.Context, eventID, userID int, till time.Time) error {
+func (er *EventRepository) Delay(ctx context.Context, eventID, userID int, till time.Time) error {
 	op := "EventRepository.Delay: %w"
-	err := tr.q.DelayEvent(ctx, queries.DelayEventParams{
+	err := er.q.DelayEvent(ctx, queries.DelayEventParams{
 		Till:   pgxconv.Timestamp(till),
 		ID:     int32(eventID),
 		UserID: int32(userID),

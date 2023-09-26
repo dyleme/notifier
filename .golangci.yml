@@ -30,8 +30,6 @@ linters-settings:
       - standard
       - default
       - prefix(github.com/Dyleme/Notifier)
-      - blank
-      - dot
 
 
 issues:

@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
@@ -11,32 +12,43 @@ import (
 	"github.com/Dyleme/Notifier/internal/telegram/userinfo"
 )
 
+func (th *TelegramHandler) tgUserID(update *models.Update) (int64, error) {
+	switch {
+	case update.Message != nil:
+		return update.Message.From.ID, nil
+	case update.CallbackQuery != nil:
+		return update.CallbackQuery.Sender.ID, nil
+	}
+
+	return 0, fmt.Errorf("unknown id")
+}
+
 func (th *TelegramHandler) UserMiddleware(next bot.HandlerFunc) bot.HandlerFunc {
-	return func(ctx context.Context, bot *bot.Bot, update *models.Update) {
+	return func(ctx context.Context, b *bot.Bot, update *models.Update) {
 		chatID, err := th.chatID(update)
 		if err != nil {
-			th.handleError(ctx, 0, err)
+			handleError(ctx, b, 0, err)
 
 			return
 		}
 
 		tgUserID, err := th.tgUserID(update)
 		if err != nil {
-			th.handleError(ctx, chatID, err)
+			handleError(ctx, b, chatID, err)
 
 			return
 		}
 
 		userInfo, err := th.userRepo.GetUserInfo(ctx, int(tgUserID))
 		if err != nil {
-			th.handleError(ctx, chatID, err)
+			handleError(ctx, b, chatID, err)
 
 			return
 		}
 
 		ctx = context.WithValue(ctx, userCtxKey, userInfo)
 
-		next(ctx, bot, update)
+		next(ctx, b, update)
 	}
 }
 

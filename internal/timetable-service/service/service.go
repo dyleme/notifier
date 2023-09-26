@@ -10,6 +10,7 @@ type Repository interface {
 	DefaultNotificationParams() NotificationParamsRepository
 	Tasks() TaskRepository
 	Events() EventRepository
+	TgImages() TgImagesRepository
 }
 
 type Service struct {

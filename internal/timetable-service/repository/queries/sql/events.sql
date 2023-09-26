@@ -1,10 +1,10 @@
 -- name: AddEvent :one
 INSERT INTO events (user_id,
-                             text,
-                             start,
-                             description,
-                             done,
-                             notification)
+                    text,
+                    start,
+                    description,
+                    done,
+                    notification)
 VALUES (@user_id,
         @text,
         @start,
@@ -24,11 +24,10 @@ SELECT *
 FROM events
 WHERE user_id = @user_id
 ORDER BY id DESC
-LIMIT @lim
-OFFSET @off;
+LIMIT @lim OFFSET @OFF;
 
 -- name: CountListEvents :one
-SELECT count(*)
+SELECT COUNT(*)
 FROM events
 WHERE user_id = @user_id;
 
@@ -39,22 +38,21 @@ FROM events
 WHERE user_id = @user_id
   AND start BETWEEN @from_time AND @to_time
 ORDER BY id DESC
-LIMIT @lim
-OFFSET @off;
+LIMIT @lim OFFSET @OFF;
 
 
 -- name: CountGetEventsInPeriod :one
-SELECT count(*)
+SELECT COUNT(*)
 FROM events
 WHERE user_id = @user_id
   AND start BETWEEN @from_time AND @to_time;
 
--- name: DeleteEvent :one
+-- name: DeleteEvent :many
 DELETE
 FROM events
 WHERE id = @id
-  AND user_id = @user_id
-RETURNING COUNT(*) AS deleted_amount;
+AND user_id = @user_id
+RETURNING *;
 
 -- name: UpdateEvent :one
 UPDATE events
@@ -91,6 +89,6 @@ RETURNING notification;
 
 -- name: DelayEvent :exec
 UPDATE events AS t
-SET notification = JSONB_SET(notificaiton, '{"delayed_till"}',sqlc.arg(till)::TIMESTAMP)
+SET notification = JSONB_SET(notificaiton, '{"delayed_till"}', sqlc.arg(till)::TIMESTAMP)
 WHERE id = @id
   AND user_id = @user_id;

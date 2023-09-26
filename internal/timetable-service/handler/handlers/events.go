@@ -122,9 +122,10 @@ func (t EventHandler) UpdateEvent(w http.ResponseWriter, r *http.Request, eventI
 		description = *updateBody.Description
 	}
 
-	event, err := t.serv.UpdateEvent(r.Context(), service.UpdateEventParams{
+	event, err := t.serv.UpdateEvent(r.Context(), service.EventUpdateParams{
 		ID:          eventID,
 		UserID:      userID,
+		Text:        description,
 		Description: description,
 		Start:       updateBody.Start,
 		Done:        updateBody.Done,

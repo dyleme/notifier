@@ -9,7 +9,6 @@ import (
 	"github.com/go-telegram/bot/models"
 
 	"github.com/Dyleme/Notifier/internal/lib/log"
-	"github.com/Dyleme/Notifier/internal/lib/tgwf"
 	"github.com/Dyleme/Notifier/internal/telegram/userinfo"
 	timetableService "github.com/Dyleme/Notifier/internal/timetable-service/service"
 )
@@ -20,18 +19,19 @@ type Config struct {
 
 const defaultListLimit = 100
 
-func New(service *timetableService.Service, userRepo UserRepo, cfg Config) (*TelegramHandler, error) {
+func New(service *timetableService.Service, userRepo UserRepo, cfg Config, actionsStore WaitingActionsStore) (*TelegramHandler, error) {
 	op := "New: %w"
 	tgHandler := TelegramHandler{
-		serv:     service,
-		userRepo: userRepo,
-		bot:      nil, // set this field later by calling SetBot method
+		serv:                service,
+		userRepo:            userRepo,
+		waitingActionsStore: actionsStore,
+		bot:                 nil, // set this field later by calling SetBot method
 	}
 	opts := []bot.Option{
 		bot.WithMiddlewares(loggingMiddleware, tgHandler.UserMiddleware),
-		bot.WithMessageTextHandler("/start", bot.MatchTypeExact, tgHandler.MainMenu),
-		bot.WithMessageTextHandler("/info", bot.MatchTypeExact, tgHandler.Info),
-		bot.WithMessageTextHandler("/cancel", bot.MatchTypeExact, tgHandler.Cancel),
+		bot.WithMessageTextHandler("/start", bot.MatchTypeExact, tgHandler.StartListener),
+		bot.WithMessageTextHandler("/info", bot.MatchTypeExact, tgHandler.InfoListener),
+		bot.WithMessageTextHandler("/cancel", bot.MatchTypeExact, tgHandler.CancelListener),
 		bot.WithDefaultHandler(tgHandler.Handle),
 	}
 
@@ -40,20 +40,32 @@ func New(service *timetableService.Service, userRepo UserRepo, cfg Config) (*Tel
 		return nil, fmt.Errorf(op, err)
 	}
 
-	tgHandler.bot = tgwf.New(b, tgHandler.MainMenuAction())
+	tgHandler.bot = b
 
 	return &tgHandler, nil
 }
 
 type TelegramHandler struct {
-	bot      *tgwf.WorkflowHandler
-	serv     *timetableService.Service
-	userRepo UserRepo
+	bot                 *bot.Bot
+	serv                *timetableService.Service
+	userRepo            UserRepo
+	waitingActionsStore WaitingActionsStore
+}
+
+type TextMessageHandler struct {
+	handle    func(ctx context.Context, b *bot.Bot, msg *models.Message, relatedMsgID int)
+	messageID int
+}
+
+type WaitingActionsStore interface {
+	StoreDefDur(key int64, val TextMessageHandler)
+	Get(key int64) (TextMessageHandler, error)
+	Delete(key int64)
 }
 
 func (th *TelegramHandler) Run(ctx context.Context) {
 	log.Ctx(ctx).Info("start telegram bot")
-	th.bot.Bot.Start(ctx)
+	th.bot.Start(ctx)
 }
 
 type UserRepo interface {
@@ -61,19 +73,79 @@ type UserRepo interface {
 	UpdateUserTime(ctx context.Context, tgID int, timezoneOffset int, isDST bool) error
 }
 
-func (th *TelegramHandler) SetBot(b *bot.Bot) {
-	th.bot = tgwf.New(b, th.MainMenuAction())
+var errUnknownUpdate = errors.New("unknown update")
+
+func (th *TelegramHandler) Handle(ctx context.Context, b *bot.Bot, update *models.Update) {
+	op := "TelegramHandler.Handle: %w"
+	chatID, err := th.chatID(update)
+	if err != nil {
+		handleError(ctx, b, 0, err)
+
+		return
+	}
+	if update.Message != nil {
+		textHandler, err := th.waitingActionsStore.Get(chatID)
+		if err != nil {
+			handleError(ctx, b, chatID, fmt.Errorf(op, err))
+
+			return
+		}
+
+		textHandler.handle(ctx, b, update.Message, textHandler.messageID)
+	}
+	handleError(ctx, b, chatID, fmt.Errorf(op, errUnknownUpdate))
 }
 
-func (th *TelegramHandler) tgUserID(update *models.Update) (int64, error) {
-	switch {
-	case update.Message != nil:
-		return update.Message.From.ID, nil
-	case update.CallbackQuery != nil:
-		return update.CallbackQuery.Sender.ID, nil
+func (th *TelegramHandler) InfoListener(ctx context.Context, b *bot.Bot, update *models.Update) {
+	if update.Message != nil {
+		th.InfoInline(ctx, b, update.Message, nil)
+	}
+}
+
+func (th *TelegramHandler) StartListener(ctx context.Context, b *bot.Bot, update *models.Update) {
+	op := "TelegramHandler.StartListener: %w"
+	chatID, err := th.chatID(update)
+	if err != nil {
+		handleError(ctx, b, chatID, fmt.Errorf(op, err))
+
+		return
 	}
 
-	return 0, fmt.Errorf("unknown id")
+	err = th.mainMenuCreateWindow(ctx, b, chatID)
+	if err != nil {
+		handleError(ctx, b, chatID, fmt.Errorf(op, err))
+
+		return
+	}
+}
+
+func (th *TelegramHandler) CancelListener(ctx context.Context, b *bot.Bot, update *models.Update) {
+	op := "TelegramHandler.CancelListener: %w"
+	chatID, err := th.chatID(update)
+	if err != nil {
+		handleError(ctx, b, 0, fmt.Errorf(op, err))
+
+		return
+	}
+
+	th.waitingActionsStore.Delete(chatID)
+
+	_, err = th.bot.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
+		ChatID: chatID,
+		Text:   "Return basic state",
+	})
+	if err != nil {
+		handleError(ctx, b, chatID, fmt.Errorf(op, err))
+
+		return
+	}
+
+	err = th.mainMenuCreateWindow(ctx, b, chatID)
+	if err != nil {
+		handleError(ctx, b, chatID, fmt.Errorf(op, err))
+
+		return
+	}
 }
 
 func (th *TelegramHandler) chatID(update *models.Update) (int64, error) {
@@ -87,127 +159,4 @@ func (th *TelegramHandler) chatID(update *models.Update) (int64, error) {
 	}
 
 	return 0, fmt.Errorf("no chat id")
-}
-
-func (th *TelegramHandler) Handle(ctx context.Context, _ *bot.Bot, update *models.Update) {
-	chatID, err := th.chatID(update)
-	if err != nil {
-		th.handleError(ctx, 0, err)
-
-		return
-	}
-	err = th.bot.HandleAction(ctx, update)
-	if err != nil {
-		if errors.Is(err, tgwf.ErrNoAssociatedAction) {
-			th.Info(ctx, nil, update)
-
-			return
-		}
-		th.handleError(ctx, chatID, err)
-
-		return
-	}
-}
-
-func (th *TelegramHandler) Info(ctx context.Context, _ *bot.Bot, update *models.Update) {
-	chatID, err := th.chatID(update)
-	if err != nil {
-		th.handleError(ctx, 0, err)
-
-		return
-	}
-
-	err = th.info(ctx, chatID)
-	if err != nil {
-		th.handleError(ctx, chatID, err)
-
-		return
-	}
-}
-
-func (th *TelegramHandler) MainMenu(ctx context.Context, _ *bot.Bot, update *models.Update) {
-	op := "TelegramHandler.MainMenu: %w"
-	chatID, err := th.chatID(update)
-	if err != nil {
-		handleError(ctx, th.bot, chatID, fmt.Errorf(op, err))
-
-		return
-	}
-
-	err = th.bot.Start(ctx, chatID, th.MainMenuAction())
-	if err != nil {
-		handleError(ctx, th.bot, chatID, fmt.Errorf(op, err))
-
-		return
-	}
-}
-
-func (th *TelegramHandler) MainMenuAction() tgwf.Action {
-	menu := tgwf.NewMenuAction("What do you want to do?").
-		Row().Btn("Info", th.ShowInfo).
-		Row().Btn("Tasks", th.TaskMenu()).
-		Row().Btn("Events", th.EventsMenu()).
-		Row().Btn("Settings", th.SettingsMenu())
-
-	return menu.Show
-}
-
-func (th *TelegramHandler) mainMenu(ctx context.Context, chatID int64) error {
-	op := "TelegramHandler.menu: %w"
-
-	menu := th.MainMenuAction()
-	err := th.bot.Start(ctx, chatID, menu)
-	if err != nil {
-		return fmt.Errorf(op, err)
-	}
-
-	return nil
-}
-
-func (th *TelegramHandler) Cancel(ctx context.Context, _ *bot.Bot, update *models.Update) {
-	op := "TelegramHandler.Cancel: %w"
-	chatID, err := th.chatID(update)
-	if err != nil {
-		th.handleError(ctx, 0, fmt.Errorf(op, err))
-
-		return
-	}
-
-	th.bot.ForgotForChat(ctx, chatID)
-
-	_, err = th.bot.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
-		ChatID: chatID,
-		Text:   "Return basic state",
-	})
-	if err != nil {
-		th.handleError(ctx, chatID, fmt.Errorf(op, err))
-
-		return
-	}
-
-	err = th.mainMenu(ctx, chatID)
-	if err != nil {
-		th.handleError(ctx, chatID, fmt.Errorf(op, err))
-
-		return
-	}
-}
-
-func (th *TelegramHandler) handleError(ctx context.Context, chatID int64, err error) {
-	handleError(ctx, th.bot, chatID, err)
-}
-
-func handleError(ctx context.Context, b *tgwf.WorkflowHandler, chatID int64, err error) {
-	log.Ctx(ctx).Error("error occurred", log.Err(err))
-	if chatID == 0 {
-		return
-	}
-
-	_, err = b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
-		ChatID: chatID,
-		Text:   "Server error occurred",
-	})
-	if err != nil {
-		log.Ctx(ctx).Error("cannot send error message", log.Err(err))
-	}
 }

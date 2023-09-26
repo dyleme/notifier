@@ -68,7 +68,7 @@ func (ts *TimezoneSettings) SpecifyTimeMessage(ctx context.Context, b *bot.Bot, 
 }
 
 func (ts *TimezoneSettings) SetTime(_ context.Context, _ *bot.Bot, update *models.Update) (tgwf.Action, error) {
-	op := "TimezoneSettings.SetTime: %w"
+	op := "TimezoneSettings.HandleMsgSetTime: %w"
 	message, err := tgwf.GetMessage(update)
 	if err != nil {
 		return nil, fmt.Errorf(op, err)
@@ -113,7 +113,7 @@ func (ts *TimezoneSettings) IsDSTMessage(ctx context.Context, b *bot.Bot, chatID
 }
 
 func (ts *TimezoneSettings) IsDst(_ context.Context, _ *bot.Bot, update *models.Update) (tgwf.Action, error) {
-	op := "TimezoneSettings.SetTime: %w"
+	op := "TimezoneSettings.HandleMsgSetTime: %w"
 	message, err := tgwf.GetMessage(update)
 	if err != nil {
 		return nil, fmt.Errorf(op, err)

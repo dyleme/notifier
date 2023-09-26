@@ -12,16 +12,23 @@ import (
 )
 
 type Repository struct {
-	db *pgxpool.Pool
-	q  *queries.Queries
+	db    *pgxpool.Pool
+	q     *queries.Queries
+	cache Cache
 }
 
-func New(pool *pgxpool.Pool) *Repository {
-	return &Repository{db: pool, q: queries.New(pool)}
+type Cache interface {
+	Get(key string, obj any) error
+	Delete(key string) error
+	Add(key string, obj any) error
+}
+
+func New(pool *pgxpool.Pool, cache Cache) *Repository {
+	return &Repository{db: pool, q: queries.New(pool), cache: cache}
 }
 
 func (r *Repository) WithTx(tx pgx.Tx) *Repository {
-	return &Repository{q: r.q.WithTx(tx), db: nil}
+	return &Repository{q: r.q.WithTx(tx), db: nil, cache: r.cache}
 }
 
 func (r *Repository) Atomic(ctx context.Context, fn func(ctx context.Context, repository service.Repository) error) error {

@@ -31,7 +31,7 @@ import (
 //
 // 	_, err := serv.bot.SendMessage(ctx, &bot.SendMessageParams{
 // 		ChatID:      chatID,
-// 		Text:        "Menu",
+// 		Text:        "EventChosen",
 // 		ReplyMarkup: kb,
 // 	})
 // 	if err != nil {
@@ -101,7 +101,7 @@ type TaskCreation struct {
 }
 
 func (tc *TaskCreation) create(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
-	op := "TaskCreation.create: %w"
+	op := "TaskCreation.CreateInline: %w"
 	user, err := UserFromCtx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf(op, err)
@@ -159,7 +159,7 @@ type TaskEdit struct {
 }
 
 func (te *TaskEdit) Menu(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
-	op := "TaskEdit.Menu: %w"
+	op := "TaskEdit.EventChosen: %w"
 	user, err := UserFromCtx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf(op, err)
