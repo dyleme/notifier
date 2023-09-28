@@ -8,144 +8,187 @@ import (
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
+	inKbr "github.com/go-telegram/ui/keyboard/inline"
 
-	"github.com/Dyleme/Notifier/internal/lib/tgwf"
-	domains "github.com/Dyleme/Notifier/internal/timetable-service/domains"
-	"github.com/Dyleme/Notifier/internal/timetable-service/service"
+	"github.com/Dyleme/Notifier/internal/timetable-service/domains"
 )
 
-func (th *TelegramHandler) SettingsMenu() tgwf.Action {
-	timezoneSetting := &TimezoneSettings{userRepo: th.userRepo, zone: 0, isDST: false}
-	menu := tgwf.NewMenuAction("Settings").
-		Row().Btn("Notifications", th.NotificationMenu()).
-		Row().Btn("Timezone", timezoneSetting.CurrentTime)
+func (th *TelegramHandler) SettingsInline(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
+	op := "TelegramHandler.SettingsInline: %w"
 
-	return menu.Show
+	timezoneSetting := &TimezoneSettings{th: th, zone: 0, isDST: false}
+	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick()).
+		Row().Button("Notifications", nil, errorHandling(th.NotificationMenu)).
+		Row().Button("Timezone", nil, errorHandling(timezoneSetting.CurrentTime))
+
+	_, err := b.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to fill
+		ChatID:      msg.Chat.ID,
+		MessageID:   msg.ID,
+		Caption:     "Timezone",
+		ReplyMarkup: kbr,
+	})
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+
+	return nil
 }
 
 type TimezoneSettings struct {
-	userRepo UserRepo
-	zone     int
-	isDST    bool
+	th    *TelegramHandler
+	zone  int
+	isDST bool
 }
 
-func (ts *TimezoneSettings) CurrentTime(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
-	op := "TimezoneSettings.CurrentTime: %w"
-	user, err := UserFromCtx(ctx)
-	if err != nil {
-		return nil, fmt.Errorf(op, err)
-	}
-
-	userLoc := time.FixedZone("Temp/Location", user.Zone*int(time.Hour/time.Second))
+func (ts *TimezoneSettings) String() string {
+	userLoc := time.FixedZone("Temp/Location", ts.zone*int(time.Hour/time.Second))
 	utcTime := time.Now().In(time.UTC)
 	userTime := utcTime.In(userLoc)
 	h, m, _ := userTime.Clock()
-	messageText := fmt.Sprintf("Your time: %02d:%02d,\nYour timezone: UTC%+02d\nDST:%v", h, m, user.Zone, user.IsDST)
-	menu := tgwf.NewMenuAction(messageText).
-		Row().Btn("Update", ts.SpecifyTimeMessage).
-		Row().Btn("Ok", nil)
 
-	menuHandler, err := menu.Show(ctx, b, chatID)
-	if err != nil {
-		return nil, fmt.Errorf(op, err)
-	}
-
-	return menuHandler, nil
+	return fmt.Sprintf("Your time: %02d:%02d,\nYour timezone: UTC%+02d\nDST:%v", h, m, ts.zone, ts.isDST)
 }
 
-func (ts *TimezoneSettings) SpecifyTimeMessage(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
-	op := "TimezoneSettings.Enable: %w"
+func (ts *TimezoneSettings) CurrentTime(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
+	op := "TimezoneSettings.CurrentTime: %w"
+	user, err := UserFromCtx(ctx)
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
 
-	_, err := b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
-		ChatID: chatID,
-		Text:   "Write your current time (18:04)",
+	ts.isDST = user.IsDST
+	ts.zone = user.Zone
+
+	if err = ts.EditMenuMsg(ctx, b, msg.ID, msg.Chat.ID); err != nil {
+		return fmt.Errorf(op, err)
+	}
+
+	return nil
+}
+
+func (ts *TimezoneSettings) EditMenuMsg(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) error {
+	op := "TimezoneSettings.EditMenuMsg: %w"
+
+	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick()).
+		Row().
+		Button("Set current time", nil, errorHandling(ts.SetTimeMsg)).
+		Button("Set is dst", nil, errorHandling(ts.SetDstMsg))
+
+	kbr.Row().Button("Update", nil, errorHandling(ts.UpdateInline))
+
+	kbr.Button("Cancel", nil, errorHandling(ts.th.MainMenuInline))
+
+	params := &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to fill
+		ChatID:      chatID,
+		MessageID:   relatedMsgID,
+		Caption:     ts.String(),
+		ReplyMarkup: kbr,
+	}
+
+	_, err := b.EditMessageCaption(ctx, params)
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+
+	return nil
+}
+
+func (ts *TimezoneSettings) SetTimeMsg(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
+	op := "TimezoneSettings.SetTimeMsg: %w"
+
+	_, err := b.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to fill
+		ChatID:      msg.Chat.ID,
+		MessageID:   msg.ID,
+		Caption:     ts.String() + "\n\n" + "Specify time message",
+		ReplyMarkup: inKbr.New(b, inKbr.NoDeleteAfterClick()).Button("Cancel", nil, errorHandling(ts.th.MainMenuInline)),
 	})
 	if err != nil {
-		return nil, fmt.Errorf(op, err)
+		return fmt.Errorf(op, err)
 	}
 
-	return ts.SetTime, nil
+	ts.th.waitingActionsStore.StoreDefDur(msg.Chat.ID, TextMessageHandler{
+		handle:    ts.HandleMsgSetTime,
+		messageID: msg.ID,
+	})
+
+	return nil
 }
 
-func (ts *TimezoneSettings) SetTime(_ context.Context, _ *bot.Bot, update *models.Update) (tgwf.Action, error) {
-	op := "TimezoneSettings.SetTime: %w"
-	message, err := tgwf.GetMessage(update)
-	if err != nil {
-		return nil, fmt.Errorf(op, err)
-	}
+func (ts *TimezoneSettings) HandleMsgSetTime(ctx context.Context, b *bot.Bot, msg *models.Message, relatedMsgID int) error {
+	op := "TimezoneSettings.HandleMsgSetTime: %w"
 
-	userTime, err := parseTime(message.Text)
+	userTime, err := parseTime(msg.Text)
 	if err != nil {
-		return nil, fmt.Errorf(op, err)
+		return fmt.Errorf(op, err)
 	}
 
 	h, m, _ := userTime.Clock()
 	ts.zone = getTimezone(time.Now().In(time.UTC), h, m)
 
-	return ts.IsDSTMessage, nil
-}
+	err = ts.EditMenuMsg(ctx, b, relatedMsgID, msg.Chat.ID)
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
 
-func (ts *TimezoneSettings) IsDSTMessage(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
-	op := "TimezoneSettings.IsDSTMessage: %w"
-
-	_, err := b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
-		ChatID: chatID,
-		Text:   "Is your country using DST?",
-		ReplyMarkup: models.ReplyKeyboardMarkup{ //nolint:exhaustruct //no need to specify
-			Keyboard: [][]models.KeyboardButton{
-				{
-					{ //nolint:exhaustruct //no need to specify
-						Text: "true",
-					},
-					{ //nolint:exhaustruct //no need to specify
-						Text: "false",
-					},
-				},
-			},
-			OneTimeKeyboard: true,
-		},
+	_, err = b.DeleteMessage(ctx, &bot.DeleteMessageParams{
+		ChatID:    msg.Chat.ID,
+		MessageID: msg.ID,
 	})
 	if err != nil {
-		return nil, fmt.Errorf(op, err)
+		return fmt.Errorf(op, err)
 	}
 
-	return ts.IsDst, nil
+	return nil
 }
 
-func (ts *TimezoneSettings) IsDst(_ context.Context, _ *bot.Bot, update *models.Update) (tgwf.Action, error) {
-	op := "TimezoneSettings.SetTime: %w"
-	message, err := tgwf.GetMessage(update)
+func (ts *TimezoneSettings) SetDstMsg(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
+	op := "TimezoneSettings.SetDstMsg: %w"
+
+	_, err := b.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to fill
+		ChatID:    msg.Chat.ID,
+		MessageID: msg.ID,
+		Caption:   "Is your country using DST?",
+		ReplyMarkup: inKbr.New(b, inKbr.NoDeleteAfterClick()).Row().
+			Button("true", []byte("true"), errorHandling(ts.HandleBtnSetDst)).
+			Button("false", []byte("false"), errorHandling(ts.HandleBtnSetDst)),
+	})
 	if err != nil {
-		return nil, fmt.Errorf(op, err)
+		return fmt.Errorf(op, err)
 	}
 
-	isDst, err := strconv.ParseBool(message.Text)
+	return nil
+}
+
+func (ts *TimezoneSettings) HandleBtnSetDst(ctx context.Context, b *bot.Bot, msg *models.Message, boolBts []byte) error {
+	op := "TimezoneSettings.HandleBtnSetDst: %w"
+
+	isDst, err := strconv.ParseBool(string(boolBts))
 	if err != nil {
-		return nil, fmt.Errorf(op, err)
+		return fmt.Errorf(op, err)
 	}
 
 	ts.isDST = isDst
 
-	return ts.done, nil
+	if err = ts.EditMenuMsg(ctx, b, msg.ID, msg.Chat.ID); err != nil {
+		return fmt.Errorf(op, err)
+	}
+
+	return nil
 }
 
-func (ts *TimezoneSettings) done(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
-	op := "TimezoneSettings.done: %w"
+func (ts *TimezoneSettings) UpdateInline(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
+	op := "TimezoneSettings.UpdateInline: %w"
 
-	err := ts.userRepo.UpdateUserTime(ctx, int(chatID), ts.zone, ts.isDST)
+	err := ts.th.userRepo.UpdateUserTime(ctx, int(msg.Chat.ID), ts.zone, ts.isDST)
 	if err != nil {
-		return nil, fmt.Errorf(op, err)
+		return fmt.Errorf(op, err)
 	}
 
-	_, err = b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
-		ChatID: chatID,
-		Text:   "Successfully updated",
-	})
-	if err != nil {
-		return nil, fmt.Errorf(op, err)
+	if err = ts.th.MainMenuWithText(ctx, b, msg, "Timezone updated:"+ts.String()); err != nil {
+		return fmt.Errorf(op, err)
 	}
 
-	return nil, nil
+	return nil
 }
 
 func getTimezone(utcTime time.Time, userHours, userMinutes int) int {
@@ -181,39 +224,55 @@ func absDur(d time.Duration) time.Duration {
 	return -d
 }
 
-func (th *TelegramHandler) NotificationMenu() tgwf.Action {
-	enableNotifications := EnableNotifications{serv: th.serv}
-	menu := tgwf.NewMenuAction("Notifications").
-		Row().Btn("Enable", enableNotifications.Enable)
+func (th *TelegramHandler) NotificationMenu(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
+	op := "TelegramHandler.NotificationMenu: %w"
 
-	return menu.Show
+	enableNotifications := EnableNotifications{th: th}
+	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick()).
+		Row().Button("Enable", nil, errorHandling(enableNotifications.EnableInline))
+
+	_, err := b.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to fill
+		ChatID:      msg.Chat.ID,
+		MessageID:   msg.ID,
+		Caption:     "Notifications",
+		ReplyMarkup: kbr,
+	})
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+
+	return nil
 }
 
 type EnableNotifications struct {
-	serv *service.Service
+	th *TelegramHandler
 }
 
 const defaultNotificationPeriod = 5 * time.Minute
 
-func (en *EnableNotifications) Enable(ctx context.Context, _ *bot.Bot, chatID int64) (tgwf.Handler, error) {
-	op := "TimezoneSettings.Enable: %w"
+func (en *EnableNotifications) EnableInline(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
+	op := "TimezoneSettings.EnableInline: %w"
 	user, err := UserFromCtx(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(op, err)
+		return fmt.Errorf(op, err)
 	}
 
-	_, err = en.serv.SetDefaultNotificationParams(ctx, domains.NotificationParams{
+	_, err = en.th.serv.SetDefaultNotificationParams(ctx, domains.NotificationParams{
 		Period: defaultNotificationPeriod,
 		Params: domains.Params{
-			Telegram: int(chatID),
+			Telegram: int(msg.Chat.ID),
 			Webhook:  "",
 			Cmd:      "",
 		},
 		DalayedTill: nil,
 	}, user.ID)
 	if err != nil {
-		return nil, fmt.Errorf(op, err)
+		return fmt.Errorf(op, err)
 	}
 
-	return nil, nil
+	if err = en.th.MainMenuWithText(ctx, b, msg, "Notifications enabled"); err != nil {
+		return fmt.Errorf(op, err)
+	}
+
+	return nil
 }

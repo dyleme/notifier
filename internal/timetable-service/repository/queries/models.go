@@ -10,36 +10,42 @@ import (
 )
 
 type DefaultUserNotificationParam struct {
-	UserID    int32
-	CreatedAt pgtype.Timestamp
-	Params    domains.NotificationParams
+	UserID    int32                      `db:"user_id"`
+	CreatedAt pgtype.Timestamp           `db:"created_at"`
+	Params    domains.NotificationParams `db:"params"`
 }
 
 type Event struct {
-	ID           int32
-	CreatedAt    pgtype.Timestamp
-	Text         string
-	Description  pgtype.Text
-	UserID       int32
-	Start        pgtype.Timestamptz
-	Done         bool
-	Notification domains.Notification
+	ID           int32                `db:"id"`
+	CreatedAt    pgtype.Timestamp     `db:"created_at"`
+	Text         string               `db:"text"`
+	Description  pgtype.Text          `db:"description"`
+	UserID       int32                `db:"user_id"`
+	Start        pgtype.Timestamptz   `db:"start"`
+	Done         bool                 `db:"done"`
+	Notification domains.Notification `db:"notification"`
 }
 
 type Task struct {
-	ID        int32
-	CreatedAt pgtype.Timestamp
-	Message   string
-	UserID    int32
-	Periodic  bool
-	Archived  bool
+	ID        int32            `db:"id"`
+	CreatedAt pgtype.Timestamp `db:"created_at"`
+	Message   string           `db:"message"`
+	UserID    int32            `db:"user_id"`
+	Periodic  bool             `db:"periodic"`
+	Archived  bool             `db:"archived"`
+}
+
+type TgImage struct {
+	ID       int32  `db:"id"`
+	Filename string `db:"filename"`
+	TgFileID string `db:"tg_file_id"`
 }
 
 type User struct {
-	ID             int32
-	Email          pgtype.Text
-	PasswordHash   pgtype.Text
-	TgID           pgtype.Int4
-	TimezoneOffset int32
-	TimezoneDst    bool
+	ID             int32       `db:"id"`
+	Email          pgtype.Text `db:"email"`
+	PasswordHash   pgtype.Text `db:"password_hash"`
+	TgID           pgtype.Int4 `db:"tg_id"`
+	TimezoneOffset int32       `db:"timezone_offset"`
+	TimezoneDst    bool        `db:"timezone_dst"`
 }

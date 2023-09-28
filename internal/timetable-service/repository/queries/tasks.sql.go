@@ -20,9 +20,9 @@ RETURNING id, created_at, message, user_id, periodic, archived
 `
 
 type AddTaskParams struct {
-	UserID   int32
-	Message  string
-	Periodic bool
+	UserID   int32  `db:"user_id"`
+	Message  string `db:"message"`
+	Periodic bool   `db:"periodic"`
 }
 
 func (q *Queries) AddTask(ctx context.Context, arg AddTaskParams) (Task, error) {
@@ -61,8 +61,8 @@ WHERE id = $1
 `
 
 type DeleteTaskParams struct {
-	ID     int32
-	UserID int32
+	ID     int32 `db:"id"`
+	UserID int32 `db:"user_id"`
 }
 
 func (q *Queries) DeleteTask(ctx context.Context, arg DeleteTaskParams) (int64, error) {
@@ -81,8 +81,8 @@ WHERE id = $1
 `
 
 type GetTaskParams struct {
-	ID     int32
-	UserID int32
+	ID     int32 `db:"id"`
+	UserID int32 `db:"user_id"`
 }
 
 func (q *Queries) GetTask(ctx context.Context, arg GetTaskParams) (Task, error) {
@@ -110,9 +110,9 @@ OFFSET $2
 `
 
 type ListTasksParams struct {
-	UserID int32
-	Off    int32
-	Lim    int32
+	UserID int32 `db:"user_id"`
+	Off    int32 `db:"off"`
+	Lim    int32 `db:"lim"`
 }
 
 func (q *Queries) ListTasks(ctx context.Context, arg ListTasksParams) ([]Task, error) {
@@ -152,11 +152,11 @@ WHERE id = $4
 `
 
 type UpdateTaskParams struct {
-	Message  string
-	Periodic bool
-	Archived bool
-	ID       int32
-	UserID   int32
+	Message  string `db:"message"`
+	Periodic bool   `db:"periodic"`
+	Archived bool   `db:"archived"`
+	ID       int32  `db:"id"`
+	UserID   int32  `db:"user_id"`
 }
 
 func (q *Queries) UpdateTask(ctx context.Context, arg UpdateTaskParams) error {

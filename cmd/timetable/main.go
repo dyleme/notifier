@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/Dyleme/timecache"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"golang.org/x/sync/errgroup"
@@ -51,7 +52,8 @@ func main() { //nolint:funlen // main can be long
 	}
 
 	notif := notifier.New(ctx, cmdnotifier.New(logger), cfg.Notifier)
-	timetableRepo := timetableRepository.New(db)
+	cache := timetableRepository.NewUniversalCache()
+	timetableRepo := timetableRepository.New(db, cache)
 	timetableServ := timetableService.New(ctx, timetableRepo, notif, cfg.Event)
 	timeTableHandler := timetableHandler.New(timetableServ)
 
@@ -76,7 +78,7 @@ func main() { //nolint:funlen // main can be long
 		},
 	)
 
-	tg, err := handler.New(timetableServ, userinfo.NewUserRepoCache(authService), cfg.Telegram)
+	tg, err := handler.New(timetableServ, userinfo.NewUserRepoCache(authService), cfg.Telegram, timecache.New[int64, handler.TextMessageHandler]())
 	if err != nil {
 		logger.Error("tg init error", log.Err(err))
 

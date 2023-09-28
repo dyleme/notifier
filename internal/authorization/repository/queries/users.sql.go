@@ -26,9 +26,9 @@ RETURNING id, email, password_hash, tg_id, timezone_offset, timezone_dst
 `
 
 type AddUserParams struct {
-	Email        pgtype.Text
-	PasswordHash pgtype.Text
-	TgID         pgtype.Int4
+	Email        pgtype.Text `db:"email"`
+	PasswordHash pgtype.Text `db:"password_hash"`
+	TgID         pgtype.Int4 `db:"tg_id"`
 }
 
 func (q *Queries) AddUser(ctx context.Context, arg AddUserParams) (User, error) {
@@ -53,8 +53,8 @@ WHERE email = $1
 `
 
 type FindUserParams struct {
-	Email pgtype.Text
-	TgID  pgtype.Int4
+	Email pgtype.Text `db:"email"`
+	TgID  pgtype.Int4 `db:"tg_id"`
 }
 
 func (q *Queries) FindUser(ctx context.Context, arg FindUserParams) (User, error) {
@@ -79,8 +79,8 @@ WHERE email = $1
 `
 
 type GetLoginParametersRow struct {
-	ID           int32
-	PasswordHash pgtype.Text
+	ID           int32       `db:"id"`
+	PasswordHash pgtype.Text `db:"password_hash"`
 }
 
 func (q *Queries) GetLoginParameters(ctx context.Context, email pgtype.Text) (GetLoginParametersRow, error) {
@@ -98,9 +98,9 @@ WHERE id = $3
 `
 
 type UpdateTimeParams struct {
-	TimezoneOffset int32
-	IsDst          bool
-	ID             int32
+	TimezoneOffset int32 `db:"timezone_offset"`
+	IsDst          bool  `db:"is_dst"`
+	ID             int32 `db:"id"`
 }
 
 func (q *Queries) UpdateTime(ctx context.Context, arg UpdateTimeParams) error {

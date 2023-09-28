@@ -14,11 +14,11 @@ import (
 
 const addEvent = `-- name: AddEvent :one
 INSERT INTO events (user_id,
-                             text,
-                             start,
-                             description,
-                             done,
-                             notification)
+                    text,
+                    start,
+                    description,
+                    done,
+                    notification)
 VALUES ($1,
         $2,
         $3,
@@ -29,12 +29,12 @@ RETURNING id, created_at, text, description, user_id, start, done, notification
 `
 
 type AddEventParams struct {
-	UserID       int32
-	Text         string
-	Start        pgtype.Timestamptz
-	Description  pgtype.Text
-	Done         bool
-	Notification domains.Notification
+	UserID       int32                `db:"user_id"`
+	Text         string               `db:"text"`
+	Start        pgtype.Timestamptz   `db:"start"`
+	Description  pgtype.Text          `db:"description"`
+	Done         bool                 `db:"done"`
+	Notification domains.Notification `db:"notification"`
 }
 
 func (q *Queries) AddEvent(ctx context.Context, arg AddEventParams) (Event, error) {
@@ -61,16 +61,16 @@ func (q *Queries) AddEvent(ctx context.Context, arg AddEventParams) (Event, erro
 }
 
 const countGetEventsInPeriod = `-- name: CountGetEventsInPeriod :one
-SELECT count(*)
+SELECT COUNT(*)
 FROM events
 WHERE user_id = $1
   AND start BETWEEN $2 AND $3
 `
 
 type CountGetEventsInPeriodParams struct {
-	UserID   int32
-	FromTime pgtype.Timestamptz
-	ToTime   pgtype.Timestamptz
+	UserID   int32              `db:"user_id"`
+	FromTime pgtype.Timestamptz `db:"from_time"`
+	ToTime   pgtype.Timestamptz `db:"to_time"`
 }
 
 func (q *Queries) CountGetEventsInPeriod(ctx context.Context, arg CountGetEventsInPeriodParams) (int64, error) {
@@ -81,7 +81,7 @@ func (q *Queries) CountGetEventsInPeriod(ctx context.Context, arg CountGetEvents
 }
 
 const countListEvents = `-- name: CountListEvents :one
-SELECT count(*)
+SELECT COUNT(*)
 FROM events
 WHERE user_id = $1
 `
@@ -95,15 +95,15 @@ func (q *Queries) CountListEvents(ctx context.Context, userID int32) (int64, err
 
 const delayEvent = `-- name: DelayEvent :exec
 UPDATE events AS t
-SET notification = JSONB_SET(notificaiton, '{"delayed_till"}',$1::TIMESTAMP)
+SET notification = JSONB_SET(notificaiton, '{"delayed_till"}', $1::TIMESTAMP)
 WHERE id = $2
   AND user_id = $3
 `
 
 type DelayEventParams struct {
-	Till   pgtype.Timestamp
-	ID     int32
-	UserID int32
+	Till   pgtype.Timestamp `db:"till"`
+	ID     int32            `db:"id"`
+	UserID int32            `db:"user_id"`
 }
 
 func (q *Queries) DelayEvent(ctx context.Context, arg DelayEventParams) error {
@@ -111,24 +111,46 @@ func (q *Queries) DelayEvent(ctx context.Context, arg DelayEventParams) error {
 	return err
 }
 
-const deleteEvent = `-- name: DeleteEvent :one
+const deleteEvent = `-- name: DeleteEvent :many
 DELETE
 FROM events
 WHERE id = $1
-  AND user_id = $2
-RETURNING COUNT(*) AS deleted_amount
+AND user_id = $2
+RETURNING id, created_at, text, description, user_id, start, done, notification
 `
 
 type DeleteEventParams struct {
-	ID     int32
-	UserID int32
+	ID     int32 `db:"id"`
+	UserID int32 `db:"user_id"`
 }
 
-func (q *Queries) DeleteEvent(ctx context.Context, arg DeleteEventParams) (int64, error) {
-	row := q.db.QueryRow(ctx, deleteEvent, arg.ID, arg.UserID)
-	var deleted_amount int64
-	err := row.Scan(&deleted_amount)
-	return deleted_amount, err
+func (q *Queries) DeleteEvent(ctx context.Context, arg DeleteEventParams) ([]Event, error) {
+	rows, err := q.db.Query(ctx, deleteEvent, arg.ID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Event
+	for rows.Next() {
+		var i Event
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.Text,
+			&i.Description,
+			&i.UserID,
+			&i.Start,
+			&i.Done,
+			&i.Notification,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getEvent = `-- name: GetEvent :one
@@ -139,8 +161,8 @@ WHERE id = $1
 `
 
 type GetEventParams struct {
-	ID     int32
-	UserID int32
+	ID     int32 `db:"id"`
+	UserID int32 `db:"user_id"`
 }
 
 func (q *Queries) GetEvent(ctx context.Context, arg GetEventParams) (Event, error) {
@@ -206,16 +228,15 @@ FROM events
 WHERE user_id = $1
   AND start BETWEEN $2 AND $3
 ORDER BY id DESC
-LIMIT $5
-OFFSET $4
+LIMIT $5 OFFSET $4
 `
 
 type GetEventsInPeriodParams struct {
-	UserID   int32
-	FromTime pgtype.Timestamptz
-	ToTime   pgtype.Timestamptz
-	Off      int32
-	Lim      int32
+	UserID   int32              `db:"user_id"`
+	FromTime pgtype.Timestamptz `db:"from_time"`
+	ToTime   pgtype.Timestamptz `db:"to_time"`
+	Off      int32              `db:"off"`
+	Lim      int32              `db:"lim"`
 }
 
 func (q *Queries) GetEventsInPeriod(ctx context.Context, arg GetEventsInPeriodParams) ([]Event, error) {
@@ -258,14 +279,13 @@ SELECT id, created_at, text, description, user_id, start, done, notification
 FROM events
 WHERE user_id = $1
 ORDER BY id DESC
-LIMIT $3
-OFFSET $2
+LIMIT $3 OFFSET $2
 `
 
 type ListEventsParams struct {
-	UserID int32
-	Off    int32
-	Lim    int32
+	UserID int32 `db:"user_id"`
+	Off    int32 `db:"off"`
+	Lim    int32 `db:"lim"`
 }
 
 func (q *Queries) ListEvents(ctx context.Context, arg ListEventsParams) ([]Event, error) {
@@ -320,12 +340,12 @@ RETURNING id, created_at, text, description, user_id, start, done, notification
 `
 
 type UpdateEventParams struct {
-	Start       pgtype.Timestamptz
-	Text        string
-	Description pgtype.Text
-	Done        bool
-	ID          int32
-	UserID      int32
+	Start       pgtype.Timestamptz `db:"start"`
+	Text        string             `db:"text"`
+	Description pgtype.Text        `db:"description"`
+	Done        bool               `db:"done"`
+	ID          int32              `db:"id"`
+	UserID      int32              `db:"user_id"`
 }
 
 func (q *Queries) UpdateEvent(ctx context.Context, arg UpdateEventParams) (Event, error) {
@@ -360,9 +380,9 @@ RETURNING notification
 `
 
 type UpdateNotificationParamsParams struct {
-	Params []byte
-	ID     int32
-	UserID int32
+	Params []byte `db:"params"`
+	ID     int32  `db:"id"`
+	UserID int32  `db:"user_id"`
 }
 
 func (q *Queries) UpdateNotificationParams(ctx context.Context, arg UpdateNotificationParamsParams) (domains.Notification, error) {

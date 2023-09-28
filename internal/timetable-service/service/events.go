@@ -113,15 +113,16 @@ func (s *Service) ListEventsInPeriod(ctx context.Context, userID int, from, to t
 	return tts, nil
 }
 
-type UpdateEventParams struct {
+type EventUpdateParams struct {
 	ID          int
 	UserID      int
+	Text        string
 	Description string
 	Start       time.Time
 	Done        bool
 }
 
-func (s *Service) UpdateEvent(ctx context.Context, params UpdateEventParams) (domains.Event, error) {
+func (s *Service) UpdateEvent(ctx context.Context, params EventUpdateParams) (domains.Event, error) {
 	op := "Service.UpdateEvent: %w"
 	var res domains.Event
 	err := s.repo.Atomic(ctx, func(ctx context.Context, repo Repository) error {
@@ -137,6 +138,7 @@ func (s *Service) UpdateEvent(ctx context.Context, params UpdateEventParams) (do
 			}
 		}
 
+		e.Text = params.Text
 		e.Description = params.Description
 		e.Done = params.Done
 		e.Start = params.Start
