@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/go-telegram/bot"
@@ -17,7 +16,12 @@ type Config struct {
 	Token string
 }
 
-const defaultListLimit = 100
+type TelegramHandler struct {
+	bot                 *bot.Bot
+	serv                *timetableService.Service
+	userRepo            UserRepo
+	waitingActionsStore WaitingActionsStore
+}
 
 func New(service *timetableService.Service, userRepo UserRepo, cfg Config, actionsStore WaitingActionsStore) (*TelegramHandler, error) {
 	op := "New: %w"
@@ -45,15 +49,13 @@ func New(service *timetableService.Service, userRepo UserRepo, cfg Config, actio
 	return &tgHandler, nil
 }
 
-type TelegramHandler struct {
-	bot                 *bot.Bot
-	serv                *timetableService.Service
-	userRepo            UserRepo
-	waitingActionsStore WaitingActionsStore
+func (th *TelegramHandler) Run(ctx context.Context) {
+	log.Ctx(ctx).Info("start telegram bot")
+	th.bot.Start(ctx)
 }
 
 type TextMessageHandler struct {
-	handle    func(ctx context.Context, b *bot.Bot, msg *models.Message, relatedMsgID int)
+	handle    func(ctx context.Context, b *bot.Bot, msg *models.Message, relatedMsgID int) error
 	messageID int
 }
 
@@ -63,17 +65,10 @@ type WaitingActionsStore interface {
 	Delete(key int64)
 }
 
-func (th *TelegramHandler) Run(ctx context.Context) {
-	log.Ctx(ctx).Info("start telegram bot")
-	th.bot.Start(ctx)
-}
-
 type UserRepo interface {
 	GetUserInfo(ctx context.Context, tgID int) (userinfo.User, error)
 	UpdateUserTime(ctx context.Context, tgID int, timezoneOffset int, isDST bool) error
 }
-
-var errUnknownUpdate = errors.New("unknown update")
 
 func (th *TelegramHandler) Handle(ctx context.Context, b *bot.Bot, update *models.Update) {
 	op := "TelegramHandler.Handle: %w"
@@ -86,19 +81,33 @@ func (th *TelegramHandler) Handle(ctx context.Context, b *bot.Bot, update *model
 	if update.Message != nil {
 		textHandler, err := th.waitingActionsStore.Get(chatID)
 		if err != nil {
-			handleError(ctx, b, chatID, fmt.Errorf(op, err))
+			if creationError := th.mainMenuCreateWindow(ctx, b, chatID); creationError != nil {
+				handleError(ctx, b, chatID, fmt.Errorf(op, creationError))
+			}
 
 			return
 		}
 
-		textHandler.handle(ctx, b, update.Message, textHandler.messageID)
+		err = textHandler.handle(ctx, b, update.Message, textHandler.messageID)
+		if err != nil {
+			handleError(ctx, b, chatID, fmt.Errorf(op, err))
+		}
+
+		return
 	}
-	handleError(ctx, b, chatID, fmt.Errorf(op, errUnknownUpdate))
+
+	if creationError := th.mainMenuCreateWindow(ctx, b, chatID); creationError != nil {
+		handleError(ctx, b, chatID, fmt.Errorf(op, creationError))
+	}
 }
 
 func (th *TelegramHandler) InfoListener(ctx context.Context, b *bot.Bot, update *models.Update) {
+	op := "TelegramHandler.InfoListener: %w"
+
 	if update.Message != nil {
-		th.InfoInline(ctx, b, update.Message, nil)
+		if err := th.InfoInline(ctx, b, update.Message, nil); err != nil {
+			handleError(ctx, b, update.Message.Chat.ID, fmt.Errorf(op, err))
+		}
 	}
 }
 

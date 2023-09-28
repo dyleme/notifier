@@ -12,8 +12,10 @@ import (
 
 func (th *TelegramHandler) mainMenuKeyboard(b *bot.Bot) models.ReplyMarkup {
 	return inKbr.New(b, inKbr.NoDeleteAfterClick()).
-		Row().Button("Info", nil, th.InfoInline).
-		Row().Button("Events", nil, th.EventsMenuInline)
+		Row().Button("Info", nil, errorHandling(th.InfoInline)).
+		Row().Button("Events", nil, errorHandling(th.EventsMenuInline)).
+		Row().Button("Tasks", nil, errorHandling(th.TasksMenuInline)).
+		Row().Button("Settings", nil, errorHandling(th.SettingsInline))
 }
 
 const imageName = "clock.png"
@@ -25,39 +27,63 @@ func (th *TelegramHandler) mainMenuCreateWindow(ctx context.Context, b *bot.Bot,
 	op := "TelegramHandler.mainMenuCreateWindow: %w"
 
 	err := th.SendImage(ctx, imageName, image, &bot.SendPhotoParams{ //nolint:exhaustruct //no need to fill
-		Caption:     "EventChosen",
+		Caption:     "Main menu",
 		ChatID:      chatID,
 		ReplyMarkup: th.mainMenuKeyboard(b),
 	})
 	if err != nil {
-		handleError(ctx, b, chatID, fmt.Errorf(op, err))
-
-		return err
+		return fmt.Errorf(op, err)
 	}
 
 	return nil
 }
 
-func (th *TelegramHandler) MainMenuInline(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) {
-	op := "TelegramHandler.MainMenuInline: %w"
+func (th *TelegramHandler) AdditionalText(inlineFunc func(ctx context.Context, b *bot.Bot, msg *models.Message, bts []byte, text string) error, text string) func(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
+	op := "TelegramHandler.AdditionalText: %w"
+
+	return func(ctx context.Context, b *bot.Bot, msg *models.Message, bts []byte) error {
+		if err := inlineFunc(ctx, b, msg, bts, text); err != nil {
+			return fmt.Errorf(op, err)
+		}
+
+		return nil
+	}
+}
+
+func (th *TelegramHandler) MainMenuWithText(ctx context.Context, b *bot.Bot, msg *models.Message, text string) error {
+	op := "TelegramHandler.MainMenuWithText: %w"
+	caption := "Main menu"
+	if text != "" {
+		caption = caption + "\n\n" + text
+	}
 
 	_, err := th.bot.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{ //nolint:exhaustruct // no need to fill
 		ChatID:      msg.Chat.ID,
 		MessageID:   msg.ID,
-		Caption:     "Edit caption",
+		Caption:     caption,
 		ReplyMarkup: th.mainMenuKeyboard(b),
 	})
 	if err != nil {
-		handleError(ctx, b, msg.Chat.ID, fmt.Errorf(op, err))
-
-		return
+		return fmt.Errorf(op, err)
 	}
+
+	return nil
 }
 
-func (th *TelegramHandler) InfoInline(ctx context.Context, b *bot.Bot, mes *models.Message, _ []byte) {
+func (th *TelegramHandler) MainMenuInline(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
+	op := "TelegramHandler.MainMenuInline: %w"
+	err := th.MainMenuWithText(ctx, b, msg, "")
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+
+	return nil
+}
+
+func (th *TelegramHandler) InfoInline(ctx context.Context, b *bot.Bot, mes *models.Message, _ []byte) error {
 	op := "TelegramHandler.InfoInline: %w"
 	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick()).
-		Row().Button("Main menu", nil, th.MainMenuInline)
+		Row().Button("Main menu", nil, errorHandling(th.MainMenuInline))
 
 	_, err := b.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to fill
 		ChatID:      mes.Chat.ID,
@@ -66,6 +92,8 @@ func (th *TelegramHandler) InfoInline(ctx context.Context, b *bot.Bot, mes *mode
 		ReplyMarkup: kbr,
 	})
 	if err != nil {
-		handleError(ctx, b, mes.Chat.ID, fmt.Errorf(op, err))
+		return fmt.Errorf(op, err)
 	}
+
+	return nil
 }

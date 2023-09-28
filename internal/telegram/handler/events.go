@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -19,13 +18,16 @@ import (
 
 var ErrCantParseMessage = errors.New("cant parse message")
 
-func (th *TelegramHandler) EventsMenuInline(ctx context.Context, b *bot.Bot, mes *models.Message, _ []byte) {
+func (th *TelegramHandler) EventsMenuInline(ctx context.Context, b *bot.Bot, mes *models.Message, _ []byte) error {
+	op := "TelegramHandler.EventsMenuInline: %w"
+
 	listEvents := ListEvents{th: th}
 	createEvents := NewEventCreation(th, true)
 	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick()).
-		Row().Button("List events", nil, listEvents.listInline).
-		Row().Button("Create event", nil, makeOnSelect(createEvents.SetTextMsg)).
-		Row().Button("Create event from task", nil, createEvents.SelectTaskMsg)
+		Row().Button("List events", nil, errorHandling(listEvents.listInline)).
+		Row().Button("Create event", nil, onSelectErrorHandling(createEvents.SetTextMsg)).
+		Row().Button("Create event from task", nil, errorHandling(createEvents.SelectTaskMsg)).
+		Row().Button("Cancel", nil, errorHandling(th.MainMenuInline))
 
 	_, err := th.bot.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to fill
 		ChatID:      mes.Chat.ID,
@@ -34,22 +36,22 @@ func (th *TelegramHandler) EventsMenuInline(ctx context.Context, b *bot.Bot, mes
 		ReplyMarkup: kbr,
 	})
 	if err != nil {
-		handleError(ctx, b, mes.Chat.ID, err)
+		return fmt.Errorf(op, err)
 	}
+
+	return nil
 }
 
 type ListEvents struct {
 	th *TelegramHandler
 }
 
-func (l *ListEvents) listInline(ctx context.Context, b *bot.Bot, mes *models.Message, _ []byte) {
+func (l *ListEvents) listInline(ctx context.Context, b *bot.Bot, mes *models.Message, _ []byte) error {
 	op := "ListEvents.listInline: %w"
 
 	userInfo, err := UserFromCtx(ctx)
 	if err != nil {
-		handleError(ctx, b, mes.Chat.ID, fmt.Errorf(op, err))
-
-		return
+		return fmt.Errorf(op, err)
 	}
 
 	events, err := l.th.serv.ListEvents(ctx, userInfo.ID, service.ListParams{
@@ -57,14 +59,12 @@ func (l *ListEvents) listInline(ctx context.Context, b *bot.Bot, mes *models.Mes
 		Limit:  defaultListLimit,
 	})
 	if err != nil {
-		handleError(ctx, b, mes.Chat.ID, fmt.Errorf(op, err))
-
-		return
+		return fmt.Errorf(op, err)
 	}
 
 	if len(events) == 0 {
 		kbr := inKbr.New(b, inKbr.NoDeleteAfterClick())
-		kbr.Row().Button("Ok", nil, l.th.MainMenuInline)
+		kbr.Row().Button("Ok", nil, errorHandling(l.th.MainMenuInline))
 		_, err = b.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to specify
 			ChatID:    mes.Chat.ID,
 			MessageID: mes.ID,
@@ -72,18 +72,16 @@ func (l *ListEvents) listInline(ctx context.Context, b *bot.Bot, mes *models.Mes
 		})
 
 		if err != nil {
-			handleError(ctx, b, mes.Chat.ID, fmt.Errorf(op, err))
-
-			return
+			return fmt.Errorf(op, err)
 		}
 
-		return
+		return nil
 	}
 
 	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick())
 	for _, event := range events {
-		ec := EventCreation{th: l.th} //nolint:exhaustruct //fill it in ec.HandleBtnEventChosen
-		kbr.Row().Button(event.Text, []byte(strconv.Itoa(event.ID)), ec.HandleBtnEventChosen)
+		ec := SingleEvent{th: l.th} //nolint:exhaustruct //fill it in ec.HandleBtnEventChosen
+		kbr.Row().Button(event.Text, []byte(strconv.Itoa(event.ID)), errorHandling(ec.HandleBtnEventChosen))
 	}
 
 	_, err = b.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to fill
@@ -93,126 +91,133 @@ func (l *ListEvents) listInline(ctx context.Context, b *bot.Bot, mes *models.Mes
 		ReplyMarkup: kbr,
 	})
 	if err != nil {
-		handleError(ctx, b, mes.Chat.ID, fmt.Errorf(op, err))
-
-		return
+		return fmt.Errorf(op, err)
 	}
+
+	return nil
 }
 
 const notSettedID = -1
 
-func NewEventCreation(th *TelegramHandler, isWorkflow bool) EventCreation {
-	return EventCreation{
+func NewEventCreation(th *TelegramHandler, isWorkflow bool) SingleEvent {
+	return SingleEvent{
 		id:          notSettedID,
 		th:          th,
 		text:        "",
 		description: "",
-		day:         time.Time{},
+		date:        time.Time{},
 		time:        time.Time{},
 		isWorkflow:  isWorkflow,
 	}
 }
 
-type EventCreation struct {
+type SingleEvent struct {
 	th          *TelegramHandler
 	id          int
 	text        string
-	day         time.Time
+	date        time.Time
 	time        time.Time
 	description string
 	isWorkflow  bool
 }
 
-func (ec *EventCreation) next(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64,
-	nextF func(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64),
-) {
-	if ec.isWorkflow {
-		nextF(ctx, b, relatedMsgID, chatID)
+func (se *SingleEvent) next(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64,
+	nextFunc func(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) error,
+) error {
+	op := "SingleEvent.next: %w"
+	if se.isWorkflow {
+		err := nextFunc(ctx, b, relatedMsgID, chatID)
+		if err != nil {
+			return fmt.Errorf(op, err)
+		}
 	} else {
-		ec.EditMenuMsg(ctx, b, relatedMsgID, chatID)
+		err := se.EditMenuMsg(ctx, b, relatedMsgID, chatID)
+		if err != nil {
+			return fmt.Errorf(op, err)
+		}
 	}
+
+	return nil
 }
 
-func (ec *EventCreation) isCreation() bool {
-	return ec.id == notSettedID
+func (se *SingleEvent) isCreation() bool {
+	return se.id == notSettedID
 }
 
-func (ec *EventCreation) String() string {
+func (se *SingleEvent) String() string {
 	var (
 		dateStr string
 		timeStr string
 	)
 
-	if !ec.day.IsZero() {
-		dateStr = ec.day.Format(dayPointWithYearFormat)
+	if !se.date.IsZero() {
+		dateStr = se.date.Format(dayPointWithYearFormat)
 	}
-	if !ec.time.IsZero() {
-		timeStr = ec.time.Format(timeDoublePointsFormat)
+	if !se.time.IsZero() {
+		timeStr = se.time.Format(timeDoublePointsFormat)
 	}
 
 	var eventStringBuilder strings.Builder
-	eventStringBuilder.WriteString("Current event\n")
-	eventStringBuilder.WriteString(fmt.Sprintf("Text: %q\n", ec.text))
+	eventStringBuilder.WriteString(fmt.Sprintf("Text: %q\n", se.text))
 	eventStringBuilder.WriteString(fmt.Sprintf("Date: %s\n", dateStr))
 	eventStringBuilder.WriteString(fmt.Sprintf("Time: %s\n", timeStr))
-	eventStringBuilder.WriteString(fmt.Sprintf("Description: %s\n", ec.description))
+	eventStringBuilder.WriteString(fmt.Sprintf("Description: %s\n", se.description))
 
 	return eventStringBuilder.String()
 }
 
-func (ec *EventCreation) EditMenuMsg(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) {
-	op := "EventCreation.EditMenuMsg: %w"
+func (se *SingleEvent) EditMenuMsg(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) error {
+	op := "SingleEvent.EditMenuMsg: %w"
 	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick()).
 		Row().
-		Button("Change text", nil, makeOnSelect(ec.SetTextMsg)).
-		Button("Change date", nil, makeOnSelect(ec.SetDateMsg)).
-		Button("Change time", nil, makeOnSelect(ec.SetTimeMsg))
+		Button("Set text", nil, onSelectErrorHandling(se.SetTextMsg)).
+		Button("Set date", nil, onSelectErrorHandling(se.SetDateMsg)).
+		Button("Set time", nil, onSelectErrorHandling(se.SetTimeMsg)).
+		Button("Set description", nil, onSelectErrorHandling(se.SetDescription))
 
 	kbr.Row()
-	if ec.isCreation() {
-		kbr.Button("Create", nil, ec.CreateInline)
+	if se.isCreation() {
+		kbr.Button("Create", nil, errorHandling(se.CreateInline))
 	} else {
-		kbr.Button("Update", nil, ec.UpdateInline)
+		kbr.Button("Update", nil, errorHandling(se.UpdateInline))
 	}
 
-	kbr.Button("Cancel", nil, ec.th.MainMenuInline)
+	kbr.Button("Cancel", nil, errorHandling(se.th.MainMenuInline))
 
 	params := &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to fill
 		ChatID:      chatID,
 		MessageID:   relatedMsgID,
-		Caption:     ec.String(),
+		Caption:     se.String(),
 		ReplyMarkup: kbr,
 	}
 
 	_, err := b.EditMessageCaption(ctx, params)
 	if err != nil {
-		handleError(ctx, b, chatID, fmt.Errorf(op, err))
+		return fmt.Errorf(op, err)
 	}
+
+	return nil
 }
 
-func (ec *EventCreation) SelectTaskMsg(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) {
-	op := "EventCreation.MessageChooseTask: %w"
+func (se *SingleEvent) SelectTaskMsg(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
+	op := "SingleEvent.MessageChooseTask: %w"
 
 	user, err := UserFromCtx(ctx)
 	if err != nil {
-		handleError(ctx, b, msg.Chat.ID, fmt.Errorf(op, err))
-
-		return
+		return fmt.Errorf(op, err)
 	}
 
-	tasks, err := ec.th.serv.ListUserTasks(ctx, user.ID, service.ListParams{
+	tasks, err := se.th.serv.ListUserTasks(ctx, user.ID, service.ListParams{
 		Offset: 0,
 		Limit:  defaultListLimit,
 	})
 	if err != nil {
-		handleError(ctx, b, msg.Chat.ID, fmt.Errorf(op, err))
-
-		return
+		return fmt.Errorf(op, err)
 	}
 
 	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick())
 	for _, t := range tasks {
-		kbr.Row().Button(t.Text, []byte(strconv.Itoa(t.ID)), ec.HandleBtnTaskChosen)
+		kbr.Row().Button(t.Text, []byte(strconv.Itoa(t.ID)), errorHandling(se.HandleBtnTaskChosen))
 	}
 
 	_, err = b.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to fill
@@ -222,105 +227,97 @@ func (ec *EventCreation) SelectTaskMsg(ctx context.Context, b *bot.Bot, msg *mod
 		ReplyMarkup: kbr,
 	})
 	if err != nil {
-		handleError(ctx, b, msg.Chat.ID, fmt.Errorf(op, err))
-
-		return
+		return fmt.Errorf(op, err)
 	}
+
+	return nil
 }
 
-func (ec *EventCreation) HandleBtnTaskChosen(ctx context.Context, b *bot.Bot, msg *models.Message, btsTaskID []byte) {
-	op := "EventCreation.HandleBtnTaskChosen: %w"
+func (se *SingleEvent) HandleBtnTaskChosen(ctx context.Context, b *bot.Bot, msg *models.Message, btsTaskID []byte) error {
+	op := "SingleEvent.HandleBtnTaskChosen: %w"
 	user, err := UserFromCtx(ctx)
 	if err != nil {
-		handleError(ctx, b, msg.Chat.ID, fmt.Errorf(op, err))
-
-		return
+		return fmt.Errorf(op, err)
 	}
 
 	taskID, err := strconv.Atoi(string(btsTaskID))
 	if err != nil {
-		handleError(ctx, b, msg.Chat.ID, fmt.Errorf(op, err))
-
-		return
+		return fmt.Errorf(op, err)
 	}
 
-	task, err := ec.th.serv.GetTask(ctx, taskID, user.ID)
+	task, err := se.th.serv.GetTask(ctx, taskID, user.ID)
 	if err != nil {
-		handleError(ctx, b, msg.Chat.ID, fmt.Errorf(op, err))
-
-		return
+		return fmt.Errorf(op, err)
 	}
 
-	ec.text = task.Text
+	se.text = task.Text
 
-	ec.next(ctx, b, msg.ID, msg.Chat.ID, ec.SetDateMsg)
+	err = se.next(ctx, b, msg.ID, msg.Chat.ID, se.SetDateMsg)
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+
+	return nil
 }
 
-func (ec *EventCreation) SetTextMsg(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) {
-	op := "EventCreation.SetTextMsg: %w"
+func (se *SingleEvent) SetTextMsg(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) error {
+	op := "SingleEvent.SetTextMsg: %w"
 	_, err := b.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to specify
 		ChatID:    chatID,
 		MessageID: relatedMsgID,
 		Caption:   "Enter event text",
 	})
 	if err != nil {
-		handleError(ctx, b, chatID, fmt.Errorf(op, err))
+		return fmt.Errorf(op, err)
 	}
 
-	ec.th.waitingActionsStore.StoreDefDur(chatID, TextMessageHandler{
-		handle:    ec.HandleMsgSetText,
+	se.th.waitingActionsStore.StoreDefDur(chatID, TextMessageHandler{
+		handle:    se.HandleMsgSetText,
 		messageID: relatedMsgID,
 	})
+
+	return nil
 }
 
-func (ec *EventCreation) HandleMsgSetText(ctx context.Context, b *bot.Bot, msg *models.Message, relatedMsgID int) {
-	op := "EventCreation.HandleMsgSetText: %w"
-	ec.text = msg.Text
+func (se *SingleEvent) HandleMsgSetText(ctx context.Context, b *bot.Bot, msg *models.Message, relatedMsgID int) error {
+	op := "SingleEvent.HandleMsgSetText: %w"
+	se.text = msg.Text
 
 	_, err := b.DeleteMessage(ctx, &bot.DeleteMessageParams{
 		ChatID:    msg.Chat.ID,
 		MessageID: msg.ID,
 	})
 	if err != nil {
-		handleError(ctx, b, msg.Chat.ID, fmt.Errorf(op, err))
-
-		return
+		return fmt.Errorf(op, err)
 	}
 
-	ec.th.waitingActionsStore.Delete(msg.Chat.ID)
+	se.th.waitingActionsStore.Delete(msg.Chat.ID)
 
-	ec.next(ctx, b, relatedMsgID, msg.Chat.ID, ec.SetDateMsg)
+	err = se.next(ctx, b, relatedMsgID, msg.Chat.ID, se.SetDateMsg)
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+
+	return nil
 }
 
-func (ec *EventCreation) SetDateMsg(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) {
-	op := "EventCreation.SetDateMsg: %w"
+func (se *SingleEvent) SetDateMsg(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) error {
+	op := "SingleEvent.SetDateMsg: %w"
 	user, err := UserFromCtx(ctx)
 	if err != nil {
-		handleError(ctx, b, chatID, fmt.Errorf(op, err))
-
-		return
+		return fmt.Errorf(op, err)
 	}
-	caption := ec.String() + "\n\nEnter date (it can be or one of provided, or you can type your own date)"
+	caption := se.String() + "\n\nEnter date (it can be or one of provided, or you can type your own date)"
 	now := time.Now().In(user.Location())
-	nowBts, err := json.Marshal(now)
-	if err != nil {
-		handleError(ctx, b, chatID, fmt.Errorf(op, err))
-
-		return
-	}
+	nowStr := now.Format(dayPointFormat)
 	tomorrow := time.Now().Add(day).In(user.Location())
-	tomorrowBts, err := json.Marshal(tomorrow)
-	if err != nil {
-		handleError(ctx, b, chatID, fmt.Errorf(op, err))
-
-		return
-	}
+	tomorrowStr := tomorrow.Format(dayPointFormat)
 	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick()).
-		Row().Button(now.Format(dayPointFormat), nowBts, ec.HandleBtnSetDate).
-		Row().Button(tomorrow.Format(dayPointFormat), tomorrowBts, ec.HandleBtnSetDate)
+		Row().Button(nowStr, []byte(nowStr), errorHandling(se.HandleBtnSetDate)).
+		Row().Button(tomorrowStr, []byte(tomorrowStr), errorHandling(se.HandleBtnSetDate))
 
-	ec.th.waitingActionsStore.StoreDefDur(chatID, TextMessageHandler{
-		handle:    ec.HandleMsgSetDate,
+	se.th.waitingActionsStore.StoreDefDur(chatID, TextMessageHandler{
+		handle:    se.HandleMsgSetDate,
 		messageID: relatedMsgID,
 	})
 
@@ -331,57 +328,65 @@ func (ec *EventCreation) SetDateMsg(ctx context.Context, b *bot.Bot, relatedMsgI
 		ReplyMarkup: kbr,
 	})
 	if err != nil {
-		handleError(ctx, b, chatID, fmt.Errorf(op, err))
+		return fmt.Errorf(op, err)
 	}
+
+	return nil
 }
 
-func (ec *EventCreation) HandleBtnSetDate(ctx context.Context, b *bot.Bot, msg *models.Message, bts []byte) {
-	op := "EventCreation.HandleBtnSetDate: %w"
+func (se *SingleEvent) HandleBtnSetDate(ctx context.Context, b *bot.Bot, msg *models.Message, bts []byte) error {
+	op := "SingleEvent.HandleBtnSetDate: %w"
 
-	var t time.Time
-	err := json.Unmarshal(bts, &t)
-	if err != nil {
-		handleError(ctx, b, msg.Chat.ID, fmt.Errorf(op, err))
-
-		return
+	if err := se.handleSetDate(ctx, b, msg.Chat.ID, msg.ID, string(bts)); err != nil {
+		return fmt.Errorf(op, err)
 	}
-	ec.day = t
-	ec.th.waitingActionsStore.Delete(msg.Chat.ID)
 
-	ec.next(ctx, b, msg.ID, msg.Chat.ID, ec.SetTimeMsg)
+	return nil
 }
 
-func (ec *EventCreation) HandleMsgSetDate(ctx context.Context, b *bot.Bot, msg *models.Message, relatedMsgID int) {
-	op := "EventCreation.HandleMsgSetDate: %w"
+func (se *SingleEvent) HandleMsgSetDate(ctx context.Context, b *bot.Bot, msg *models.Message, relatedMsgID int) error {
+	op := "SingleEvent.HandleMsgSetDate: %w"
 
-	t, err := parseDay(msg.Text)
-	if err != nil {
-		handleError(ctx, b, msg.Chat.ID, fmt.Errorf(op, err))
-
-		return
+	if err := se.handleSetDate(ctx, b, msg.Chat.ID, relatedMsgID, msg.Text); err != nil {
+		return fmt.Errorf(op, err)
 	}
-	ec.day = t
-	ec.th.waitingActionsStore.Delete(msg.Chat.ID)
 
-	_, err = b.DeleteMessage(ctx, &bot.DeleteMessageParams{
+	_, err := b.DeleteMessage(ctx, &bot.DeleteMessageParams{
 		ChatID:    msg.Chat.ID,
 		MessageID: msg.ID,
 	})
 	if err != nil {
-		handleError(ctx, b, msg.Chat.ID, fmt.Errorf(op, err))
-
-		return
+		return fmt.Errorf(op, err)
 	}
 
-	ec.next(ctx, b, relatedMsgID, msg.Chat.ID, ec.SetTimeMsg)
+	return nil
 }
 
-func (ec *EventCreation) SetTimeMsg(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) {
-	op := "EventCreation.SetTimeMsg: %w"
-	caption := ec.String() + "\n\nEnter time"
+func (se *SingleEvent) handleSetDate(ctx context.Context, b *bot.Bot, chatID int64, msgID int, dateStr string) error {
+	op := "SingleEvent.handleSetDate: %w"
 
-	ec.th.waitingActionsStore.StoreDefDur(chatID, TextMessageHandler{
-		handle:    ec.HandleMsgSetTime,
+	t, err := parseDate(dateStr)
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+	se.date = t
+
+	se.th.waitingActionsStore.Delete(chatID)
+
+	err = se.next(ctx, b, msgID, chatID, se.SetTimeMsg)
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+
+	return nil
+}
+
+func (se *SingleEvent) SetTimeMsg(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) error {
+	op := "SingleEvent.SetTimeMsg: %w"
+	caption := se.String() + "\n\nEnter time"
+
+	se.th.waitingActionsStore.StoreDefDur(chatID, TextMessageHandler{
+		handle:    se.HandleMsgSetTime,
 		messageID: relatedMsgID,
 	})
 	_, err := b.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to fill
@@ -390,54 +395,104 @@ func (ec *EventCreation) SetTimeMsg(ctx context.Context, b *bot.Bot, relatedMsgI
 		Caption:   caption,
 	})
 	if err != nil {
-		handleError(ctx, b, chatID, fmt.Errorf(op, err))
+		return fmt.Errorf(op, err)
 	}
+
+	return nil
 }
 
-func (ec *EventCreation) HandleMsgSetTime(ctx context.Context, b *bot.Bot, msg *models.Message, relatedMsgID int) {
-	op := "EventCreation.HandleMsgSetTime: %w"
+func (se *SingleEvent) HandleMsgSetTime(ctx context.Context, b *bot.Bot, msg *models.Message, relatedMsgID int) error {
+	op := "SingleEvent.HandleMsgSetTime: %w"
 
 	t, err := parseTime(msg.Text)
 	if err != nil {
-		handleError(ctx, b, msg.Chat.ID, fmt.Errorf(op, err))
-
-		return
+		return fmt.Errorf(op, err)
 	}
-	ec.time = t
-	ec.th.waitingActionsStore.Delete(msg.Chat.ID)
+	se.time = t
+	se.th.waitingActionsStore.Delete(msg.Chat.ID)
 
 	_, err = b.DeleteMessage(ctx, &bot.DeleteMessageParams{
 		ChatID:    msg.Chat.ID,
 		MessageID: msg.ID,
 	})
 	if err != nil {
-		handleError(ctx, b, msg.Chat.ID, fmt.Errorf(op, err))
-
-		return
+		return fmt.Errorf(op, err)
 	}
 
-	ec.isWorkflow = false
-	ec.EditMenuMsg(ctx, b, relatedMsgID, msg.Chat.ID)
+	se.isWorkflow = false
+	err = se.EditMenuMsg(ctx, b, relatedMsgID, msg.Chat.ID)
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+
+	return nil
 }
 
 func computeTime(day, hourMinutes time.Time, loc *time.Location) time.Time {
 	return time.Date(day.Year(), day.Month(), day.Day(), hourMinutes.Hour(), hourMinutes.Minute(), 0, 0, loc)
 }
 
-func (ec *EventCreation) CreateInline(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) {
-	op := "EventCreation.CreateInline: %w"
+func (se *SingleEvent) SetDescription(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) error {
+	op := "SingleEvent.SetDescription: %w"
+	caption := se.String() + "\n\nEnter description"
+
+	se.th.waitingActionsStore.StoreDefDur(chatID, TextMessageHandler{
+		handle:    se.HandleMsgSetDescription,
+		messageID: relatedMsgID,
+	})
+	_, err := b.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to fill
+		ChatID:    chatID,
+		MessageID: relatedMsgID,
+		Caption:   caption,
+	})
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+
+	return nil
+}
+
+func (se *SingleEvent) HandleMsgSetDescription(ctx context.Context, b *bot.Bot, msg *models.Message, relatedMsgID int) error {
+	op := "SingleEvent.HandleMsgSetDescription: %w"
+
+	se.description = msg.Text
+	se.th.waitingActionsStore.Delete(msg.Chat.ID)
+
+	_, err := b.DeleteMessage(ctx, &bot.DeleteMessageParams{
+		ChatID:    msg.Chat.ID,
+		MessageID: msg.ID,
+	})
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+
+	err = se.EditMenuMsg(ctx, b, relatedMsgID, msg.Chat.ID)
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+
+	return nil
+}
+
+var ErrTimeInPast = errors.New("time is in past")
+
+func (se *SingleEvent) CreateInline(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
+	op := "SingleEvent.CreateInline: %w"
 	user, err := UserFromCtx(ctx)
 	if err != nil {
-		handleError(ctx, b, msg.Chat.ID, fmt.Errorf(op, err))
+		return fmt.Errorf(op, err)
+	}
 
-		return
+	utcTime := computeTime(se.date, se.time, user.Location())
+	if utcTime.Before(time.Now()) {
+		return fmt.Errorf(op, ErrTimeInPast)
 	}
 
 	event := domains.Event{ //nolint:exhaustruct // don't know id on creation
 		UserID:      user.ID,
-		Text:        ec.text,
-		Description: "",
-		Start:       computeTime(ec.day, ec.time, user.Location()),
+		Text:        se.text,
+		Description: se.description,
+		Start:       utcTime,
 		Done:        false,
 		Notification: domains.Notification{
 			Sended:             false,
@@ -445,127 +500,110 @@ func (ec *EventCreation) CreateInline(ctx context.Context, b *bot.Bot, msg *mode
 		},
 	}
 
-	_, err = ec.th.serv.CreateEvent(ctx, event)
+	_, err = se.th.serv.CreateEvent(ctx, event)
 	if err != nil {
-		handleError(ctx, b, msg.Chat.ID, fmt.Errorf(op, err))
-
-		return
+		return fmt.Errorf(op, err)
 	}
 
-	_, err = b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
-		ChatID: msg.Chat.ID,
-		Text:   "Event successfully created",
-	})
+	err = se.th.MainMenuWithText(ctx, b, msg, "Event successfully created:\n"+se.String())
 	if err != nil {
-		handleError(ctx, b, msg.Chat.ID, fmt.Errorf(op, err))
-
-		return
+		return fmt.Errorf(op, err)
 	}
+
+	return nil
 }
 
-func (ec *EventCreation) UpdateInline(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) {
-	op := "EventCreation.UpdateInline: %w"
+func (se *SingleEvent) UpdateInline(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
+	op := "SingleEvent.UpdateInline: %w"
 	user, err := UserFromCtx(ctx)
 	if err != nil {
-		handleError(ctx, b, msg.Chat.ID, fmt.Errorf(op, err))
+		return fmt.Errorf(op, err)
 	}
 
-	_, err = ec.th.serv.UpdateEvent(ctx, service.EventUpdateParams{
-		ID:          ec.id,
-		Text:        ec.text,
+	_, err = se.th.serv.UpdateEvent(ctx, service.EventUpdateParams{
+		ID:          se.id,
+		Text:        se.text,
 		UserID:      user.ID,
-		Description: "",
-		Start:       computeTime(ec.day, ec.time, user.Location()),
+		Description: se.description,
+		Start:       computeTime(se.date, se.time, user.Location()),
 		Done:        false,
 	})
 	if err != nil {
-		handleError(ctx, b, msg.Chat.ID, fmt.Errorf(op, err))
-
-		return
+		return fmt.Errorf(op, err)
 	}
 
-	_, err = b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
-		ChatID: msg.Chat.ID,
-		Text:   "Task successfully updated",
-	})
+	err = se.th.MainMenuWithText(ctx, b, msg, "Event successfully updated:\n"+se.String())
 	if err != nil {
-		handleError(ctx, b, msg.Chat.ID, fmt.Errorf(op, err))
-
-		return
+		return fmt.Errorf(op, err)
 	}
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+
+	return nil
 }
 
-func (ec *EventCreation) DeleteInline(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) {
-	op := "EventCreation.DeleteInline: %w"
+func (se *SingleEvent) DeleteInline(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
+	op := "SingleEvent.DeleteInline: %w"
 	user, err := UserFromCtx(ctx)
 	if err != nil {
-		handleError(ctx, b, msg.Chat.ID, fmt.Errorf(op, err))
-
-		return
+		return fmt.Errorf(op, err)
 	}
 
-	err = ec.th.serv.DeleteEvent(ctx, user.ID, ec.id)
+	err = se.th.serv.DeleteEvent(ctx, user.ID, se.id)
 	if err != nil {
-		handleError(ctx, b, msg.Chat.ID, fmt.Errorf(op, err))
-
-		return
+		return fmt.Errorf(op, err)
 	}
 
-	_, err = b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to fill
-		ChatID: msg.Chat.ID,
-		Text:   "Deleted successfully",
-	})
+	err = se.th.MainMenuWithText(ctx, b, msg, "Event successfully deleted:\n"+se.String())
 	if err != nil {
-		handleError(ctx, b, msg.Chat.ID, fmt.Errorf(op, err))
-
-		return
+		return fmt.Errorf(op, err)
 	}
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+
+	return nil
 }
 
-func (ec *EventCreation) HandleBtnEventChosen(ctx context.Context, b *bot.Bot, msg *models.Message, btsEventID []byte) {
+func (se *SingleEvent) HandleBtnEventChosen(ctx context.Context, b *bot.Bot, msg *models.Message, btsEventID []byte) error {
 	op := "EventEdit.EventChosen: %w"
 	user, err := UserFromCtx(ctx)
 	if err != nil {
-		handleError(ctx, b, msg.Chat.ID, fmt.Errorf(op, err))
-
-		return
+		return fmt.Errorf(op, err)
 	}
 
 	eventID, err := strconv.Atoi(string(btsEventID))
 	if err != nil {
-		handleError(ctx, b, msg.Chat.ID, fmt.Errorf(op, err))
-
-		return
+		return fmt.Errorf(op, err)
 	}
 
-	event, err := ec.th.serv.GetEvent(ctx, user.ID, eventID)
+	event, err := se.th.serv.GetEvent(ctx, user.ID, eventID)
 	if err != nil {
-		handleError(ctx, b, msg.Chat.ID, fmt.Errorf(op, err))
-
-		return
+		return fmt.Errorf(op, err)
 	}
 
-	ec.id = event.ID
-	ec.day = event.Start
-	ec.time = event.Start
-	ec.text = event.Text
-	ec.description = event.Description
-	ec.isWorkflow = false
+	se.id = event.ID
+	se.date = event.Start
+	se.time = event.Start
+	se.text = event.Text
+	se.description = event.Description
+	se.isWorkflow = false
 
 	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick()).
-		Button("Edit", nil, makeOnSelect(ec.EditMenuMsg)).
-		Button("Delete", nil, ec.DeleteInline).
-		Row().Button("Cancel", nil, ec.th.MainMenuInline)
+		Button("Edit", nil, onSelectErrorHandling(se.EditMenuMsg)).
+		Button("Delete", nil, errorHandling(se.DeleteInline)).
+		Row().Button("Cancel", nil, errorHandling(se.th.MainMenuInline))
 
 	_, err = b.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to fill
 		ChatID:      msg.Chat.ID,
 		MessageID:   msg.ID,
-		Caption:     ec.String(),
+		Caption:     se.String(),
 		ReplyMarkup: kbr,
 	})
 	if err != nil {
-		handleError(ctx, b, msg.Chat.ID, fmt.Errorf(op, err))
-
-		return
+		return fmt.Errorf(op, err)
 	}
+
+	return nil
 }

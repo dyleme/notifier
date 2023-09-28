@@ -4,249 +4,266 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
+	inKbr "github.com/go-telegram/ui/keyboard/inline"
 
-	"github.com/Dyleme/Notifier/internal/lib/log"
-	"github.com/Dyleme/Notifier/internal/lib/tgwf"
-	domains "github.com/Dyleme/Notifier/internal/timetable-service/domains"
+	"github.com/Dyleme/Notifier/internal/timetable-service/domains"
 	"github.com/Dyleme/Notifier/internal/timetable-service/service"
 )
 
-// func TaskMenuAction() tgwf.Action {
-// 	listTasks := &ListTasks{}
-// 	taskCreation := &TaskCreation{}
-// 	tgwf.NewMenuAction("Tasks").Btn("list", listTasks.list)
-// 	return menu.Show
-// }
+func (th *TelegramHandler) TasksMenuInline(ctx context.Context, b *bot.Bot, mes *models.Message, _ []byte) error {
+	op := "TelegramHandler.TasksMenuInline: %w"
+	listTasks := ListTasks{th: th}
+	createTask := SingleTask{th: th, id: notSettedID, text: ""}
+	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick()).
+		Row().Button("List tasks", nil, errorHandling(listTasks.listInline)).
+		Row().Button("Create task", nil, onSelectErrorHandling(createTask.SetTextMsg))
 
-// func (serv *TelegramHandler) TaskMenu(ctx context.Context, _ *bot.Bot, message *models.Message, data []byte) {
-// 	op := "TelegramHandler.taskMenu: %w"
-// 	chatID := message.Chat.ID
-// 	kb := inline.New(serv.bot)
-// 	kb = kb.Row().Button("Tasks", nil, serv.TaskMenu)
-// 	kb = kb.Row().Button("list", nil, serv.listTasks)
-// 	kb = kb.Row().Button("Create", nil, serv.createTask)
-//
-// 	_, err := serv.bot.SendMessage(ctx, &bot.SendMessageParams{
-// 		ChatID:      chatID,
-// 		Text:        "EventChosen",
-// 		ReplyMarkup: kb,
-// 	})
-// 	if err != nil {
-// 		serv.handleError(ctx, chatID, fmt.Errorf(op, err))
-// 		return
-// 	}
-// }
+	_, err := th.bot.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to fill
+		ChatID:      mes.Chat.ID,
+		MessageID:   mes.ID,
+		Caption:     "Tasks actions",
+		ReplyMarkup: kbr,
+	})
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
 
-func (th *TelegramHandler) TaskMenu() tgwf.Action {
-	listTasks := ListTasks{serv: th.serv}
-	createTask := TaskCreation{serv: th.serv, text: ""}
-	menu := tgwf.NewMenuAction("Tasks action").
-		Row().Btn("List tasks", listTasks.list).
-		Row().Btn("Create task", createTask.MessageSetText)
-
-	return menu.Show
+	return nil
 }
 
 type ListTasks struct {
-	serv *service.Service
+	th *TelegramHandler
 }
 
-func (l *ListTasks) list(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
-	op := "TelegramHandler.listTasks: %w"
+func (l *ListTasks) listInline(ctx context.Context, b *bot.Bot, mes *models.Message, _ []byte) error {
+	op := "ListTasks.listInline: %w"
 
 	user, err := UserFromCtx(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(op, err)
+		return fmt.Errorf(op, err)
 	}
 
-	tasks, err := l.serv.ListUserTasks(ctx, user.ID, service.ListParams{
+	tasks, err := l.th.serv.ListUserTasks(ctx, user.ID, service.ListParams{
 		Offset: 0,
 		Limit:  defaultListLimit,
 	})
 	if err != nil {
-		return nil, fmt.Errorf(op, err)
+		return fmt.Errorf(op, err)
 	}
 
-	kb := tgwf.NewMenuAction("Tasks")
+	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick())
 	for i, t := range tasks {
 		text := strconv.Itoa(i+1) + ". " + t.Text
-		te := TaskEdit{serv: l.serv, id: t.ID, text: t.Text}
-		kb.Row().Btn(text, te.Menu)
+		te := SingleTask{th: l.th, id: t.ID, text: t.Text}
+		kbr.Row().Button(text, nil, errorHandling(te.HandleBtnTaskChosen))
 	}
 
-	if len(tasks) == 0 {
-		kb = kb.Row().Btn("No tasks. Create new task", nil)
-	}
-
-	kbHandler, err := kb.Show(ctx, b, chatID)
-	if err != nil {
-		return nil, fmt.Errorf(op, err)
-	}
-
-	return kbHandler, nil
-}
-
-func (l *ListTasks) Post(ctx context.Context, _ *bot.Bot, _ *models.Update) (tgwf.Action, error) {
-	log.Ctx(ctx).Error("not implemented", "action", "ListTasks")
-
-	return nil, nil
-}
-
-type TaskCreation struct {
-	serv *service.Service
-	text string
-}
-
-func (tc *TaskCreation) create(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
-	op := "TaskCreation.CreateInline: %w"
-	user, err := UserFromCtx(ctx)
-	if err != nil {
-		return nil, fmt.Errorf(op, err)
-	}
-
-	_, err = tc.serv.AddTask(ctx, domains.Task{ //nolint:exhaustruct //object creation request
-		UserID:   user.ID,
-		Text:     tc.text,
-		Archived: false,
-		Periodic: false,
+	_, err = b.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to fill
+		ChatID:      mes.Chat.ID,
+		MessageID:   mes.ID,
+		Caption:     "All tasks",
+		ReplyMarkup: kbr,
 	})
 	if err != nil {
-		return nil, fmt.Errorf(op, err)
+		return fmt.Errorf(op, err)
 	}
 
-	_, err = b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
-		ChatID: chatID,
-		Text:   "Task successfully created",
-	})
-	if err != nil {
-		return nil, fmt.Errorf(op, err)
-	}
-
-	return nil, nil
+	return nil
 }
 
-func (tc *TaskCreation) MessageSetText(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
-	op := "SetTextAction.Show: %w"
-	_, err := b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
-		ChatID: chatID,
-		Text:   "Enter task text",
-	})
-	if err != nil {
-		return nil, fmt.Errorf(op, err)
-	}
-
-	return tc.SetText, nil
-}
-
-func (tc *TaskCreation) SetText(_ context.Context, _ *bot.Bot, update *models.Update) (tgwf.Action, error) {
-	op := "TaskCreation.SetText: %w"
-	message, err := tgwf.GetMessage(update)
-	if err != nil {
-		return nil, fmt.Errorf(op, err)
-	}
-	tc.text = message.Text
-
-	return tc.create, nil
-}
-
-type TaskEdit struct {
-	serv *service.Service
+type SingleTask struct {
+	th   *TelegramHandler
 	id   int
 	text string
 }
 
-func (te *TaskEdit) Menu(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
-	op := "TaskEdit.EventChosen: %w"
+func (st *SingleTask) String() string {
+	var eventStringBuilder strings.Builder
+	eventStringBuilder.WriteString("Current event\n")
+	eventStringBuilder.WriteString(fmt.Sprintf("Text: %q\n", st.text))
+
+	return eventStringBuilder.String()
+}
+
+func (st *SingleTask) isCreation() bool {
+	return st.id == notSettedID
+}
+
+func (st *SingleTask) EditMenuMsg(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) error {
+	op := "SingleTask.EditMenuMsg: %w"
+	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick()).
+		Row().
+		Button("Set text", nil, onSelectErrorHandling(st.SetTextMsg))
+
+	kbr.Row()
+	if st.isCreation() {
+		kbr.Button("Create", nil, errorHandling(st.CreateInline))
+	} else {
+		kbr.Button("Update", nil, errorHandling(st.UpdateInline))
+	}
+
+	kbr.Button("Cancel", nil, errorHandling(st.th.MainMenuInline))
+
+	params := &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to fill
+		ChatID:      chatID,
+		MessageID:   relatedMsgID,
+		Caption:     st.String(),
+		ReplyMarkup: kbr,
+	}
+
+	_, err := b.EditMessageCaption(ctx, params)
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+
+	return nil
+}
+
+func (st *SingleTask) CreateInline(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
+	op := "SingleTask.CreateInline: %w"
 	user, err := UserFromCtx(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(op, err)
+		return fmt.Errorf(op, err)
 	}
 
-	t, err := te.serv.GetTask(ctx, te.id, user.ID)
-	if err != nil {
-		return nil, fmt.Errorf(op, err)
-	}
-
-	message := fmt.Sprintf("Task:\n%s", t.Text)
-	menu := tgwf.NewMenuAction(message).Row().
-		Btn("Edit", te.MessageSetText).
-		Btn("Delete", te.Delete)
-
-	menuHandler, err := menu.Show(ctx, b, chatID)
-	if err != nil {
-		return nil, fmt.Errorf(op, err)
-	}
-
-	return menuHandler, nil
-}
-
-func (te *TaskEdit) MessageSetText(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
-	op := "SetTextAction.Show: %w"
-	_, err := b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
-		ChatID: chatID,
-		Text:   "Enter task text",
-	})
-	if err != nil {
-		return nil, fmt.Errorf(op, err)
-	}
-
-	return te.SetText, nil
-}
-
-func (te *TaskEdit) Delete(ctx context.Context, _ *bot.Bot, _ int64) (tgwf.Handler, error) {
-	op := "TaskEdit.Delete: %w"
-	user, err := UserFromCtx(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	err = te.serv.DeleteTask(ctx, te.id, user.ID)
-	if err != nil {
-		return nil, fmt.Errorf(op, err)
-	}
-
-	return nil, nil
-}
-
-func (te *TaskEdit) SetText(_ context.Context, _ *bot.Bot, update *models.Update) (tgwf.Action, error) {
-	op := "TaskEdit.SetText: %w"
-	message, err := tgwf.GetMessage(update)
-	if err != nil {
-		return nil, fmt.Errorf(op, err)
-	}
-	te.text = message.Text
-
-	return te.save, nil
-}
-
-func (te *TaskEdit) save(ctx context.Context, b *bot.Bot, chatID int64) (tgwf.Handler, error) {
-	op := "TaskEdit.save: %w"
-	user, err := UserFromCtx(ctx)
-	if err != nil {
-		return nil, fmt.Errorf(op, err)
-	}
-
-	err = te.serv.UpdateTask(ctx, domains.Task{
-		ID:       te.id,
+	_, err = st.th.serv.AddTask(ctx, domains.Task{ //nolint:exhaustruct //object creation request
 		UserID:   user.ID,
-		Text:     te.text,
+		Text:     st.text,
 		Archived: false,
 		Periodic: false,
 	})
 	if err != nil {
-		return nil, fmt.Errorf(op, err)
+		return fmt.Errorf(op, err)
 	}
 
-	_, err = b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
-		ChatID: chatID,
-		Text:   "Task successfully created",
+	err = st.th.MainMenuWithText(ctx, b, msg, "Task successfully created\n"+st.String())
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+
+	return nil
+}
+
+func (st *SingleTask) SetTextMsg(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) error {
+	op := "SingleTask.SetTextMsg: %w"
+	_, err := b.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to specify
+		ChatID:    chatID,
+		MessageID: relatedMsgID,
+		Caption:   "Enter task text",
 	})
 	if err != nil {
-		return nil, fmt.Errorf(op, err)
+		return fmt.Errorf(op, err)
 	}
 
-	return nil, nil
+	st.th.waitingActionsStore.StoreDefDur(chatID, TextMessageHandler{
+		handle:    st.HandleMsgSetText,
+		messageID: relatedMsgID,
+	})
+
+	return nil
+}
+
+func (st *SingleTask) HandleMsgSetText(ctx context.Context, b *bot.Bot, msg *models.Message, relatedMsgID int) error {
+	op := "SingleTask.HandleMsgSetText: %w"
+
+	st.text = msg.Text
+
+	_, err := b.DeleteMessage(ctx, &bot.DeleteMessageParams{
+		ChatID:    msg.Chat.ID,
+		MessageID: msg.ID,
+	})
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+
+	st.th.waitingActionsStore.Delete(msg.Chat.ID)
+
+	err = st.EditMenuMsg(ctx, b, relatedMsgID, msg.Chat.ID)
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+
+	return nil
+}
+
+func (st *SingleTask) HandleBtnTaskChosen(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
+	op := "TaskEdit.EventChosen: %w"
+	user, err := UserFromCtx(ctx)
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+
+	t, err := st.th.serv.GetTask(ctx, st.id, user.ID)
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+
+	st.id = t.ID
+	st.text = t.Text
+
+	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick()).
+		Row().Button("Edit", nil, onSelectErrorHandling(st.EditMenuMsg)).
+		Row().Button("Delete", nil, errorHandling(st.DeleteInline))
+
+	_, err = b.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to fill
+		ChatID:      msg.Chat.ID,
+		MessageID:   msg.ID,
+		Caption:     st.String(),
+		ReplyMarkup: kbr,
+	})
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+
+	return nil
+}
+
+func (st *SingleTask) DeleteInline(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
+	op := "SingleTask.DeleteInline: %w"
+	user, err := UserFromCtx(ctx)
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+
+	err = st.th.serv.DeleteTask(ctx, st.id, user.ID)
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+
+	err = st.th.MainMenuWithText(ctx, b, msg, "Task successfully deleted\n"+st.String())
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+
+	return nil
+}
+
+func (st *SingleTask) UpdateInline(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
+	op := "TaskEdit.save: %w"
+	user, err := UserFromCtx(ctx)
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+
+	err = st.th.serv.UpdateTask(ctx, domains.Task{
+		ID:       st.id,
+		UserID:   user.ID,
+		Text:     st.text,
+		Archived: false,
+		Periodic: false,
+	})
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+
+	err = st.th.MainMenuWithText(ctx, b, msg, "Task successfully updated\n"+st.String())
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+
+	return nil
 }
