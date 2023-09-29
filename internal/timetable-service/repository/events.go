@@ -138,15 +138,16 @@ func (er *EventRepository) Get(ctx context.Context, eventID, userID int) (domain
 	return dtoEvent(tt)
 }
 
-func (er *EventRepository) Update(ctx context.Context, tt domains.Event) (domains.Event, error) {
+func (er *EventRepository) Update(ctx context.Context, event domains.Event) (domains.Event, error) {
 	op := "update timetable task: %w"
 	updatedTT, err := er.q.UpdateEvent(ctx, queries.UpdateEventParams{
-		ID:          int32(tt.ID),
-		UserID:      int32(tt.UserID),
-		Text:        tt.Text,
-		Description: pgxconv.Text(tt.Description),
-		Start:       pgxconv.Timestamptz(tt.Start),
-		Done:        tt.Done,
+		ID:           int32(event.ID),
+		UserID:       int32(event.UserID),
+		Text:         event.Text,
+		Description:  pgxconv.Text(event.Description),
+		Start:        pgxconv.Timestamptz(event.Start),
+		Done:         event.Done,
+		Notification: event.Notification,
 	})
 	if err != nil {
 		return domains.Event{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))

@@ -68,10 +68,16 @@ func (s *Service) notify(ctx context.Context) {
 	log.Ctx(ctx).Info("notified", "amount", notifiedAmount)
 }
 
-func (s *Service) Add(_ context.Context, ns []domains.SendingNotification) error {
+func (s *Service) AddList(_ context.Context, ns []domains.SendingNotification) error {
 	for i := 0; i < len(ns); i++ {
 		s.notifications[ns[i].EventID] = &Notification{notification: ns[i], timePassed: 0}
 	}
+
+	return nil
+}
+
+func (s *Service) Add(_ context.Context, n domains.SendingNotification) error {
+	s.notifications[n.EventID] = &Notification{notification: n, timePassed: 0}
 
 	return nil
 }

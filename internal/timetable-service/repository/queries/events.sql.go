@@ -333,19 +333,21 @@ UPDATE events
 SET start       = $1,
     text        = $2,
     description = $3,
-    done        = $4
-WHERE id = $5
-  AND user_id = $6
+    done        = $4,
+    notification = $5
+WHERE id = $6
+  AND user_id = $7
 RETURNING id, created_at, text, description, user_id, start, done, notification
 `
 
 type UpdateEventParams struct {
-	Start       pgtype.Timestamptz `db:"start"`
-	Text        string             `db:"text"`
-	Description pgtype.Text        `db:"description"`
-	Done        bool               `db:"done"`
-	ID          int32              `db:"id"`
-	UserID      int32              `db:"user_id"`
+	Start        pgtype.Timestamptz   `db:"start"`
+	Text         string               `db:"text"`
+	Description  pgtype.Text          `db:"description"`
+	Done         bool                 `db:"done"`
+	Notification domains.Notification `db:"notification"`
+	ID           int32                `db:"id"`
+	UserID       int32                `db:"user_id"`
 }
 
 func (q *Queries) UpdateEvent(ctx context.Context, arg UpdateEventParams) (Event, error) {
@@ -354,6 +356,7 @@ func (q *Queries) UpdateEvent(ctx context.Context, arg UpdateEventParams) (Event
 		arg.Text,
 		arg.Description,
 		arg.Done,
+		arg.Notification,
 		arg.ID,
 		arg.UserID,
 	)

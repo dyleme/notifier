@@ -19,6 +19,13 @@ const (
 const (
 	timeDoublePointsFormat = "15:04"
 	timeSpaceFormat        = "15 04"
+
+	dayPointFormat         = "02.01"
+	daySpaceFormat         = "02 01"
+	dayPointWithYearFormat = "02.01.2006"
+	daySpaceWithYearFormat = "02 01 2006"
+
+	dayTimeFormat = "02.01.2006 15:04"
 )
 const day = 24 * time.Hour
 
@@ -34,13 +41,6 @@ func parseTime(dayString string) (time.Time, error) {
 
 	return time.Time{}, ErrCantParseMessage
 }
-
-const (
-	dayPointFormat         = "02.01"
-	daySpaceFormat         = "02 01"
-	dayPointWithYearFormat = "02.01.2006"
-	daySpaceWithYearFormat = "02 01 2006"
-)
 
 var dayFormats = []string{dayPointFormat, daySpaceFormat, dayPointWithYearFormat, daySpaceWithYearFormat}
 
