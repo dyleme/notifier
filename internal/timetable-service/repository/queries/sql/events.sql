@@ -59,7 +59,8 @@ UPDATE events
 SET start       = @start,
     text        = @text,
     description = @description,
-    done        = @done
+    done        = @done,
+    notification = @notification
 WHERE id = @id
   AND user_id = @user_id
 RETURNING *;

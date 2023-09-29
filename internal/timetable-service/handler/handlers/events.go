@@ -128,7 +128,6 @@ func (t EventHandler) UpdateEvent(w http.ResponseWriter, r *http.Request, eventI
 		Text:        description,
 		Description: description,
 		Start:       updateBody.Start,
-		Done:        updateBody.Done,
 	})
 	if err != nil {
 		responses.Error(w, http.StatusInternalServerError, err)

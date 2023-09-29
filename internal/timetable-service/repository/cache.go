@@ -38,7 +38,7 @@ func (uc *UniversalCache) Delete(key string) error {
 }
 
 func (uc *UniversalCache) Add(key string, obj any) error {
-	op := "UniversalCache.Add: %wAdd"
+	op := "UniversalCache.AddList: %wAdd"
 	objBytes, err := json.Marshal(obj)
 	if err != nil {
 		return fmt.Errorf(op, err)

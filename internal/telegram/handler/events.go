@@ -49,12 +49,12 @@ type ListEvents struct {
 func (l *ListEvents) listInline(ctx context.Context, b *bot.Bot, mes *models.Message, _ []byte) error {
 	op := "ListEvents.listInline: %w"
 
-	userInfo, err := UserFromCtx(ctx)
+	user, err := UserFromCtx(ctx)
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}
 
-	events, err := l.th.serv.ListEvents(ctx, userInfo.ID, service.ListParams{
+	events, err := l.th.serv.ListEventsInPeriod(ctx, user.ID, time.Now(), time.Now().AddDate(1, 0, 0), service.ListParams{
 		Offset: 0,
 		Limit:  defaultListLimit,
 	})
@@ -81,8 +81,10 @@ func (l *ListEvents) listInline(ctx context.Context, b *bot.Bot, mes *models.Mes
 	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick())
 	for _, event := range events {
 		ec := SingleEvent{th: l.th} //nolint:exhaustruct //fill it in ec.HandleBtnEventChosen
-		kbr.Row().Button(event.Text, []byte(strconv.Itoa(event.ID)), errorHandling(ec.HandleBtnEventChosen))
+		text := event.Text + "\t|\t" + event.Start.In(user.Location()).Format(dayTimeFormat)
+		kbr.Row().Button(text, []byte(strconv.Itoa(event.ID)), errorHandling(ec.HandleBtnEventChosen))
 	}
+	kbr.Row().Button("Cancel", nil, errorHandling(l.th.MainMenuInline))
 
 	_, err = b.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to fill
 		ChatID:      mes.Chat.ID,
@@ -526,7 +528,6 @@ func (se *SingleEvent) UpdateInline(ctx context.Context, b *bot.Bot, msg *models
 		UserID:      user.ID,
 		Description: se.description,
 		Start:       computeTime(se.date, se.time, user.Location()),
-		Done:        false,
 	})
 	if err != nil {
 		return fmt.Errorf(op, err)

@@ -20,7 +20,8 @@ func (th *TelegramHandler) TasksMenuInline(ctx context.Context, b *bot.Bot, mes 
 	createTask := SingleTask{th: th, id: notSettedID, text: ""}
 	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick()).
 		Row().Button("List tasks", nil, errorHandling(listTasks.listInline)).
-		Row().Button("Create task", nil, onSelectErrorHandling(createTask.SetTextMsg))
+		Row().Button("Create task", nil, onSelectErrorHandling(createTask.SetTextMsg)).
+		Row().Button("Cancel", nil, errorHandling(th.MainMenuInline))
 
 	_, err := th.bot.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to fill
 		ChatID:      mes.Chat.ID,
@@ -61,6 +62,7 @@ func (l *ListTasks) listInline(ctx context.Context, b *bot.Bot, mes *models.Mess
 		te := SingleTask{th: l.th, id: t.ID, text: t.Text}
 		kbr.Row().Button(text, nil, errorHandling(te.HandleBtnTaskChosen))
 	}
+	kbr.Button("Cancel", nil, errorHandling(l.th.MainMenuInline))
 
 	_, err = b.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to fill
 		ChatID:      mes.Chat.ID,

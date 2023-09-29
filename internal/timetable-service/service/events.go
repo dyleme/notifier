@@ -119,7 +119,6 @@ type EventUpdateParams struct {
 	Text        string
 	Description string
 	Start       time.Time
-	Done        bool
 }
 
 func (s *Service) UpdateEvent(ctx context.Context, params EventUpdateParams) (domains.Event, error) {
@@ -131,17 +130,44 @@ func (s *Service) UpdateEvent(ctx context.Context, params EventUpdateParams) (do
 			return err //nolint:wrapcheck //wrapping later
 		}
 
-		if e.IsGettingDone(params.Done) {
+		e.Text = params.Text
+		e.Description = params.Description
+		e.Start = params.Start
+
+		res, err = s.repo.Events().Update(ctx, e)
+		if err != nil {
+			return err //nolint:wrapcheck //wrapping later
+		}
+
+		return nil
+	})
+	if err != nil {
+		err = fmt.Errorf(op, err)
+		logError(ctx, err)
+
+		return domains.Event{}, err
+	}
+
+	return res, nil
+}
+
+func (s *Service) SetEventDoneStatus(ctx context.Context, userID, eventID int, done bool) (domains.Event, error) {
+	op := "Service.UpdateEvent: %w"
+	var res domains.Event
+	err := s.repo.Atomic(ctx, func(ctx context.Context, repo Repository) error {
+		e, err := repo.Events().Get(ctx, eventID, userID)
+		if err != nil {
+			return err //nolint:wrapcheck //wrapping later
+		}
+
+		if done {
 			err := s.notifier.Delete(ctx, e.ID) //nolint:govet //new error
 			if err != nil {
 				return serverrors.NewServiceError(err)
 			}
+		} else {
+			e.Notification.Sended = false
 		}
-
-		e.Text = params.Text
-		e.Description = params.Description
-		e.Done = params.Done
-		e.Start = params.Start
 
 		res, err = s.repo.Events().Update(ctx, e)
 		if err != nil {
