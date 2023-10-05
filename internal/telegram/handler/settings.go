@@ -264,7 +264,6 @@ func (en *EnableNotifications) EnableInline(ctx context.Context, b *bot.Bot, msg
 			Webhook:  "",
 			Cmd:      "",
 		},
-		DalayedTill: nil,
 	}, user.ID)
 	if err != nil {
 		return fmt.Errorf(op, err)

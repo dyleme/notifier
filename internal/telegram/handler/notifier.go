@@ -85,7 +85,6 @@ func (n *Notification) setStatus(ctx context.Context, b *bot.Bot, msg *models.Me
 	}
 
 	if n.deletionCancel != nil {
-		log.Ctx(ctx).Info("ctx cancel")
 		n.deletionCancel()
 	}
 

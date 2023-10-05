@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -25,30 +24,31 @@ func (r *Repository) Events() service.EventRepository {
 	return &EventRepository{q: r.q}
 }
 
-func dtoEvent(t queries.Event) (domains.Event, error) {
+func dtoEvent(ev queries.Event) (domains.Event, error) {
 	return domains.Event{
-		ID:           int(t.ID),
-		UserID:       int(t.UserID),
-		Text:         t.Text,
-		Description:  pgxconv.String(t.Description),
-		Start:        pgxconv.TimeWithZone(t.Start),
-		Done:         t.Done,
-		Notification: t.Notification,
+		ID:                 int(ev.ID),
+		UserID:             int(ev.UserID),
+		Text:               ev.Text,
+		Description:        pgxconv.String(ev.Description),
+		Start:              pgxconv.TimeWithZone(ev.Start),
+		Done:               ev.Done,
+		SendTime:           pgxconv.TimeWithZone(ev.Start),
+		Sended:             ev.Sended,
+		NotificationParams: ev.NotificationParams,
 	}, nil
 }
 
-func (er *EventRepository) Add(ctx context.Context, tt domains.Event) (domains.Event, error) {
+func (er *EventRepository) Add(ctx context.Context, ev domains.Event) (domains.Event, error) {
 	op := "add timetable task: %w"
 	addedEvent, err := er.q.AddEvent(ctx, queries.AddEventParams{
-		UserID:      int32(tt.UserID),
-		Text:        tt.Text,
-		Done:        tt.Done,
-		Description: pgxconv.Text(tt.Description),
-		Start:       pgxconv.Timestamptz(tt.Start),
-		Notification: domains.Notification{
-			Sended:             tt.Notification.Sended,
-			NotificationParams: tt.Notification.NotificationParams,
-		},
+		UserID:             int32(ev.UserID),
+		Text:               ev.Text,
+		Start:              pgxconv.Timestamptz(ev.Start),
+		Description:        pgxconv.Text(ev.Description),
+		Done:               ev.Done,
+		NotificationParams: ev.NotificationParams,
+		SendTime:           pgxconv.Timestamptz(ev.Start),
+		Sended:             false,
 	})
 	if err != nil {
 		return domains.Event{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
@@ -141,13 +141,15 @@ func (er *EventRepository) Get(ctx context.Context, eventID, userID int) (domain
 func (er *EventRepository) Update(ctx context.Context, event domains.Event) (domains.Event, error) {
 	op := "update timetable task: %w"
 	updatedTT, err := er.q.UpdateEvent(ctx, queries.UpdateEventParams{
-		ID:           int32(event.ID),
-		UserID:       int32(event.UserID),
-		Text:         event.Text,
-		Description:  pgxconv.Text(event.Description),
-		Start:        pgxconv.Timestamptz(event.Start),
-		Done:         event.Done,
-		Notification: event.Notification,
+		Start:              pgxconv.Timestamptz(event.Start),
+		Text:               event.Text,
+		Description:        pgxconv.Text(event.Description),
+		Done:               event.Done,
+		NotificationParams: event.NotificationParams,
+		ID:                 int32(event.ID),
+		UserID:             int32(event.UserID),
+		Sended:             event.Sended,
+		SendTime:           pgxconv.Timestamptz(event.SendTime),
 	})
 	if err != nil {
 		return domains.Event{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
@@ -156,14 +158,30 @@ func (er *EventRepository) Update(ctx context.Context, event domains.Event) (dom
 	return dtoEvent(updatedTT)
 }
 
-func (er *EventRepository) GetNotNotified(ctx context.Context) ([]domains.Event, error) {
-	op := "EventRepository.GetNotNotified: %w"
-	tasks, err := er.q.GetEventReadyTasks(ctx)
+func (er *EventRepository) GetNearestEventSendTime(ctx context.Context) (time.Time, error) {
+	op := "EventRepository.GetNearestEventSendTime: %w"
+
+	nearestTime, err := er.q.NearestTime(ctx)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return time.Time{}, fmt.Errorf(op, serverrors.NewNotFoundError(err, "nearest time"))
+		}
+
+		return time.Time{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
+	}
+
+	return pgxconv.TimeWithZone(nearestTime), nil
+}
+
+func (er *EventRepository) ListEventsAtSendTime(ctx context.Context, sendTime time.Time) ([]domains.Event, error) {
+	op := "EventRepository.ListEventsAtSendTime: %w"
+
+	events, err := er.q.ListNearest(ctx, pgxconv.Timestamptz(sendTime))
 	if err != nil {
 		return nil, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
-	notNotified, err := dto.ErrorSlice(tasks, dtoEvent)
+	notNotified, err := dto.ErrorSlice(events, dtoEvent)
 	if err != nil {
 		return nil, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
@@ -171,11 +189,9 @@ func (er *EventRepository) GetNotNotified(ctx context.Context) ([]domains.Event,
 	return notNotified, nil
 }
 
-func (er *EventRepository) MarkNotified(ctx context.Context, ids []int) error {
+func (er *EventRepository) MarkNotified(ctx context.Context, eventID int) error {
 	op := "EventRepository.MarkNotified: %w"
-	err := er.q.MarkNotificationSended(ctx, dto.Slice(ids, func(i int) int32 {
-		return int32(i)
-	}))
+	err := er.q.MarkSendedNotificationEvent(ctx, int32(eventID))
 	if err != nil {
 		return fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
@@ -185,13 +201,9 @@ func (er *EventRepository) MarkNotified(ctx context.Context, ids []int) error {
 
 func (er *EventRepository) UpdateNotificationParams(ctx context.Context, eventID, userID int, params domains.NotificationParams) (domains.NotificationParams, error) {
 	op := "EventRepository.UpdateNotificationParams: %w"
-	bts, err := json.Marshal(params)
-	if err != nil {
-		return domains.NotificationParams{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
-	}
 
 	p, err := er.q.UpdateNotificationParams(ctx, queries.UpdateNotificationParamsParams{
-		Params: bts,
+		Params: &params,
 		ID:     int32(eventID),
 		UserID: int32(userID),
 	})
@@ -199,11 +211,11 @@ func (er *EventRepository) UpdateNotificationParams(ctx context.Context, eventID
 		return domains.NotificationParams{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
-	if p.NotificationParams == nil {
+	if p == nil {
 		return domains.NotificationParams{}, fmt.Errorf(op, serverrors.NewRepositoryError(fmt.Errorf("params are nil after update")))
 	}
 
-	return *p.NotificationParams, nil
+	return *p, nil
 }
 
 func (er *EventRepository) Delay(ctx context.Context, eventID, userID int, till time.Time) error {

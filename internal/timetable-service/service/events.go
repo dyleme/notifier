@@ -9,6 +9,7 @@ import (
 	"github.com/Dyleme/Notifier/internal/timetable-service/domains"
 )
 
+//go:generate mockgen -destination=mocks/events_mocks.go -package=mocks . EventRepository
 type EventRepository interface {
 	Add(context.Context, domains.Event) (domains.Event, error)
 	List(ctx context.Context, userID int, params ListParams) ([]domains.Event, error)
@@ -16,8 +17,9 @@ type EventRepository interface {
 	Delete(ctx context.Context, eventID, userID int) error
 	ListInPeriod(ctx context.Context, userID int, from, to time.Time, params ListParams) ([]domains.Event, error)
 	Get(ctx context.Context, eventID, userID int) (domains.Event, error)
-	GetNotNotified(ctx context.Context) ([]domains.Event, error)
-	MarkNotified(ctx context.Context, ids []int) error
+	MarkNotified(ctx context.Context, eventID int) error
+	GetNearestEventSendTime(ctx context.Context) (time.Time, error)
+	ListEventsAtSendTime(ctx context.Context, sendTime time.Time) ([]domains.Event, error)
 	UpdateNotificationParams(ctx context.Context, eventID, userID int, params domains.NotificationParams) (domains.NotificationParams, error)
 	Delay(ctx context.Context, eventID, userID int, till time.Time) error
 }
@@ -42,6 +44,8 @@ func (s *Service) CreateEvent(ctx context.Context, event domains.Event) (domains
 
 		return domains.Event{}, err
 	}
+
+	s.notifierJob.UpdateWithTime(ctx, createdEvent.SendTime)
 
 	return createdEvent, nil
 }
@@ -70,6 +74,8 @@ func (s *Service) AddTaskToEvent(ctx context.Context, userID, taskID int, start 
 
 		return domains.Event{}, err
 	}
+
+	s.notifierJob.UpdateWithTime(ctx, event.SendTime)
 
 	return event, nil
 }
@@ -123,7 +129,7 @@ type EventUpdateParams struct {
 
 func (s *Service) UpdateEvent(ctx context.Context, params EventUpdateParams) (domains.Event, error) {
 	op := "Service.UpdateEvent: %w"
-	var res domains.Event
+	var event domains.Event
 	err := s.repo.Atomic(ctx, func(ctx context.Context, repo Repository) error {
 		e, err := repo.Events().Get(ctx, params.ID, params.UserID)
 		if err != nil {
@@ -134,7 +140,7 @@ func (s *Service) UpdateEvent(ctx context.Context, params EventUpdateParams) (do
 		e.Description = params.Description
 		e.Start = params.Start
 
-		res, err = s.repo.Events().Update(ctx, e)
+		event, err = s.repo.Events().Update(ctx, e)
 		if err != nil {
 			return err //nolint:wrapcheck //wrapping later
 		}
@@ -148,16 +154,22 @@ func (s *Service) UpdateEvent(ctx context.Context, params EventUpdateParams) (do
 		return domains.Event{}, err
 	}
 
-	return res, nil
+	s.notifierJob.UpdateWithTime(ctx, event.SendTime)
+
+	return event, nil
 }
 
 func (s *Service) SetEventDoneStatus(ctx context.Context, userID, eventID int, done bool) (domains.Event, error) {
 	op := "Service.UpdateEvent: %w"
-	var res domains.Event
+	var event domains.Event
 	err := s.repo.Atomic(ctx, func(ctx context.Context, repo Repository) error {
 		e, err := repo.Events().Get(ctx, eventID, userID)
 		if err != nil {
 			return err //nolint:wrapcheck //wrapping later
+		}
+
+		if e.Done == done {
+			return nil
 		}
 
 		if done {
@@ -166,10 +178,10 @@ func (s *Service) SetEventDoneStatus(ctx context.Context, userID, eventID int, d
 				return serverrors.NewServiceError(err)
 			}
 		} else {
-			e.Notification.Sended = false
+			e.Sended = false
 		}
 
-		res, err = s.repo.Events().Update(ctx, e)
+		event, err = s.repo.Events().Update(ctx, e)
 		if err != nil {
 			return err //nolint:wrapcheck //wrapping later
 		}
@@ -183,7 +195,9 @@ func (s *Service) SetEventDoneStatus(ctx context.Context, userID, eventID int, d
 		return domains.Event{}, err
 	}
 
-	return res, nil
+	s.notifierJob.UpdateWithTime(ctx, event.SendTime)
+
+	return event, nil
 }
 
 func (s *Service) DeleteEvent(ctx context.Context, userID, eventID int) error {

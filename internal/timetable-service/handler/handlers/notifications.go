@@ -66,7 +66,7 @@ func mapNotificationParamsResp(p domains.NotificationParams) timetableapi.Notifi
 			Webhook:  &p.Params.Webhook,
 		},
 		Period:      int(p.Period.Minutes()),
-		DelayedTill: p.DalayedTill,
+		DelayedTill: nil,
 	}
 }
 
@@ -88,7 +88,6 @@ func mapNotificationParams(req timetableapi.NotificationParams) domains.Notifica
 			Webhook:  webhook,
 			Cmd:      "",
 		},
-		DalayedTill: req.DelayedTill,
 	}
 
 	return params

@@ -22,7 +22,6 @@ import (
 	"github.com/Dyleme/Notifier/internal/lib/log"
 	"github.com/Dyleme/Notifier/internal/lib/log/slogpretty"
 	"github.com/Dyleme/Notifier/internal/lib/sqldatabase"
-	"github.com/Dyleme/Notifier/internal/notification-service/cmdnotifier"
 	"github.com/Dyleme/Notifier/internal/notification-service/notifier"
 	"github.com/Dyleme/Notifier/internal/server"
 	"github.com/Dyleme/Notifier/internal/server/custmidlleware"
@@ -51,10 +50,10 @@ func main() { //nolint:funlen // main can be long
 		return
 	}
 
-	notif := notifier.New(ctx, cmdnotifier.New(logger), cfg.Notifier)
+	notif := notifier.New(ctx, nil, cfg.Notifier)
 	cache := timetableRepository.NewUniversalCache()
 	timetableRepo := timetableRepository.New(db, cache)
-	timetableServ := timetableService.New(ctx, timetableRepo, notif, cfg.Event)
+	timetableServ := timetableService.New(ctx, timetableRepo, notif)
 	timeTableHandler := timetableHandler.New(timetableServ)
 
 	apiTokenMiddleware := authmiddleware.NewAPIToken(cfg.APIKey)
@@ -87,7 +86,7 @@ func main() { //nolint:funlen // main can be long
 
 	notif.SetNotifier(tg)
 
-	go timetableServ.RunJob(ctx)
+	go timetableServ.RunNotificationJob(ctx)
 
 	serv := server.New(router, cfg.Server)
 

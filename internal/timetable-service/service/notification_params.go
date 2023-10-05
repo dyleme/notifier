@@ -9,6 +9,7 @@ import (
 	"github.com/Dyleme/Notifier/internal/timetable-service/domains"
 )
 
+//go:generate mockgen -destination=mocks/notification_params_mocks.go -package=mocks . NotificationParamsRepository
 type NotificationParamsRepository interface {
 	Get(ctx context.Context, userID int) (domains.NotificationParams, error)
 	Set(ctx context.Context, userID int, params domains.NotificationParams) (domains.NotificationParams, error)
@@ -44,13 +45,13 @@ func (s *Service) GetNotificationParams(ctx context.Context, eventID, userID int
 	op := "Service.GetNotificationParams: %w"
 	var notifParams domains.NotificationParams
 	err := s.repo.Atomic(ctx, func(ctx context.Context, repo Repository) error {
-		tt, err := repo.Events().Get(ctx, eventID, userID)
+		event, err := repo.Events().Get(ctx, eventID, userID)
 		if err != nil {
 			return err //nolint:wrapcheck //wrapping later
 		}
 
-		if tt.Notification.NotificationParams != nil {
-			notifParams = *tt.Notification.NotificationParams
+		if event.NotificationParams != nil {
+			notifParams = *event.NotificationParams
 
 			return nil
 		}

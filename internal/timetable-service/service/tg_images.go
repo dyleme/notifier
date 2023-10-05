@@ -7,6 +7,7 @@ import (
 	"github.com/Dyleme/Notifier/internal/timetable-service/domains"
 )
 
+//go:generate mockgen -destination=mocks/tg_images_mocks.go -package=mocks . TgImagesRepository
 type TgImagesRepository interface {
 	Add(ctx context.Context, filename, tgFileID string) error
 	Get(ctx context.Context, filename string) (domains.TgImage, error)

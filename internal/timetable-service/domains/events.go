@@ -5,18 +5,15 @@ import (
 )
 
 type Event struct {
-	ID           int
-	UserID       int
-	Text         string
-	Description  string
-	Start        time.Time
-	Done         bool
-	Notification Notification
-}
-
-type Notification struct {
-	Sended             bool                `json:"sended"`
-	NotificationParams *NotificationParams `json:"notification_params"`
+	ID                 int
+	UserID             int
+	Text               string
+	Description        string
+	Start              time.Time
+	Done               bool
+	NotificationParams *NotificationParams
+	SendTime           time.Time
+	Sended             bool
 }
 
 func (e *Event) IsGettingDone(newDone bool) bool {
@@ -29,14 +26,13 @@ func (e *Event) IsGettingDone(newDone bool) bool {
 
 func EventFromTask(t Task, start time.Time, description string) Event {
 	return Event{ //nolint:exhaustruct  // TODO: We dont know Event id
-		UserID:      t.UserID,
-		Text:        t.Text,
-		Start:       start,
-		Done:        false,
-		Description: description,
-		Notification: Notification{
-			Sended:             false,
-			NotificationParams: nil,
-		},
+		UserID:             t.UserID,
+		Text:               t.Text,
+		Start:              start,
+		Done:               false,
+		Description:        description,
+		Sended:             false,
+		SendTime:           start,
+		NotificationParams: nil,
 	}
 }

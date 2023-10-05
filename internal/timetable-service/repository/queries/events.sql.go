@@ -18,23 +18,29 @@ INSERT INTO events (user_id,
                     start,
                     description,
                     done,
-                    notification)
+                    notification_params,
+                    send_time,
+                    sended)
 VALUES ($1,
         $2,
         $3,
         $4,
         $5,
-        $6)
-RETURNING id, created_at, text, description, user_id, start, done, notification
+        $6,
+        $7,
+        $8)
+RETURNING id, created_at, text, description, user_id, start, done, notification_params, send_time, sended
 `
 
 type AddEventParams struct {
-	UserID       int32                `db:"user_id"`
-	Text         string               `db:"text"`
-	Start        pgtype.Timestamptz   `db:"start"`
-	Description  pgtype.Text          `db:"description"`
-	Done         bool                 `db:"done"`
-	Notification domains.Notification `db:"notification"`
+	UserID             int32                       `db:"user_id"`
+	Text               string                      `db:"text"`
+	Start              pgtype.Timestamptz          `db:"start"`
+	Description        pgtype.Text                 `db:"description"`
+	Done               bool                        `db:"done"`
+	NotificationParams *domains.NotificationParams `db:"notification_params"`
+	SendTime           pgtype.Timestamptz          `db:"send_time"`
+	Sended             bool                        `db:"sended"`
 }
 
 func (q *Queries) AddEvent(ctx context.Context, arg AddEventParams) (Event, error) {
@@ -44,7 +50,9 @@ func (q *Queries) AddEvent(ctx context.Context, arg AddEventParams) (Event, erro
 		arg.Start,
 		arg.Description,
 		arg.Done,
-		arg.Notification,
+		arg.NotificationParams,
+		arg.SendTime,
+		arg.Sended,
 	)
 	var i Event
 	err := row.Scan(
@@ -55,7 +63,9 @@ func (q *Queries) AddEvent(ctx context.Context, arg AddEventParams) (Event, erro
 		&i.UserID,
 		&i.Start,
 		&i.Done,
-		&i.Notification,
+		&i.NotificationParams,
+		&i.SendTime,
+		&i.Sended,
 	)
 	return i, err
 }
@@ -95,7 +105,8 @@ func (q *Queries) CountListEvents(ctx context.Context, userID int32) (int64, err
 
 const delayEvent = `-- name: DelayEvent :exec
 UPDATE events AS t
-SET notification = JSONB_SET(notificaiton, '{"delayed_till"}', $1::TIMESTAMP)
+SET send_time =  $1::TIMESTAMP,
+    sended = FALSE
 WHERE id = $2
   AND user_id = $3
 `
@@ -116,7 +127,7 @@ DELETE
 FROM events
 WHERE id = $1
 AND user_id = $2
-RETURNING id, created_at, text, description, user_id, start, done, notification
+RETURNING id, created_at, text, description, user_id, start, done, notification_params, send_time, sended
 `
 
 type DeleteEventParams struct {
@@ -141,7 +152,9 @@ func (q *Queries) DeleteEvent(ctx context.Context, arg DeleteEventParams) ([]Eve
 			&i.UserID,
 			&i.Start,
 			&i.Done,
-			&i.Notification,
+			&i.NotificationParams,
+			&i.SendTime,
+			&i.Sended,
 		); err != nil {
 			return nil, err
 		}
@@ -154,7 +167,7 @@ func (q *Queries) DeleteEvent(ctx context.Context, arg DeleteEventParams) ([]Eve
 }
 
 const getEvent = `-- name: GetEvent :one
-SELECT id, created_at, text, description, user_id, start, done, notification
+SELECT id, created_at, text, description, user_id, start, done, notification_params, send_time, sended
 FROM events
 WHERE id = $1
   AND user_id = $2
@@ -176,54 +189,15 @@ func (q *Queries) GetEvent(ctx context.Context, arg GetEventParams) (Event, erro
 		&i.UserID,
 		&i.Start,
 		&i.Done,
-		&i.Notification,
+		&i.NotificationParams,
+		&i.SendTime,
+		&i.Sended,
 	)
 	return i, err
 }
 
-const getEventReadyTasks = `-- name: GetEventReadyTasks :many
-SELECT id, created_at, text, description, user_id, start, done, notification
-FROM events AS t
-WHERE t.start <= NOW()
-  AND t.done = FALSE
-  AND t.notification ->> 'sended' = 'false'
-  AND (
-        t.notification ->> 'delayed_till' IS NULL
-        OR CAST(t.notification ->> 'delayed_till' AS TIMESTAMP) <= NOW()
-    )
-`
-
-func (q *Queries) GetEventReadyTasks(ctx context.Context) ([]Event, error) {
-	rows, err := q.db.Query(ctx, getEventReadyTasks)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Event
-	for rows.Next() {
-		var i Event
-		if err := rows.Scan(
-			&i.ID,
-			&i.CreatedAt,
-			&i.Text,
-			&i.Description,
-			&i.UserID,
-			&i.Start,
-			&i.Done,
-			&i.Notification,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getEventsInPeriod = `-- name: GetEventsInPeriod :many
-SELECT id, created_at, text, description, user_id, start, done, notification
+SELECT id, created_at, text, description, user_id, start, done, notification_params, send_time, sended
 FROM events
 WHERE user_id = $1
   AND start BETWEEN $2 AND $3
@@ -262,7 +236,9 @@ func (q *Queries) GetEventsInPeriod(ctx context.Context, arg GetEventsInPeriodPa
 			&i.UserID,
 			&i.Start,
 			&i.Done,
-			&i.Notification,
+			&i.NotificationParams,
+			&i.SendTime,
+			&i.Sended,
 		); err != nil {
 			return nil, err
 		}
@@ -275,7 +251,7 @@ func (q *Queries) GetEventsInPeriod(ctx context.Context, arg GetEventsInPeriodPa
 }
 
 const listEvents = `-- name: ListEvents :many
-SELECT id, created_at, text, description, user_id, start, done, notification
+SELECT id, created_at, text, description, user_id, start, done, notification_params, send_time, sended
 FROM events
 WHERE user_id = $1
 ORDER BY id DESC
@@ -305,7 +281,9 @@ func (q *Queries) ListEvents(ctx context.Context, arg ListEventsParams) ([]Event
 			&i.UserID,
 			&i.Start,
 			&i.Done,
-			&i.Notification,
+			&i.NotificationParams,
+			&i.SendTime,
+			&i.Sended,
 		); err != nil {
 			return nil, err
 		}
@@ -317,15 +295,70 @@ func (q *Queries) ListEvents(ctx context.Context, arg ListEventsParams) ([]Event
 	return items, nil
 }
 
-const markNotificationSended = `-- name: MarkNotificationSended :exec
-UPDATE events AS t
-SET notification = notification || '{"sended":true}'
-WHERE id = ANY ($1::INTEGER[])
+const listNearest = `-- name: ListNearest :many
+SELECT id, created_at, text, description, user_id, start, done, notification_params, send_time, sended
+FROM events
+WHERE sended = FALSE
+  AND send_time = $1
+ORDER BY start
 `
 
-func (q *Queries) MarkNotificationSended(ctx context.Context, ids []int32) error {
-	_, err := q.db.Exec(ctx, markNotificationSended, ids)
+func (q *Queries) ListNearest(ctx context.Context, nearestTime pgtype.Timestamptz) ([]Event, error) {
+	rows, err := q.db.Query(ctx, listNearest, nearestTime)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Event
+	for rows.Next() {
+		var i Event
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.Text,
+			&i.Description,
+			&i.UserID,
+			&i.Start,
+			&i.Done,
+			&i.NotificationParams,
+			&i.SendTime,
+			&i.Sended,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const markSendedNotificationEvent = `-- name: MarkSendedNotificationEvent :exec
+UPDATE events AS t
+SET sended = true
+WHERE id = $1
+`
+
+func (q *Queries) MarkSendedNotificationEvent(ctx context.Context, eventID int32) error {
+	_, err := q.db.Exec(ctx, markSendedNotificationEvent, eventID)
 	return err
+}
+
+const nearestTime = `-- name: NearestTime :one
+SELECT send_time as t
+FROM events
+WHERE done = FALSE
+  AND sended = FALSE
+ORDER BY start
+LIMIT 1
+`
+
+func (q *Queries) NearestTime(ctx context.Context) (pgtype.Timestamptz, error) {
+	row := q.db.QueryRow(ctx, nearestTime)
+	var t pgtype.Timestamptz
+	err := row.Scan(&t)
+	return t, err
 }
 
 const updateEvent = `-- name: UpdateEvent :one
@@ -334,20 +367,24 @@ SET start       = $1,
     text        = $2,
     description = $3,
     done        = $4,
-    notification = $5
-WHERE id = $6
-  AND user_id = $7
-RETURNING id, created_at, text, description, user_id, start, done, notification
+    notification_params = $5,
+    sended = $6,
+    send_time = $7
+WHERE id = $8
+  AND user_id = $9
+RETURNING id, created_at, text, description, user_id, start, done, notification_params, send_time, sended
 `
 
 type UpdateEventParams struct {
-	Start        pgtype.Timestamptz   `db:"start"`
-	Text         string               `db:"text"`
-	Description  pgtype.Text          `db:"description"`
-	Done         bool                 `db:"done"`
-	Notification domains.Notification `db:"notification"`
-	ID           int32                `db:"id"`
-	UserID       int32                `db:"user_id"`
+	Start              pgtype.Timestamptz          `db:"start"`
+	Text               string                      `db:"text"`
+	Description        pgtype.Text                 `db:"description"`
+	Done               bool                        `db:"done"`
+	NotificationParams *domains.NotificationParams `db:"notification_params"`
+	Sended             bool                        `db:"sended"`
+	SendTime           pgtype.Timestamptz          `db:"send_time"`
+	ID                 int32                       `db:"id"`
+	UserID             int32                       `db:"user_id"`
 }
 
 func (q *Queries) UpdateEvent(ctx context.Context, arg UpdateEventParams) (Event, error) {
@@ -356,7 +393,9 @@ func (q *Queries) UpdateEvent(ctx context.Context, arg UpdateEventParams) (Event
 		arg.Text,
 		arg.Description,
 		arg.Done,
-		arg.Notification,
+		arg.NotificationParams,
+		arg.Sended,
+		arg.SendTime,
 		arg.ID,
 		arg.UserID,
 	)
@@ -369,28 +408,30 @@ func (q *Queries) UpdateEvent(ctx context.Context, arg UpdateEventParams) (Event
 		&i.UserID,
 		&i.Start,
 		&i.Done,
-		&i.Notification,
+		&i.NotificationParams,
+		&i.SendTime,
+		&i.Sended,
 	)
 	return i, err
 }
 
 const updateNotificationParams = `-- name: UpdateNotificationParams :one
 UPDATE events AS t
-SET notification = JSONB_SET(notification, '{notification_params}', $1)
+SET notification_params = notification_params ||  $1
 WHERE id = $2
   AND user_id = $3
-RETURNING notification
+RETURNING notification_params
 `
 
 type UpdateNotificationParamsParams struct {
-	Params []byte `db:"params"`
-	ID     int32  `db:"id"`
-	UserID int32  `db:"user_id"`
+	Params *domains.NotificationParams `db:"params"`
+	ID     int32                       `db:"id"`
+	UserID int32                       `db:"user_id"`
 }
 
-func (q *Queries) UpdateNotificationParams(ctx context.Context, arg UpdateNotificationParamsParams) (domains.Notification, error) {
+func (q *Queries) UpdateNotificationParams(ctx context.Context, arg UpdateNotificationParamsParams) (*domains.NotificationParams, error) {
 	row := q.db.QueryRow(ctx, updateNotificationParams, arg.Params, arg.ID, arg.UserID)
-	var notification domains.Notification
-	err := row.Scan(&notification)
-	return notification, err
+	var notification_params *domains.NotificationParams
+	err := row.Scan(&notification_params)
+	return notification_params, err
 }
