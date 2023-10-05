@@ -7,6 +7,7 @@ import (
 	"github.com/Dyleme/Notifier/internal/timetable-service/domains"
 )
 
+//go:generate mockgen -destination=mocks/tasks_mocks.go -package=mocks . TaskRepository
 type TaskRepository interface {
 	Add(ctx context.Context, task domains.Task) (domains.Task, error)
 	Get(ctx context.Context, taskID, userID int) (domains.Task, error)

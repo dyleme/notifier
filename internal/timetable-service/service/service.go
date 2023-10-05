@@ -14,9 +14,9 @@ type Repository interface {
 }
 
 type Service struct {
-	repo            Repository
-	notifier        Notifier
-	checkTaskPeriod time.Duration
+	repo        Repository
+	notifierJob NotifierJob
+	notifier    Notifier
 }
 
 type Config struct {
@@ -24,7 +24,17 @@ type Config struct {
 }
 
 func New(_ context.Context, repo Repository, notifier Notifier, cfg Config) *Service {
-	s := &Service{repo: repo, notifier: notifier, checkTaskPeriod: cfg.CheckTasksPeriod}
+	s := &Service{
+		repo: repo,
+		notifierJob: NotifierJob{
+			repo:         repo,
+			notifier:     notifier,
+			checkPeriod:  cfg.CheckTasksPeriod,
+			timer:        nil,
+			nextSendTime: nil,
+		},
+		notifier: notifier,
+	}
 
 	return s
 }

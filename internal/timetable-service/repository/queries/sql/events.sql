@@ -4,13 +4,17 @@ INSERT INTO events (user_id,
                     start,
                     description,
                     done,
-                    notification)
+                    notification_params,
+                    send_time,
+                    sended)
 VALUES (@user_id,
         @text,
         @start,
         @description,
         @done,
-        @notification)
+        @notification_params,
+        @send_time,
+        @sended)
 RETURNING *;
 
 -- name: GetEvent :one
@@ -38,7 +42,7 @@ FROM events
 WHERE user_id = @user_id
   AND start BETWEEN @from_time AND @to_time
 ORDER BY id DESC
-LIMIT @lim OFFSET @OFF;
+LIMIT @lim OFFSET @off;
 
 
 -- name: CountGetEventsInPeriod :one
@@ -60,36 +64,43 @@ SET start       = @start,
     text        = @text,
     description = @description,
     done        = @done,
-    notification = @notification
+    notification_params = @notification_params,
+    sended = @sended,
+    send_time = @send_time
 WHERE id = @id
   AND user_id = @user_id
 RETURNING *;
 
--- name: GetEventReadyTasks :many
-SELECT *
-FROM events AS t
-WHERE t.start <= NOW()
-  AND t.done = FALSE
-  AND t.notification ->> 'sended' = 'false'
-  AND (
-        t.notification ->> 'delayed_till' IS NULL
-        OR CAST(t.notification ->> 'delayed_till' AS TIMESTAMP) <= NOW()
-    );
+-- name: NearestTime :one
+SELECT send_time as t
+FROM events
+WHERE done = FALSE
+  AND sended = FALSE
+ORDER BY start
+LIMIT 1;
 
--- name: MarkNotificationSended :exec
+-- name: ListNearest :many
+SELECT *
+FROM events
+WHERE sended = FALSE
+  AND send_time = @nearest_time
+ORDER BY start;
+
+-- name: MarkSendedNotificationEvent :exec
 UPDATE events AS t
-SET notification = notification || '{"sended":true}'
-WHERE id = ANY (sqlc.arg(ids)::INTEGER[]);
+SET sended = true
+WHERE id = @event_id;
 
 -- name: UpdateNotificationParams :one
 UPDATE events AS t
-SET notification = JSONB_SET(notification, '{notification_params}', @params)
+SET notification_params = notification_params ||  @params
 WHERE id = @id
   AND user_id = @user_id
-RETURNING notification;
+RETURNING notification_params;
 
 -- name: DelayEvent :exec
 UPDATE events AS t
-SET notification = JSONB_SET(notificaiton, '{"delayed_till"}', sqlc.arg(till)::TIMESTAMP)
+SET send_time =  sqlc.arg(till)::TIMESTAMP,
+    sended = FALSE
 WHERE id = @id
   AND user_id = @user_id;

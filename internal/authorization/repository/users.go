@@ -82,7 +82,7 @@ func (r *Repository) Get(ctx context.Context, email string, tgID *int) (models.U
 }
 
 func (r *Repository) UpdateTime(ctx context.Context, id int, tzOffset models.TimeZoneOffset, isDST bool) error {
-	op := "Repository.UpdateTime: %w"
+	op := "Repository.UpdateWithTime: %w"
 
 	err := r.q.UpdateTime(ctx, queries.UpdateTimeParams{
 		TimezoneOffset: int32(tzOffset),

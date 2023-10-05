@@ -49,7 +49,7 @@ migrate.reset:
 	goose postgres ${DB_CONNECTION} reset
 
 .PHONY: gen
-gen: gen.sqlc gen.api
+gen: gen.sqlc gen.api gen.go
 
 .PHONY: gen.sqlc
 gen.sqlc:
@@ -61,6 +61,11 @@ gen.api:
 	@echo "----------- Generate apis ----------------"
 	@oapi-codegen --config api/auth-config.yml api/openapi.yaml
 	@oapi-codegen --config api/timetable-config.yml api/openapi.yaml
+
+.PHONY: gen.go
+gen.go:
+	@echo "----------- Generate go files ----------------"
+	go generate ./...
 
 .PHONY: lint
 lint:

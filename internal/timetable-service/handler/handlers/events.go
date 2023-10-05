@@ -147,15 +147,14 @@ func mapCreateEvent(body timetableapi.CreateEventReqBody, userID int) domains.Ev
 	}
 
 	event := domains.Event{ //nolint:exhaustruct //creation object we don't know ids
-		UserID:      userID,
-		Text:        body.Message,
-		Description: description,
-		Start:       body.Start,
-		Done:        false,
-		Notification: domains.Notification{
-			Sended:             false,
-			NotificationParams: nil,
-		},
+		UserID:             userID,
+		Text:               body.Message,
+		Description:        description,
+		Start:              body.Start,
+		Done:               false,
+		Sended:             false,
+		NotificationParams: nil,
+		SendTime:           body.Start,
 	}
 
 	return event

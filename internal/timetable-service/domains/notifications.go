@@ -3,9 +3,8 @@ package domains
 import "time"
 
 type NotificationParams struct {
-	Period      time.Duration `json:"period"`
-	DalayedTill *time.Time    `json:"dalayed_till,omitempty"`
-	Params      Params        `json:"params"`
+	Period time.Duration `json:"period"`
+	Params Params        `json:"params"`
 }
 
 type Params struct {

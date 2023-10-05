@@ -15,14 +15,16 @@ type DefaultUserNotificationParam struct {
 }
 
 type Event struct {
-	ID           int32              `db:"id"`
-	CreatedAt    pgtype.Timestamp   `db:"created_at"`
-	Text         string             `db:"text"`
-	Description  pgtype.Text        `db:"description"`
-	UserID       int32              `db:"user_id"`
-	Start        pgtype.Timestamptz `db:"start"`
-	Done         bool               `db:"done"`
-	Notification []byte             `db:"notification"`
+	ID                 int32              `db:"id"`
+	CreatedAt          pgtype.Timestamp   `db:"created_at"`
+	Text               string             `db:"text"`
+	Description        pgtype.Text        `db:"description"`
+	UserID             int32              `db:"user_id"`
+	Start              pgtype.Timestamptz `db:"start"`
+	Done               bool               `db:"done"`
+	NotificationParams []byte             `db:"notification_params"`
+	SendTime           pgtype.Timestamptz `db:"send_time"`
+	Sended             bool               `db:"sended"`
 }
 
 type Task struct {

@@ -2,12 +2,14 @@ package notifier
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/Dyleme/Notifier/internal/lib/log"
 	"github.com/Dyleme/Notifier/internal/timetable-service/domains"
 )
 
+//go:generate mockgen -destination=mocks/notifier_mocks.go -package=mocks . Notifier
 type Notifier interface {
 	Notify(context.Context, domains.SendingNotification) error
 }
@@ -17,13 +19,23 @@ type Config struct {
 }
 
 type Service struct {
-	period        time.Duration
 	notifier      Notifier
 	notifications map[int]*Notification
+	mx            *sync.Mutex
+	nextNotifTime time.Time
+	timer         *time.Timer
+	period        time.Duration
 }
 
 func New(ctx context.Context, notifier Notifier, cfg Config) *Service {
-	s := &Service{notifier: notifier, period: cfg.Period, notifications: make(map[int]*Notification)}
+	s := &Service{
+		notifier:      notifier,
+		period:        cfg.Period,
+		nextNotifTime: time.Now().Add(cfg.Period),
+		timer:         time.NewTimer(cfg.Period),
+		notifications: make(map[int]*Notification),
+		mx:            &sync.Mutex{},
+	}
 	go s.RunJob(ctx)
 
 	return s
@@ -34,55 +46,77 @@ func (s *Service) SetNotifier(notifier Notifier) {
 }
 
 type Notification struct {
-	timePassed   time.Duration
-	notification domains.SendingNotification
+	nextNotifTime time.Time
+	notification  domains.SendingNotification
+}
+
+func (s *Service) notify(ctx context.Context) {
+	s.mx.Lock()
+	defer s.mx.Unlock()
+	for eventID, n := range s.notifications {
+		if n.nextNotifTime.Before(time.Now()) {
+			err := s.notifier.Notify(ctx, n.notification)
+			if err != nil {
+				log.Ctx(ctx).Error("notifier error", log.Err(err))
+			}
+
+			s.notifications[eventID].nextNotifTime = n.nextNotifTime.Add(n.notification.Params.Period)
+		}
+	}
+
+	t := s.calcNextNotificationTime()
+	s.setTimerForNextNotification(t)
 }
 
 func (s *Service) RunJob(ctx context.Context) {
-	ticker := time.NewTicker(s.period)
+	s.notify(ctx)
 	for {
 		select {
-		case <-ticker.C:
+		case <-s.timer.C:
 			s.notify(ctx)
 		case <-ctx.Done():
-			ticker.Stop()
+			s.timer.Stop()
 
 			return
 		}
 	}
 }
 
-func (s *Service) notify(ctx context.Context) {
-	log.Ctx(ctx).Info("holding notifications", "amount", len(s.notifications))
-	notifiedAmount := 0
+func (s *Service) calcNextNotificationTime() time.Time {
+	var nearestNotifTime time.Time
 	for _, n := range s.notifications {
-		if n.timePassed%n.notification.Params.Period == 0 {
-			err := s.notifier.Notify(ctx, n.notification)
-			if err != nil {
-				log.Ctx(ctx).Error("notifier error", log.Err(err))
-			}
-			notifiedAmount++
+		if nearestNotifTime.IsZero() || n.nextNotifTime.Before(nearestNotifTime) {
+			nearestNotifTime = n.nextNotifTime
 		}
-		n.timePassed += s.period
 	}
-	log.Ctx(ctx).Info("notified", "amount", notifiedAmount)
+
+	if nearestNotifTime.IsZero() {
+		return time.Now().Add(s.period)
+	}
+
+	return nearestNotifTime
 }
 
-func (s *Service) AddList(_ context.Context, ns []domains.SendingNotification) error {
-	for i := 0; i < len(ns); i++ {
-		s.notifications[ns[i].EventID] = &Notification{notification: ns[i], timePassed: 0}
-	}
-
-	return nil
+func (s *Service) setTimerForNextNotification(t time.Time) {
+	s.nextNotifTime = t
+	s.timer.Reset(time.Until(s.nextNotifTime))
 }
 
 func (s *Service) Add(_ context.Context, n domains.SendingNotification) error {
-	s.notifications[n.EventID] = &Notification{notification: n, timePassed: 0}
+	s.mx.Lock()
+	defer s.mx.Unlock()
+	s.notifications[n.EventID] = &Notification{notification: n, nextNotifTime: n.NotificationTime}
+
+	if n.NotificationTime.Before(s.nextNotifTime) {
+		s.setTimerForNextNotification(n.NotificationTime)
+	}
 
 	return nil
 }
 
 func (s *Service) Delete(_ context.Context, eventID int) error {
+	s.mx.Lock()
+	defer s.mx.Unlock()
 	delete(s.notifications, eventID)
 
 	return nil

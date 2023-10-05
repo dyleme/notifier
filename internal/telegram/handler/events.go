@@ -491,15 +491,14 @@ func (se *SingleEvent) CreateInline(ctx context.Context, b *bot.Bot, msg *models
 	}
 
 	event := domains.Event{ //nolint:exhaustruct // don't know id on creation
-		UserID:      user.ID,
-		Text:        se.text,
-		Description: se.description,
-		Start:       utcTime,
-		Done:        false,
-		Notification: domains.Notification{
-			Sended:             false,
-			NotificationParams: nil,
-		},
+		UserID:             user.ID,
+		Text:               se.text,
+		Description:        se.description,
+		Start:              utcTime,
+		Done:               false,
+		Sended:             false,
+		NotificationParams: nil,
+		SendTime:           utcTime,
 	}
 
 	_, err = se.th.serv.CreateEvent(ctx, event)
@@ -507,7 +506,7 @@ func (se *SingleEvent) CreateInline(ctx context.Context, b *bot.Bot, msg *models
 		return fmt.Errorf(op, err)
 	}
 
-	err = se.th.MainMenuWithText(ctx, b, msg, "Event successfully created:\n"+se.String())
+	err = se.th.MainMenuWithText(ctx, b, msg, "Service successfully created:\n"+se.String())
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}
@@ -533,7 +532,7 @@ func (se *SingleEvent) UpdateInline(ctx context.Context, b *bot.Bot, msg *models
 		return fmt.Errorf(op, err)
 	}
 
-	err = se.th.MainMenuWithText(ctx, b, msg, "Event successfully updated:\n"+se.String())
+	err = se.th.MainMenuWithText(ctx, b, msg, "Service successfully updated:\n"+se.String())
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}
@@ -556,7 +555,7 @@ func (se *SingleEvent) DeleteInline(ctx context.Context, b *bot.Bot, msg *models
 		return fmt.Errorf(op, err)
 	}
 
-	err = se.th.MainMenuWithText(ctx, b, msg, "Event successfully deleted:\n"+se.String())
+	err = se.th.MainMenuWithText(ctx, b, msg, "Service successfully deleted:\n"+se.String())
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}

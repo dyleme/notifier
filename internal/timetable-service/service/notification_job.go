@@ -2,118 +2,145 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"golang.org/x/sync/errgroup"
 
 	"github.com/Dyleme/Notifier/internal/lib/log"
-	"github.com/Dyleme/Notifier/internal/lib/utils/dto"
+	"github.com/Dyleme/Notifier/internal/lib/serverrors"
 	"github.com/Dyleme/Notifier/internal/timetable-service/domains"
 )
 
+//go:generate mockgen -destination=mocks/notification_job_mocks.go -package=mocks . Notifier
 type Notifier interface {
-	AddList(ctx context.Context, ns []domains.SendingNotification) error
 	Add(ctx context.Context, n domains.SendingNotification) error
 	Delete(ctx context.Context, id int) error
 }
 
-func (s *Service) RunJob(ctx context.Context) {
-	ticker := time.NewTicker(s.checkTaskPeriod)
+type NotifierJob struct {
+	repo         Repository
+	notifier     Notifier
+	checkPeriod  time.Duration
+	nextSendTime *time.Time
+	timer        *time.Timer
+}
+
+func NewNotifierJob(repo Repository, notifier Notifier, config Config) *NotifierJob {
+	return &NotifierJob{ //nolint:exhaustruct // don't know yet
+		repo:        repo,
+		notifier:    notifier,
+		checkPeriod: config.CheckTasksPeriod,
+	}
+}
+
+func (nj *NotifierJob) RunJob(ctx context.Context) {
+	nj.nextNotification(ctx)
 	for {
 		select {
-		case <-ticker.C:
-			s.notify(ctx)
+		case <-nj.timer.C:
+			nj.notify(ctx)
+			nj.nextNotification(ctx)
 		case <-ctx.Done():
-			ticker.Stop()
+			nj.timer.Stop()
 
 			return
 		}
 	}
 }
 
-func getNotifParams(ctx context.Context, r Repository, event *domains.Event) (domains.NotificationParams, error) {
-	op := "getNotifParams: %w"
-	if event.Notification.NotificationParams == nil {
-		var err error
-		userParam, err := r.DefaultNotificationParams().Get(ctx, event.UserID)
-		if err != nil {
-			return domains.NotificationParams{}, fmt.Errorf(op, err)
-		}
-
-		return userParam, nil
+func (nj *NotifierJob) UpdateWithTime(ctx context.Context, t time.Time) {
+	if nj.nextSendTime == nil || t.Before(*nj.nextSendTime) {
+		nj.nextNotification(ctx)
 	}
-
-	return *event.Notification.NotificationParams, nil
 }
 
-func mapNotifications(ctx context.Context, r Repository, events []domains.Event) ([]domains.SendingNotification, error) {
-	op := "mapNotifications: %w"
-	notifs, err := dto.ErrorContinueSlice(events, func(t domains.Event) (domains.SendingNotification, error) {
-		notifParams, err := getNotifParams(ctx, r, &t)
-		if err != nil {
-			log.Ctx(ctx).Error("get_notif_params_error", log.Err(err))
-
-			return domains.SendingNotification{}, err
-		}
-
-		return domains.SendingNotification{
-			EventID:          t.ID,
-			UserID:           t.UserID,
-			Message:          t.Text,
-			Description:      t.Description,
-			NotificationTime: t.Start,
-			Params:           notifParams,
-		}, nil
-	})
+func (nj *NotifierJob) nextNotification(ctx context.Context) {
+	op := "NotifierJob.nextNotification: %w"
+	nextSendTime, err := nj.repo.Events().GetNearestEventSendTime(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(op, err)
+		var notFoundErr serverrors.NotFoundError
+		if errors.As(err, &notFoundErr) {
+			nj.setNextNotificationTime(time.Now().Add(nj.checkPeriod))
+
+			return
+		}
+		log.Ctx(ctx).Error("update time", log.Err(fmt.Errorf(op, err)))
+
+		return
 	}
 
-	return notifs, nil
+	nj.setNextNotificationTime(nextSendTime)
 }
 
-func (s *Service) notify(ctx context.Context) {
+func (nj *NotifierJob) setNextNotificationTime(t time.Time) {
+	nj.nextSendTime = &t
+	if nj.timer != nil {
+		nj.timer.Reset(time.Until(*nj.nextSendTime))
+	} else {
+		nj.timer = time.NewTimer(time.Until(*nj.nextSendTime))
+	}
+}
+
+func (s *Service) RunNotificationJob(ctx context.Context) {
+	s.notifierJob.RunJob(ctx)
+}
+
+const parallelJobsAmount = 10
+
+func (nj *NotifierJob) notify(ctx context.Context) {
 	op := "Service.notify: %w"
-	err := s.repo.Atomic(ctx, func(ctx context.Context, r Repository) error {
-		Events, err := r.Events().GetNotNotified(ctx)
-		if err != nil {
-			return err //nolint:wrapcheck //wraping later
-		}
-		log.Ctx(ctx).Info("not_notified_from_database", "amount", len(Events))
+	if nj.nextSendTime == nil {
+		log.Ctx(ctx).Error("notify error", log.Err(fmt.Errorf(op, fmt.Errorf("next send time is nil"))))
+	}
+	events, err := nj.repo.Events().ListEventsAtSendTime(ctx, *nj.nextSendTime)
+	if err != nil {
+		log.Ctx(ctx).Error("notify error", log.Err(fmt.Errorf(op, err)))
+	}
 
-		if len(Events) == 0 {
-			return nil
-		}
-
-		wg, wgCtx := errgroup.WithContext(ctx)
-		wg.SetLimit(1)
-
+	wg, _ := errgroup.WithContext(ctx)
+	wg.SetLimit(parallelJobsAmount)
+	for _, ev := range events {
+		ev := ev
 		wg.Go(func() error {
-			notifs, err := mapNotifications(ctx, r, Events) //nolint:govet //need to shadow error
-			if err != nil {
-				return err
-			}
-
-			log.Ctx(ctx).Debug("add_notifications", "notifs", notifs)
-
-			return s.notifier.AddList(wgCtx, notifs) //nolint:wrapcheck //wraping later
+			return nj.notifyEvent(ctx, &ev)
 		})
+	}
 
-		wg.Go(func() error {
-			return r.Events().MarkNotified(wgCtx, dto.Slice(Events, func(t domains.Event) int { //nolint:wrapcheck //wraping later
-				return t.ID
-			}))
-		})
+	err = wg.Wait()
+	if err != nil {
+		log.Ctx(ctx).Error("notify error", log.Err(fmt.Errorf(op, err)))
+	}
+}
 
-		err = wg.Wait()
+func (nj *NotifierJob) notifyEvent(ctx context.Context, ev *domains.Event) error {
+	op := "NotifierJob.notifyEvent: %w"
+	if ev.NotificationParams == nil {
+		defParams, err := nj.repo.DefaultNotificationParams().Get(ctx, ev.UserID)
 		if err != nil {
-			return err //nolint:wrapcheck //wraping later
+			return fmt.Errorf(op, err)
 		}
 
-		return nil
+		ev.NotificationParams = &defParams
+	}
+
+	err := nj.notifier.Add(ctx, domains.SendingNotification{
+		EventID:          ev.ID,
+		UserID:           ev.UserID,
+		Message:          ev.Text,
+		Description:      ev.Description,
+		Params:           *ev.NotificationParams,
+		NotificationTime: ev.SendTime,
 	})
 	if err != nil {
-		log.Ctx(ctx).Error("server error", log.Err(fmt.Errorf(op, err)))
+		return fmt.Errorf(op, err)
 	}
+
+	err = nj.repo.Events().MarkNotified(ctx, ev.ID)
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+
+	return nil
 }
