@@ -28,8 +28,8 @@ func Test_notifierJob_RunJob(t *testing.T) {
 
 		ctrl := gomock.NewController(t)
 		testTime := 180 * time.Millisecond
-		ctx, _ := context.WithTimeout(context.Background(), testTime) //nolint:govet // testing
-		mockLogger := mocklogger.NewHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug})
+		ctx, _ := context.WithTimeout(context.Background(), testTime)                                //nolint:govet // testing
+		mockLogger := mocklogger.NewHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}) //nolint:exhaustruct //testing
 		ctx = log.InCtx(ctx, slog.New(mockLogger))
 		eventsRepo := mocks.NewMockEventRepository(ctrl)
 		timeToNearestCall := 20 * time.Millisecond
@@ -119,7 +119,7 @@ func TestNotifierJob_UpdateWithTime(t *testing.T) {
 		// 	period: time.Hour,
 		// 	params: []callParams{
 		// 		{
-		// 			events: []domains.Event{
+		// 			events: []domains.Service{
 		// 				{
 		// 					ID:     1,
 		// 					UserID: 1,

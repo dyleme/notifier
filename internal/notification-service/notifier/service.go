@@ -2,7 +2,6 @@ package notifier
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -55,9 +54,7 @@ func (s *Service) notify(ctx context.Context) {
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	for eventID, n := range s.notifications {
-		fmt.Printf("nextNotifTime: %+v\n", n.nextNotifTime)
 		if n.nextNotifTime.Before(time.Now()) {
-			fmt.Println("notifiy", n.notification, time.Now())
 			err := s.notifier.Notify(ctx, n.notification)
 			if err != nil {
 				log.Ctx(ctx).Error("notifier error", log.Err(err))
@@ -68,17 +65,14 @@ func (s *Service) notify(ctx context.Context) {
 	}
 
 	t := s.calcNextNotificationTime()
-	fmt.Println("nearest time", t)
 	s.setTimerForNextNotification(t)
 }
 
 func (s *Service) RunJob(ctx context.Context) {
-	fmt.Println("before")
 	s.notify(ctx)
 	for {
 		select {
 		case <-s.timer.C:
-			fmt.Println("loop", time.Now())
 			s.notify(ctx)
 		case <-ctx.Done():
 			s.timer.Stop()
@@ -104,13 +98,11 @@ func (s *Service) calcNextNotificationTime() time.Time {
 }
 
 func (s *Service) setTimerForNextNotification(t time.Time) {
-	fmt.Println("set timer", t)
 	s.nextNotifTime = t
 	s.timer.Reset(time.Until(s.nextNotifTime))
 }
 
 func (s *Service) Add(_ context.Context, n domains.SendingNotification) error {
-	fmt.Printf("add n: %+v\n", n)
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	s.notifications[n.EventID] = &Notification{notification: n, nextNotifTime: n.NotificationTime}

@@ -53,7 +53,7 @@ func main() { //nolint:funlen // main can be long
 	notif := notifier.New(ctx, nil, cfg.Notifier)
 	cache := timetableRepository.NewUniversalCache()
 	timetableRepo := timetableRepository.New(db, cache)
-	timetableServ := timetableService.New(ctx, timetableRepo, notif)
+	timetableServ := timetableService.New(ctx, timetableRepo, notif, cfg.Service)
 	timeTableHandler := timetableHandler.New(timetableServ)
 
 	apiTokenMiddleware := authmiddleware.NewAPIToken(cfg.APIKey)

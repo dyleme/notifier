@@ -25,7 +25,7 @@ func (e *Event) IsGettingDone(newDone bool) bool {
 }
 
 func EventFromTask(t Task, start time.Time, description string) Event {
-	return Event{ //nolint:exhaustruct  // TODO: We dont know Event id
+	return Event{ //nolint:exhaustruct  // TODO: We dont know Service id
 		UserID:             t.UserID,
 		Text:               t.Text,
 		Start:              start,

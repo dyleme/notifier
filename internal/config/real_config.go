@@ -16,7 +16,7 @@ type Config struct {
 	APIKey   string
 	Server   *server.Config
 	Notifier notifier.Config
-	Event    service.Config
+	Service  service.Config
 	Telegram handler.Config
 }
 
@@ -46,7 +46,7 @@ func mapConfig(cc *collectableConfig) Config {
 		Notifier: notifier.Config{
 			Period: cc.Notifier.CheckPeriod,
 		},
-		Event: service.Config{
+		Service: service.Config{
 			CheckTasksPeriod: cc.EventService.CheckPeriod,
 		},
 		Telegram: handler.Config{

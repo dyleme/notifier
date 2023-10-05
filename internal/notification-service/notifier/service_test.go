@@ -24,7 +24,7 @@ func newNotif(t time.Time, per time.Duration) domains.SendingNotification {
 		Description: "",
 		Params: domains.NotificationParams{
 			Period: per,
-			Params: domains.Params{},
+			Params: domains.Params{}, //nolint:exhaustruct // test
 		},
 		NotificationTime: t,
 	}
@@ -36,7 +36,7 @@ func TestService_RunJob(t *testing.T) {
 	t.Run("without notifications", func(t *testing.T) {
 		t.Parallel()
 
-		ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond) //nolint:govet // test
 		ctrl := gomock.NewController(t)
 		mockNotifier := mocks.NewMockNotifier(ctrl)
 		notifier.New(ctx, mockNotifier, notifier.Config{Period: 10 * time.Millisecond})
@@ -46,7 +46,7 @@ func TestService_RunJob(t *testing.T) {
 	t.Run("one notification after period time", func(t *testing.T) {
 		t.Parallel()
 
-		ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond) //nolint:govet // test
 		ctrl := gomock.NewController(t)
 		mockNotifier := mocks.NewMockNotifier(ctrl)
 		n := notifier.New(ctx, mockNotifier, notifier.Config{Period: 10 * time.Millisecond})
@@ -58,7 +58,7 @@ func TestService_RunJob(t *testing.T) {
 	t.Run("one notification before period time", func(t *testing.T) {
 		t.Parallel()
 
-		ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond) //nolint:govet // test
 		ctrl := gomock.NewController(t)
 		mockNotifier := mocks.NewMockNotifier(ctrl)
 		n := notifier.New(ctx, mockNotifier, notifier.Config{Period: time.Hour})
@@ -72,7 +72,7 @@ func TestService_RunJob(t *testing.T) {
 	t.Run("retry notification", func(t *testing.T) {
 		t.Parallel()
 
-		ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond) //nolint:govet // testing
 		ctrl := gomock.NewController(t)
 		mockNotifier := mocks.NewMockNotifier(ctrl)
 		n := notifier.New(ctx, mockNotifier, notifier.Config{Period: time.Hour})
@@ -88,7 +88,7 @@ func TestService_RunJob(t *testing.T) {
 	t.Run("two notifications at the same time", func(t *testing.T) {
 		t.Parallel()
 
-		ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond) //nolint:govet // testing
 		ctrl := gomock.NewController(t)
 		mockNotifier := mocks.NewMockNotifier(ctrl)
 		n := notifier.New(ctx, mockNotifier, notifier.Config{Period: time.Hour})

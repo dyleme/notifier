@@ -100,11 +100,11 @@ func (n *Notification) setStatus(ctx context.Context, b *bot.Bot, msg *models.Me
 	}
 
 	notifData.isNewStatusDone = !notifData.isNewStatusDone
-	text := "Event marked as done"
+	text := "Service marked as done"
 	btnText := "Cancel done"
 	if notifData.isNewStatusDone {
 		btnText = "Done"
-		text = "Event undone"
+		text = "Service undone"
 	}
 	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick()).
 		Row().Button("Ok", nil, n.DeleteMsgInline).

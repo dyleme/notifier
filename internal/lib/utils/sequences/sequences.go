@@ -22,6 +22,7 @@ func (s *Sequence[T]) Next() T {
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	s.x = s.next(s.x)
+
 	return s.x
 }
 
@@ -34,5 +35,6 @@ func (s *SequenceInt) Next() int {
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	s.x++
+
 	return s.x
 }
