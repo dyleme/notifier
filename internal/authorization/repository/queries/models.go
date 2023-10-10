@@ -27,6 +27,26 @@ type Event struct {
 	Sended             bool               `db:"sended"`
 }
 
+type PeriodicEvent struct {
+	ID                 int32              `db:"id"`
+	CreatedAt          pgtype.Timestamp   `db:"created_at"`
+	Text               string             `db:"text"`
+	Description        pgtype.Text        `db:"description"`
+	UserID             int32              `db:"user_id"`
+	Start              pgtype.Timestamptz `db:"start"`
+	SmallestPeriod     int32              `db:"smallest_period"`
+	BiggestPeriod      int32              `db:"biggest_period"`
+	NotificationParams []byte             `db:"notification_params"`
+}
+
+type PeriodicEventsNotification struct {
+	ID              int32              `db:"id"`
+	PeriodicEventID int32              `db:"periodic_event_id"`
+	SendTime        pgtype.Timestamptz `db:"send_time"`
+	Sended          bool               `db:"sended"`
+	Done            bool               `db:"done"`
+}
+
 type Task struct {
 	ID        int32            `db:"id"`
 	CreatedAt pgtype.Timestamp `db:"created_at"`

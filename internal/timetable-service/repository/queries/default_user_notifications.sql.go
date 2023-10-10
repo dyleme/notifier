@@ -37,8 +37,8 @@ RETURNING user_id, created_at, params
 `
 
 type SetDefaultUserNotificationParamsParams struct {
-	UserID int32                      `db:"user_id"`
-	Params domains.NotificationParams `db:"params"`
+	UserID int32                       `db:"user_id"`
+	Params *domains.NotificationParams `db:"params"`
 }
 
 func (q *Queries) SetDefaultUserNotificationParams(ctx context.Context, arg SetDefaultUserNotificationParamsParams) (DefaultUserNotificationParam, error) {

@@ -1,10 +1,10 @@
-package sequences
+package utils
 
 import (
 	"sync"
 )
 
-func New[T any](first T, next func(t T) T) Sequence[T] {
+func NewSequence[T any](first T, next func(t T) T) Sequence[T] {
 	return Sequence[T]{
 		x:    first,
 		next: next,
@@ -21,20 +21,15 @@ type Sequence[T any] struct {
 func (s *Sequence[T]) Next() T {
 	s.mx.Lock()
 	defer s.mx.Unlock()
+	curr := s.x
 	s.x = s.next(s.x)
 
-	return s.x
+	return curr
 }
 
-type SequenceInt struct {
-	x  int
-	mx sync.Mutex
-}
-
-func (s *SequenceInt) Next() int {
-	s.mx.Lock()
-	defer s.mx.Unlock()
-	s.x++
-
-	return s.x
+func NewIntSequence() Sequence[int] {
+	return NewSequence(0, func(i int) int {
+		i++
+		return i
+	})
 }

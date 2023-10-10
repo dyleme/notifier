@@ -295,16 +295,16 @@ func (q *Queries) ListEvents(ctx context.Context, arg ListEventsParams) ([]Event
 	return items, nil
 }
 
-const listNearest = `-- name: ListNearest :many
+const listNearestEvents = `-- name: ListNearestEvents :many
 SELECT id, created_at, text, description, user_id, start, done, notification_params, send_time, sended
 FROM events
 WHERE sended = FALSE
-  AND send_time = $1
+  AND send_time < $1
 ORDER BY start
 `
 
-func (q *Queries) ListNearest(ctx context.Context, nearestTime pgtype.Timestamptz) ([]Event, error) {
-	rows, err := q.db.Query(ctx, listNearest, nearestTime)
+func (q *Queries) ListNearestEvents(ctx context.Context, nearestTime pgtype.Timestamptz) ([]Event, error) {
+	rows, err := q.db.Query(ctx, listNearestEvents, nearestTime)
 	if err != nil {
 		return nil, err
 	}
@@ -335,8 +335,8 @@ func (q *Queries) ListNearest(ctx context.Context, nearestTime pgtype.Timestampt
 }
 
 const markSendedNotificationEvent = `-- name: MarkSendedNotificationEvent :exec
-UPDATE events AS t
-SET sended = true
+UPDATE events
+SET sended = TRUE
 WHERE id = $1
 `
 
@@ -345,7 +345,7 @@ func (q *Queries) MarkSendedNotificationEvent(ctx context.Context, eventID int32
 	return err
 }
 
-const nearestTime = `-- name: NearestTime :one
+const nearestEventTime = `-- name: NearestEventTime :one
 SELECT send_time as t
 FROM events
 WHERE done = FALSE
@@ -354,8 +354,8 @@ ORDER BY start
 LIMIT 1
 `
 
-func (q *Queries) NearestTime(ctx context.Context) (pgtype.Timestamptz, error) {
-	row := q.db.QueryRow(ctx, nearestTime)
+func (q *Queries) NearestEventTime(ctx context.Context) (pgtype.Timestamptz, error) {
+	row := q.db.QueryRow(ctx, nearestEventTime)
 	var t pgtype.Timestamptz
 	err := row.Scan(&t)
 	return t, err

@@ -6,7 +6,7 @@ import (
 	"github.com/Dyleme/Notifier/internal/authorization/authmiddleware"
 	"github.com/Dyleme/Notifier/internal/lib/http/requests"
 	"github.com/Dyleme/Notifier/internal/lib/http/responses"
-	"github.com/Dyleme/Notifier/internal/lib/utils/dto"
+	"github.com/Dyleme/Notifier/internal/lib/utils"
 	"github.com/Dyleme/Notifier/internal/timetable-service/domains"
 	"github.com/Dyleme/Notifier/internal/timetable-service/handler/timetableapi"
 )
@@ -27,7 +27,7 @@ func (t EventHandler) ListTasks(w http.ResponseWriter, r *http.Request, params t
 
 		return
 	}
-	apiTasks := dto.Slice(tasks, mapAPITask)
+	apiTasks := utils.DtoSlice(tasks, mapAPITask)
 
 	responses.JSON(w, http.StatusOK, apiTasks)
 }

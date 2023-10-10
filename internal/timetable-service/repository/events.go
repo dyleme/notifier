@@ -10,7 +10,7 @@ import (
 
 	"github.com/Dyleme/Notifier/internal/lib/serverrors"
 	"github.com/Dyleme/Notifier/internal/lib/sql/pgxconv"
-	"github.com/Dyleme/Notifier/internal/lib/utils/dto"
+	"github.com/Dyleme/Notifier/internal/lib/utils"
 	"github.com/Dyleme/Notifier/internal/timetable-service/domains"
 	"github.com/Dyleme/Notifier/internal/timetable-service/repository/queries"
 	"github.com/Dyleme/Notifier/internal/timetable-service/service"
@@ -72,7 +72,7 @@ func (er *EventRepository) List(ctx context.Context, userID int, listParams serv
 		return nil, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
-	events, err := dto.ErrorSlice(tt, dtoEvent)
+	events, err := utils.DtoErrorSlice(tt, dtoEvent)
 	if err != nil {
 		return nil, fmt.Errorf(op, err)
 	}
@@ -113,7 +113,7 @@ func (er *EventRepository) ListInPeriod(ctx context.Context, userID int, from, t
 		return nil, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
-	events, err := dto.ErrorSlice(tts, dtoEvent)
+	events, err := utils.DtoErrorSlice(tts, dtoEvent)
 	if err != nil {
 		return nil, fmt.Errorf(op, err)
 	}
@@ -161,7 +161,7 @@ func (er *EventRepository) Update(ctx context.Context, event domains.Event) (dom
 func (er *EventRepository) GetNearestEventSendTime(ctx context.Context) (time.Time, error) {
 	op := "EventRepository.GetNearestEventSendTime: %w"
 
-	nearestTime, err := er.q.NearestTime(ctx)
+	nearestTime, err := er.q.NearestEventTime(ctx)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return time.Time{}, fmt.Errorf(op, serverrors.NewNotFoundError(err, "nearest time"))
@@ -173,15 +173,15 @@ func (er *EventRepository) GetNearestEventSendTime(ctx context.Context) (time.Ti
 	return pgxconv.TimeWithZone(nearestTime), nil
 }
 
-func (er *EventRepository) ListEventsAtSendTime(ctx context.Context, sendTime time.Time) ([]domains.Event, error) {
-	op := "EventRepository.ListEventsAtSendTime: %w"
+func (er *EventRepository) ListEventsBefore(ctx context.Context, sendTime time.Time) ([]domains.Event, error) {
+	op := "EventRepository.ListEventsBefore: %w"
 
-	events, err := er.q.ListNearest(ctx, pgxconv.Timestamptz(sendTime))
+	events, err := er.q.ListNearestEvents(ctx, pgxconv.Timestamptz(sendTime))
 	if err != nil {
 		return nil, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
-	notNotified, err := dto.ErrorSlice(events, dtoEvent)
+	notNotified, err := utils.DtoErrorSlice(events, dtoEvent)
 	if err != nil {
 		return nil, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}

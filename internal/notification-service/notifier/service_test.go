@@ -8,13 +8,13 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
-	"github.com/Dyleme/Notifier/internal/lib/utils/sequences"
+	"github.com/Dyleme/Notifier/internal/lib/utils"
 	"github.com/Dyleme/Notifier/internal/notification-service/notifier"
 	"github.com/Dyleme/Notifier/internal/notification-service/notifier/mocks"
 	"github.com/Dyleme/Notifier/internal/timetable-service/domains"
 )
 
-var eventIDSeq = sequences.SequenceInt{}
+var eventIDSeq = utils.NewIntSequence()
 
 func newNotif(t time.Time, per time.Duration) domains.SendingNotification {
 	return domains.SendingNotification{

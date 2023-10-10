@@ -11,6 +11,7 @@ type RepositoryMock struct {
 	TasksRepo               service.TaskRepository
 	EventsRepo              service.EventRepository
 	TgImagesRepo            service.TgImagesRepository
+	PeriodicEventsRepo      service.PeriodicEventsRepository
 }
 
 func (r *RepositoryMock) Atomic(ctx context.Context, fn func(ctx context.Context, repo service.Repository) error) error {
@@ -31,4 +32,8 @@ func (r *RepositoryMock) Events() service.EventRepository {
 
 func (r *RepositoryMock) TgImages() service.TgImagesRepository {
 	return r.TgImagesRepo
+}
+
+func (r *RepositoryMock) PeriodicEvents() service.PeriodicEventsRepository {
+	return r.PeriodicEventsRepo
 }

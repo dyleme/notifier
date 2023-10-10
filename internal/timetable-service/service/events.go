@@ -19,7 +19,7 @@ type EventRepository interface { //nolint:interfacebloat //too many methods
 	Get(ctx context.Context, eventID, userID int) (domains.Event, error)
 	MarkNotified(ctx context.Context, eventID int) error
 	GetNearestEventSendTime(ctx context.Context) (time.Time, error)
-	ListEventsAtSendTime(ctx context.Context, sendTime time.Time) ([]domains.Event, error)
+	ListEventsBefore(ctx context.Context, sendTime time.Time) ([]domains.Event, error)
 	UpdateNotificationParams(ctx context.Context, eventID, userID int, params domains.NotificationParams) (domains.NotificationParams, error)
 	Delay(ctx context.Context, eventID, userID int, till time.Time) error
 }

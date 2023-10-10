@@ -7,7 +7,7 @@ import (
 	"github.com/Dyleme/Notifier/internal/authorization/authmiddleware"
 	"github.com/Dyleme/Notifier/internal/lib/http/requests"
 	"github.com/Dyleme/Notifier/internal/lib/http/responses"
-	"github.com/Dyleme/Notifier/internal/lib/utils/ptr"
+	"github.com/Dyleme/Notifier/internal/lib/utils"
 	"github.com/Dyleme/Notifier/internal/timetable-service/domains"
 	"github.com/Dyleme/Notifier/internal/timetable-service/handler/timetableapi"
 )
@@ -61,7 +61,7 @@ func (t EventHandler) SetDefaultNotificationParams(w http.ResponseWriter, r *htt
 func mapNotificationParamsResp(p domains.NotificationParams) timetableapi.NotificationParams {
 	return timetableapi.NotificationParams{
 		Info: timetableapi.NotificationInfo{
-			Cmd:      ptr.Ptr(true),
+			Cmd:      utils.Ptr(true),
 			Telegram: &p.Params.Telegram,
 			Webhook:  &p.Params.Webhook,
 		},

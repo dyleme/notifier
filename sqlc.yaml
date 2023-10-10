@@ -27,8 +27,16 @@ sql:
                 package: "domains"
                 type: NotificationParams
                 pointer: true
+            - column: periodic_events.notification_params
+              nullable: true
+              go_type:
+                import: "github.com/Dyleme/Notifier/internal/timetable-service/domains"
+                package: "domains"
+                type: NotificationParams
+                pointer: true
             - column: default_user_notification_params.params
               go_type:
                 import: "github.com/Dyleme/Notifier/internal/timetable-service/domains"
                 package: "domains"
                 type: NotificationParams
+                pointer: true

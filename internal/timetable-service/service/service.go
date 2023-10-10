@@ -11,11 +11,12 @@ type Repository interface {
 	Tasks() TaskRepository
 	Events() EventRepository
 	TgImages() TgImagesRepository
+	PeriodicEvents() PeriodicEventsRepository
 }
 
 type Service struct {
 	repo        Repository
-	notifierJob NotifierJob
+	notifierJob *NotifierJob
 	notifier    Notifier
 }
 
@@ -25,15 +26,9 @@ type Config struct {
 
 func New(_ context.Context, repo Repository, notifier Notifier, cfg Config) *Service {
 	s := &Service{
-		repo: repo,
-		notifierJob: NotifierJob{
-			repo:         repo,
-			notifier:     notifier,
-			checkPeriod:  cfg.CheckTasksPeriod,
-			timer:        nil,
-			nextSendTime: nil,
-		},
-		notifier: notifier,
+		repo:        repo,
+		notifierJob: NewNotifierJob(repo, notifier, cfg),
+		notifier:    notifier,
 	}
 
 	return s

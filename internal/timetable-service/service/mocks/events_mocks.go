@@ -129,19 +129,19 @@ func (mr *MockEventRepositoryMockRecorder) List(arg0, arg1, arg2 any) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockEventRepository)(nil).List), arg0, arg1, arg2)
 }
 
-// ListEventsAtSendTime mocks base method.
-func (m *MockEventRepository) ListEventsAtSendTime(arg0 context.Context, arg1 time.Time) ([]domains.Event, error) {
+// ListEventsBefore mocks base method.
+func (m *MockEventRepository) ListEventsBefore(arg0 context.Context, arg1 time.Time) ([]domains.Event, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListEventsAtSendTime", arg0, arg1)
+	ret := m.ctrl.Call(m, "ListEventsBefore", arg0, arg1)
 	ret0, _ := ret[0].([]domains.Event)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListEventsAtSendTime indicates an expected call of ListEventsAtSendTime.
-func (mr *MockEventRepositoryMockRecorder) ListEventsAtSendTime(arg0, arg1 any) *gomock.Call {
+// ListEventsBefore indicates an expected call of ListEventsBefore.
+func (mr *MockEventRepositoryMockRecorder) ListEventsBefore(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEventsAtSendTime", reflect.TypeOf((*MockEventRepository)(nil).ListEventsAtSendTime), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEventsBefore", reflect.TypeOf((*MockEventRepository)(nil).ListEventsBefore), arg0, arg1)
 }
 
 // ListInPeriod mocks base method.

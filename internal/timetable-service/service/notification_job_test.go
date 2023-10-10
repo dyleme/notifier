@@ -14,7 +14,7 @@ import (
 	"github.com/Dyleme/Notifier/internal/lib/log"
 	"github.com/Dyleme/Notifier/internal/lib/log/mocklogger"
 	"github.com/Dyleme/Notifier/internal/lib/serverrors"
-	"github.com/Dyleme/Notifier/internal/lib/utils/ptr"
+	"github.com/Dyleme/Notifier/internal/lib/utils"
 	"github.com/Dyleme/Notifier/internal/timetable-service/domains"
 	"github.com/Dyleme/Notifier/internal/timetable-service/service"
 	"github.com/Dyleme/Notifier/internal/timetable-service/service/mocks"
@@ -72,14 +72,14 @@ func anyNotifyEvents(ctx context.Context, eventsRepo *mocks.MockEventRepository,
 	for i, p := range params {
 		if i != len(params)-1 {
 			if len(p.events) != 0 {
-				eventsRepo.EXPECT().ListEventsAtSendTime(ctx, gomock.Any()).Return(p.events, nil)
+				eventsRepo.EXPECT().ListEventsBefore(ctx, gomock.Any()).Return(p.events, nil)
 				for _, ev := range p.events {
 					defaultNotifParamsRepo.EXPECT().Get(ctx, ev.UserID)
 					eventsRepo.EXPECT().MarkNotified(ctx, ev.ID)
 					notifier.EXPECT().Add(ctx, gomock.Any())
 				}
 			} else {
-				eventsRepo.EXPECT().ListEventsAtSendTime(ctx, gomock.Any()).Return(nil, serverrors.NewNotFoundError(fmt.Errorf("not found"), "nearest time"))
+				eventsRepo.EXPECT().ListEventsBefore(ctx, gomock.Any()).Return(nil, serverrors.NewNotFoundError(fmt.Errorf("not found"), "nearest time"))
 			}
 		}
 		if p.timeToNextCall != nil {
@@ -91,7 +91,7 @@ func anyNotifyEvents(ctx context.Context, eventsRepo *mocks.MockEventRepository,
 }
 
 func notifyEvents(ctx context.Context, eventsRepo *mocks.MockEventRepository, defaultNotifParamsRepo *mocks.MockNotificationParamsRepository, notifier *mocks.MockNotifier, events []domains.Event, nearestCallTime time.Time) {
-	eventsRepo.EXPECT().ListEventsAtSendTime(ctx, nearestCallTime).Return(events, nil)
+	eventsRepo.EXPECT().ListEventsBefore(ctx, nearestCallTime).Return(events, nil)
 	for _, ev := range events {
 		defaultNotifParamsRepo.EXPECT().Get(ctx, ev.UserID)
 		eventsRepo.EXPECT().MarkNotified(ctx, ev.ID)
@@ -101,7 +101,7 @@ func notifyEvents(ctx context.Context, eventsRepo *mocks.MockEventRepository, de
 
 func notifyEventsJobCalls(ctx context.Context, noEventsCalls int, eventsRepo *mocks.MockEventRepository) {
 	for i := 0; i < noEventsCalls; i++ {
-		eventsRepo.EXPECT().ListEventsAtSendTime(ctx, gomock.Any()).Return([]domains.Event{}, nil)
+		eventsRepo.EXPECT().ListEventsBefore(ctx, gomock.Any()).Return([]domains.Event{}, nil)
 		eventsRepo.EXPECT().GetNearestEventSendTime(ctx).Return(time.Time{}, serverrors.NewNotFoundError(fmt.Errorf("err"), "nearest time"))
 	}
 }
@@ -149,7 +149,7 @@ func TestNotifierJob_UpdateWithTime(t *testing.T) {
 							UserID: 2,
 						},
 					},
-					timeToNextCall: ptr.Ptr(20 * time.Millisecond),
+					timeToNextCall: utils.Ptr(20 * time.Millisecond),
 				},
 				{}, //nolint:exhaustruct //no need to fill
 			},

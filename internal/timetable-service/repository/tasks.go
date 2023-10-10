@@ -8,7 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/Dyleme/Notifier/internal/lib/serverrors"
-	"github.com/Dyleme/Notifier/internal/lib/utils/dto"
+	"github.com/Dyleme/Notifier/internal/lib/utils"
 	"github.com/Dyleme/Notifier/internal/timetable-service/domains"
 	"github.com/Dyleme/Notifier/internal/timetable-service/repository/queries"
 	"github.com/Dyleme/Notifier/internal/timetable-service/service"
@@ -102,7 +102,7 @@ func (tr *TaskRepository) List(ctx context.Context, userID int, listParams servi
 		return nil, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
-	return dto.Slice(tasks, dtoTask), nil
+	return utils.DtoSlice(tasks, dtoTask), nil
 }
 
 func (tr *TaskRepository) Delete(ctx context.Context, taskID, userID int) error {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -23,25 +24,26 @@ type NotifierJob struct {
 	repo         Repository
 	notifier     Notifier
 	checkPeriod  time.Duration
-	nextSendTime *time.Time
+	nextSendTime time.Time
 	timer        *time.Timer
 }
 
 func NewNotifierJob(repo Repository, notifier Notifier, config Config) *NotifierJob {
-	return &NotifierJob{ //nolint:exhaustruct // don't know yet
-		repo:        repo,
-		notifier:    notifier,
-		checkPeriod: config.CheckTasksPeriod,
+	return &NotifierJob{
+		repo:         repo,
+		notifier:     notifier,
+		checkPeriod:  config.CheckTasksPeriod,
+		timer:        time.NewTimer(config.CheckTasksPeriod),
+		nextSendTime: time.Now().Add(config.CheckTasksPeriod),
 	}
 }
 
 func (nj *NotifierJob) RunJob(ctx context.Context) {
-	nj.nextNotification(ctx)
+	nj.notify(ctx)
 	for {
 		select {
 		case <-nj.timer.C:
 			nj.notify(ctx)
-			nj.nextNotification(ctx)
 		case <-ctx.Done():
 			nj.timer.Stop()
 
@@ -51,36 +53,70 @@ func (nj *NotifierJob) RunJob(ctx context.Context) {
 }
 
 func (nj *NotifierJob) UpdateWithTime(ctx context.Context, t time.Time) {
-	if nj.nextSendTime == nil || t.Before(*nj.nextSendTime) {
+	if t.Before(nj.nextSendTime) {
 		nj.nextNotification(ctx)
 	}
 }
 
-func (nj *NotifierJob) nextNotification(ctx context.Context) {
-	op := "NotifierJob.nextNotification: %w"
-	nextSendTime, err := nj.repo.Events().GetNearestEventSendTime(ctx)
-	if err != nil {
-		var notFoundErr serverrors.NotFoundError
-		if errors.As(err, &notFoundErr) {
-			nj.setNextNotificationTime(time.Now().Add(nj.checkPeriod))
-
-			return
+func smallestTime(ts ...time.Time) time.Time {
+	var smallest time.Time
+	for _, t := range ts {
+		if smallest.IsZero() || t.Before(smallest) {
+			smallest = t
 		}
-		log.Ctx(ctx).Error("update time", log.Err(fmt.Errorf(op, err)))
-
-		return
 	}
 
-	nj.setNextNotificationTime(nextSendTime)
+	return smallest
+}
+
+func (nj *NotifierJob) nextNotification(ctx context.Context) {
+	op := "NotifierJob.nextNotification: %w"
+	var nearestTime time.Time
+	var (
+		wg                sync.WaitGroup
+		eventTime         time.Time
+		periodicEventTime time.Time
+	)
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		var err error
+		eventTime, err = nj.repo.Events().GetNearestEventSendTime(ctx)
+		if err != nil {
+			var notFoundErr serverrors.NotFoundError
+			if !errors.As(err, &notFoundErr) {
+				log.Ctx(ctx).Error("event time", log.Err(fmt.Errorf(op, err)))
+			}
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		var err error
+		periodicEventTime, err = nj.repo.PeriodicEvents().GetNearestNotificationSendTime(ctx)
+		if err != nil {
+			var notFoundErr serverrors.NotFoundError
+			if !errors.As(err, &notFoundErr) {
+				log.Ctx(ctx).Error("periodic event time", log.Err(fmt.Errorf(op, err)))
+			}
+		}
+	}()
+
+	wg.Wait()
+
+	nearestTime = smallestTime(eventTime, periodicEventTime)
+	if nearestTime.IsZero() {
+		nearestTime = time.Now().Add(nj.checkPeriod)
+	}
+
+	nj.setNextNotificationTime(nearestTime)
 }
 
 func (nj *NotifierJob) setNextNotificationTime(t time.Time) {
-	nj.nextSendTime = &t
-	if nj.timer != nil {
-		nj.timer.Reset(time.Until(*nj.nextSendTime))
-	} else {
-		nj.timer = time.NewTimer(time.Until(*nj.nextSendTime))
-	}
+	nj.nextSendTime = t
+	nj.timer.Reset(time.Until(nj.nextSendTime))
 }
 
 func (s *Service) RunNotificationJob(ctx context.Context) {
@@ -91,20 +127,20 @@ const parallelJobsAmount = 10
 
 func (nj *NotifierJob) notify(ctx context.Context) {
 	op := "Service.notify: %w"
-	if nj.nextSendTime == nil {
-		log.Ctx(ctx).Error("notify error", log.Err(fmt.Errorf(op, fmt.Errorf("next send time is nil"))))
-	}
-	events, err := nj.repo.Events().ListEventsAtSendTime(ctx, *nj.nextSendTime)
+	events, err := nj.repo.Events().ListEventsBefore(ctx, nj.nextSendTime)
 	if err != nil {
-		log.Ctx(ctx).Error("notify error", log.Err(fmt.Errorf(op, err)))
+		var notFoundErr serverrors.NotFoundError
+		if !errors.As(err, &notFoundErr) {
+			log.Ctx(ctx).Error("notify error", log.Err(fmt.Errorf(op, err)))
+		}
 	}
 
-	wg, _ := errgroup.WithContext(ctx)
+	wg, wgCtx := errgroup.WithContext(ctx)
 	wg.SetLimit(parallelJobsAmount)
 	for _, ev := range events {
 		ev := ev
 		wg.Go(func() error {
-			return nj.notifyEvent(ctx, &ev)
+			return nj.notifyEvent(wgCtx, &ev)
 		})
 	}
 
@@ -112,6 +148,8 @@ func (nj *NotifierJob) notify(ctx context.Context) {
 	if err != nil {
 		log.Ctx(ctx).Error("notify error", log.Err(fmt.Errorf(op, err)))
 	}
+
+	nj.nextNotification(ctx)
 }
 
 func (nj *NotifierJob) notifyEvent(ctx context.Context, ev *domains.Event) error {

@@ -71,7 +71,7 @@ WHERE id = @id
   AND user_id = @user_id
 RETURNING *;
 
--- name: NearestTime :one
+-- name: NearestEventTime :one
 SELECT send_time as t
 FROM events
 WHERE done = FALSE
@@ -79,16 +79,16 @@ WHERE done = FALSE
 ORDER BY start
 LIMIT 1;
 
--- name: ListNearest :many
+-- name: ListNearestEvents :many
 SELECT *
 FROM events
 WHERE sended = FALSE
-  AND send_time = @nearest_time
+  AND send_time < @nearest_time
 ORDER BY start;
 
 -- name: MarkSendedNotificationEvent :exec
-UPDATE events AS t
-SET sended = true
+UPDATE events
+SET sended = TRUE
 WHERE id = @event_id;
 
 -- name: UpdateNotificationParams :one
