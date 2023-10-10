@@ -14,22 +14,22 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/Dyleme/Notifier/internal/authorization/authmiddleware"
-	authHandlerrs "github.com/Dyleme/Notifier/internal/authorization/handler/handlers"
+	authorizatoinHandler "github.com/Dyleme/Notifier/internal/authorization/handler"
 	"github.com/Dyleme/Notifier/internal/authorization/jwt"
-	authRepository "github.com/Dyleme/Notifier/internal/authorization/repository"
-	authenticationService "github.com/Dyleme/Notifier/internal/authorization/service"
+	authorizationRepository "github.com/Dyleme/Notifier/internal/authorization/repository"
+	authorizationService "github.com/Dyleme/Notifier/internal/authorization/service"
 	"github.com/Dyleme/Notifier/internal/config"
-	"github.com/Dyleme/Notifier/internal/lib/log"
-	"github.com/Dyleme/Notifier/internal/lib/log/slogpretty"
-	"github.com/Dyleme/Notifier/internal/lib/sqldatabase"
-	"github.com/Dyleme/Notifier/internal/notification-service/notifier"
+	"github.com/Dyleme/Notifier/internal/notifier"
 	"github.com/Dyleme/Notifier/internal/server"
-	"github.com/Dyleme/Notifier/internal/server/custmidlleware"
-	"github.com/Dyleme/Notifier/internal/telegram/handler"
+	custMiddleware "github.com/Dyleme/Notifier/internal/server/middleware"
+	timetableHandler "github.com/Dyleme/Notifier/internal/service/handler"
+	timetableRepository "github.com/Dyleme/Notifier/internal/service/repository"
+	timetableService "github.com/Dyleme/Notifier/internal/service/service"
+	tgHandler "github.com/Dyleme/Notifier/internal/telegram/handler"
 	"github.com/Dyleme/Notifier/internal/telegram/userinfo"
-	timetableHandler "github.com/Dyleme/Notifier/internal/timetable-service/handler/handlers"
-	timetableRepository "github.com/Dyleme/Notifier/internal/timetable-service/repository"
-	timetableService "github.com/Dyleme/Notifier/internal/timetable-service/service"
+	"github.com/Dyleme/Notifier/pkg/log"
+	"github.com/Dyleme/Notifier/pkg/log/slogpretty"
+	"github.com/Dyleme/Notifier/pkg/sqldatabase"
 )
 
 func main() { //nolint:funlen // main can be long
@@ -52,16 +52,16 @@ func main() { //nolint:funlen // main can be long
 
 	notif := notifier.New(ctx, nil, cfg.Notifier)
 	cache := timetableRepository.NewUniversalCache()
-	timetableRepo := timetableRepository.New(db, cache)
-	timetableServ := timetableService.New(ctx, timetableRepo, notif, cfg.Service)
-	timeTableHandler := timetableHandler.New(timetableServ)
+	repo := timetableRepository.New(db, cache)
+	service := timetableService.New(ctx, repo, notif, cfg.Service)
+	timeTableHandler := timetableHandler.New(service)
 
 	apiTokenMiddleware := authmiddleware.NewAPIToken(cfg.APIKey)
 	jwtGen := jwt.NewJwtGen(cfg.JWT)
 	jwtMiddleware := authmiddleware.NewJWT(jwtGen)
-	authRepo := authRepository.New(db)
-	authService := authenticationService.NewAuth(authRepo, &authenticationService.HashGen{}, jwtGen)
-	authHandler := authHandlerrs.New(authService)
+	authRepo := authorizationRepository.New(db)
+	authService := authorizationService.NewAuth(authRepo, &authorizationService.HashGen{}, jwtGen)
+	authHandler := authorizatoinHandler.New(authService)
 
 	router := server.Route(
 		timeTableHandler,
@@ -70,14 +70,14 @@ func main() { //nolint:funlen // main can be long
 		apiTokenMiddleware.Handle,
 		[]func(next http.Handler) http.Handler{
 			cors.AllowAll().Handler,
-			custmidlleware.WithLogger(logger),
-			custmidlleware.RequestID,
-			custmidlleware.LoggerMiddleware,
+			custMiddleware.WithLogger(logger),
+			custMiddleware.LoggerMiddleware,
+			custMiddleware.RequestID,
 			middleware.Recoverer,
 		},
 	)
 
-	tg, err := handler.New(timetableServ, userinfo.NewUserRepoCache(authService), cfg.Telegram, timecache.New[int64, handler.TextMessageHandler]())
+	tg, err := tgHandler.New(service, userinfo.NewUserRepoCache(authService), cfg.Telegram, timecache.New[int64, tgHandler.TextMessageHandler]())
 	if err != nil {
 		logger.Error("tg init error", log.Err(err))
 
@@ -86,7 +86,7 @@ func main() { //nolint:funlen // main can be long
 
 	notif.SetNotifier(tg)
 
-	go timetableServ.RunNotificationJob(ctx)
+	go service.RunNotificationJob(ctx)
 
 	serv := server.New(router, cfg.Server)
 

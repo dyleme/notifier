@@ -8,7 +8,7 @@ import (
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 
-	"github.com/Dyleme/Notifier/internal/lib/log"
+	"github.com/Dyleme/Notifier/pkg/log"
 )
 
 const (

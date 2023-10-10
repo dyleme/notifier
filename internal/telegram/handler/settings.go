@@ -10,7 +10,7 @@ import (
 	"github.com/go-telegram/bot/models"
 	inKbr "github.com/go-telegram/ui/keyboard/inline"
 
-	"github.com/Dyleme/Notifier/internal/timetable-service/domains"
+	"github.com/Dyleme/Notifier/internal/domains"
 )
 
 func (th *TelegramHandler) SettingsInline(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {

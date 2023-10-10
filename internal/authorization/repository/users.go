@@ -10,14 +10,14 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"github.com/Dyleme/Notifier/internal/authorization/models"
 	"github.com/Dyleme/Notifier/internal/authorization/repository/queries"
 	"github.com/Dyleme/Notifier/internal/authorization/service"
-	"github.com/Dyleme/Notifier/internal/lib/serverrors"
-	"github.com/Dyleme/Notifier/internal/lib/sql/pgxconv"
+	"github.com/Dyleme/Notifier/internal/domains"
+	serverrors2 "github.com/Dyleme/Notifier/pkg/serverrors"
+	"github.com/Dyleme/Notifier/pkg/sql/pgxconv"
 )
 
-func (r *Repository) Create(ctx context.Context, input service.CreateUserInput) (models.User, error) {
+func (r *Repository) Create(ctx context.Context, input service.CreateUserInput) (domains.User, error) {
 	op := "Repository.Create: %w"
 	user, err := r.q.AddUser(ctx, queries.AddUserParams{
 		Email:        pgxconv.Text(input.Email),
@@ -26,13 +26,13 @@ func (r *Repository) Create(ctx context.Context, input service.CreateUserInput) 
 	})
 	if err != nil {
 		if intersection, isUnique := uniqueError(err); isUnique {
-			return models.User{}, fmt.Errorf(op, serverrors.NewUniqueError(intersection, input.Email))
+			return domains.User{}, fmt.Errorf(op, serverrors2.NewUniqueError(intersection, input.Email))
 		}
 
-		return models.User{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
+		return domains.User{}, fmt.Errorf(op, serverrors2.NewRepositoryError(err))
 	}
 
-	return models.User{
+	return domains.User{
 		ID:             int(user.ID),
 		Email:          pgxconv.String(user.Email),
 		PasswordHash:   pgxconv.ByteSlice(user.PasswordHash),
@@ -57,7 +57,7 @@ func uniqueError(err error) (string, bool) {
 	return "", false
 }
 
-func (r *Repository) Get(ctx context.Context, email string, tgID *int) (models.User, error) {
+func (r *Repository) Get(ctx context.Context, email string, tgID *int) (domains.User, error) {
 	op := "Repository.Get: %w"
 	out, err := r.q.FindUser(ctx, queries.FindUserParams{
 		Email: pgxconv.Text(email),
@@ -65,13 +65,13 @@ func (r *Repository) Get(ctx context.Context, email string, tgID *int) (models.U
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return models.User{}, fmt.Errorf(op, serverrors.NewNotFoundError(err, "user"))
+			return domains.User{}, fmt.Errorf(op, serverrors2.NewNotFoundError(err, "user"))
 		}
 
-		return models.User{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
+		return domains.User{}, fmt.Errorf(op, serverrors2.NewRepositoryError(err))
 	}
 
-	return models.User{
+	return domains.User{
 		ID:             int(out.ID),
 		Email:          pgxconv.String(out.Email),
 		PasswordHash:   pgxconv.ByteSlice(out.PasswordHash),
@@ -81,7 +81,7 @@ func (r *Repository) Get(ctx context.Context, email string, tgID *int) (models.U
 	}, nil
 }
 
-func (r *Repository) UpdateTime(ctx context.Context, id int, tzOffset models.TimeZoneOffset, isDST bool) error {
+func (r *Repository) UpdateTime(ctx context.Context, id int, tzOffset domains.TimeZoneOffset, isDST bool) error {
 	op := "Repository.UpdateWithTime: %w"
 
 	err := r.q.UpdateTime(ctx, queries.UpdateTimeParams{
@@ -90,7 +90,7 @@ func (r *Repository) UpdateTime(ctx context.Context, id int, tzOffset models.Tim
 		ID:             int32(id),
 	})
 	if err != nil {
-		return fmt.Errorf(op, serverrors.NewRepositoryError(err))
+		return fmt.Errorf(op, serverrors2.NewRepositoryError(err))
 	}
 
 	return nil

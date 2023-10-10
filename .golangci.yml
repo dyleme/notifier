@@ -62,3 +62,5 @@ linters:
     - ireturn
 run:
   issues-exit-code: 1
+  skip-dirs:
+    - cmd/playground

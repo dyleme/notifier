@@ -2,11 +2,11 @@ package config
 
 import (
 	"github.com/Dyleme/Notifier/internal/authorization/jwt"
-	"github.com/Dyleme/Notifier/internal/lib/sqldatabase"
-	"github.com/Dyleme/Notifier/internal/notification-service/notifier"
+	"github.com/Dyleme/Notifier/internal/notifier"
 	"github.com/Dyleme/Notifier/internal/server"
+	"github.com/Dyleme/Notifier/internal/service/service"
 	"github.com/Dyleme/Notifier/internal/telegram/handler"
-	"github.com/Dyleme/Notifier/internal/timetable-service/service"
+	"github.com/Dyleme/Notifier/pkg/sqldatabase"
 )
 
 type Config struct {

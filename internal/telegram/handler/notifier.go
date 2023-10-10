@@ -11,8 +11,8 @@ import (
 	"github.com/go-telegram/bot/models"
 	inKbr "github.com/go-telegram/ui/keyboard/inline"
 
-	"github.com/Dyleme/Notifier/internal/lib/log"
-	"github.com/Dyleme/Notifier/internal/timetable-service/domains"
+	"github.com/Dyleme/Notifier/internal/domains"
+	"github.com/Dyleme/Notifier/pkg/log"
 )
 
 type Notification struct {

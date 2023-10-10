@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Dyleme/Notifier/internal/lib/log"
+	"github.com/Dyleme/Notifier/pkg/log"
 )
 
 // Server is a struct which handles the requests.

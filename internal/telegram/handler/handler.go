@@ -7,9 +7,9 @@ import (
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 
-	"github.com/Dyleme/Notifier/internal/lib/log"
+	timetableService "github.com/Dyleme/Notifier/internal/service/service"
 	"github.com/Dyleme/Notifier/internal/telegram/userinfo"
-	timetableService "github.com/Dyleme/Notifier/internal/timetable-service/service"
+	"github.com/Dyleme/Notifier/pkg/log"
 )
 
 type Config struct {

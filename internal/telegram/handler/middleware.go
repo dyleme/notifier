@@ -8,8 +8,8 @@ import (
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 
-	"github.com/Dyleme/Notifier/internal/lib/log"
 	"github.com/Dyleme/Notifier/internal/telegram/userinfo"
+	"github.com/Dyleme/Notifier/pkg/log"
 )
 
 func (th *TelegramHandler) tgUserID(update *models.Update) (int64, error) {

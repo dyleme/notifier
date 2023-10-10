@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/Dyleme/Notifier/internal/lib/http/responses"
+	"github.com/Dyleme/Notifier/pkg/http/responses"
 )
 
 type APITokenMiddleware struct {
