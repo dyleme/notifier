@@ -32,7 +32,7 @@ func New(service *timetableService.Service, userRepo UserRepo, cfg Config, actio
 		bot:                 nil, // set this field later by calling SetBot method
 	}
 	opts := []bot.Option{
-		bot.WithMiddlewares(loggingMiddleware, tgHandler.UserMiddleware),
+		bot.WithMiddlewares(recoverPanicMiddleware, loggingMiddleware, tgHandler.UserMiddleware),
 		bot.WithMessageTextHandler("/start", bot.MatchTypeExact, tgHandler.StartListener),
 		bot.WithMessageTextHandler("/info", bot.MatchTypeExact, tgHandler.InfoListener),
 		bot.WithMessageTextHandler("/cancel", bot.MatchTypeExact, tgHandler.CancelListener),

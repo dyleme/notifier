@@ -22,6 +22,13 @@ func InCtx(ctx context.Context, logger *slog.Logger) context.Context {
 	return context.WithValue(ctx, ctxKey, logger)
 }
 
+func WithCtx(ctx context.Context, args ...any) context.Context {
+	logger := Ctx(ctx)
+	logger = logger.With(args...)
+
+	return InCtx(ctx, logger)
+}
+
 func Err(err error) slog.Attr {
 	return slog.Attr{
 		Key:   "error",

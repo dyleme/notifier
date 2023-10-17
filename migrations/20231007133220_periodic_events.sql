@@ -17,10 +17,11 @@ CREATE TABLE periodic_events
 CREATE TABLE periodic_events_notifications
 (
     id                SERIAL PRIMARY KEY,
+    created_at        TIMESTAMP DEFAULT NOW()  NOT NULL,
     periodic_event_id INTEGER                  NOT NULL,
     send_time         TIMESTAMP WITH TIME ZONE NOT NULL,
-    sended            BOOLEAN DEFAULT FALSE    NOT NULL,
-    done              BOOLEAN DEFAULT FALSE    NOT NULL,
+    sended            BOOLEAN   DEFAULT FALSE  NOT NULL,
+    done              BOOLEAN   DEFAULT FALSE  NOT NULL,
     CONSTRAINT fk_periodic_events_notifications_periodic_event_id FOREIGN KEY (periodic_event_id) REFERENCES periodic_events
 );
 -- +goose StatementEnd

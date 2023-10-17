@@ -13,9 +13,7 @@ linters-settings:
       - style
     settings:
       hugeParam:
-        sizeThreshold: 2048
-  govet:
-    check-shadowing: true
+        sizeThreshold: 512
   nolintlint:
     require-explanation: true
     require-specific: true
@@ -59,7 +57,8 @@ linters:
     - wsl # to many empty lines
     - lll # long lines is not always bad
     - testpackage # I want to test logic in not exported functions
-    - ireturn
+    - ireturn # TODO:remove
+    - dupl # some code is boilerplate
 run:
   issues-exit-code: 1
   skip-dirs:

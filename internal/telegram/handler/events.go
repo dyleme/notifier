@@ -312,7 +312,7 @@ func (se *SingleEvent) SetDateMsg(ctx context.Context, b *bot.Bot, relatedMsgID 
 	caption := se.String() + "\n\nEnter date (it can be or one of provided, or you can type your own date)"
 	now := time.Now().In(user.Location())
 	nowStr := now.Format(dayPointFormat)
-	tomorrow := time.Now().Add(day).In(user.Location())
+	tomorrow := time.Now().Add(timeDay).In(user.Location())
 	tomorrowStr := tomorrow.Format(dayPointFormat)
 	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick()).
 		Row().Button(nowStr, []byte(nowStr), errorHandling(se.HandleBtnSetDate)).

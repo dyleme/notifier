@@ -74,7 +74,7 @@ INSERT INTO periodic_events_notifications
 VALUES ($1,
         $2
        )
-RETURNING id, periodic_event_id, send_time, sended, done
+RETURNING id, created_at, periodic_event_id, send_time, sended, done
 `
 
 type AddPeriodicEventNotificationParams struct {
@@ -87,6 +87,7 @@ func (q *Queries) AddPeriodicEventNotification(ctx context.Context, arg AddPerio
 	var i PeriodicEventsNotification
 	err := row.Scan(
 		&i.ID,
+		&i.CreatedAt,
 		&i.PeriodicEventID,
 		&i.SendTime,
 		&i.Sended,
@@ -131,10 +132,9 @@ func (q *Queries) CountListPeriodicEventsInPeriod(ctx context.Context, arg Count
 }
 
 const currentPeriodicEventNotification = `-- name: CurrentPeriodicEventNotification :one
-SELECT id, periodic_event_id, send_time, sended, done
+SELECT id, created_at, periodic_event_id, send_time, sended, done
 FROM periodic_events_notifications
 WHERE periodic_event_id = $1
-  AND sended = FALSE
 ORDER BY send_time DESC
 LIMIT 1
 `
@@ -144,6 +144,7 @@ func (q *Queries) CurrentPeriodicEventNotification(ctx context.Context, periodic
 	var i PeriodicEventsNotification
 	err := row.Scan(
 		&i.ID,
+		&i.CreatedAt,
 		&i.PeriodicEventID,
 		&i.SendTime,
 		&i.Sended,
@@ -213,10 +214,11 @@ func (q *Queries) DeletePeriodicEvent(ctx context.Context, arg DeletePeriodicEve
 }
 
 const deletePeriodicEventNotification = `-- name: DeletePeriodicEventNotification :many
-DELETE FROM periodic_events_notifications
+DELETE
+FROM periodic_events_notifications
 WHERE id = $1
   AND periodic_event_id = $2
-RETURNING id, periodic_event_id, send_time, sended, done
+RETURNING id, created_at, periodic_event_id, send_time, sended, done
 `
 
 type DeletePeriodicEventNotificationParams struct {
@@ -235,6 +237,40 @@ func (q *Queries) DeletePeriodicEventNotification(ctx context.Context, arg Delet
 		var i PeriodicEventsNotification
 		if err := rows.Scan(
 			&i.ID,
+			&i.CreatedAt,
+			&i.PeriodicEventID,
+			&i.SendTime,
+			&i.Sended,
+			&i.Done,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const deletePeriodicEventNotifications = `-- name: DeletePeriodicEventNotifications :many
+DELETE FROM periodic_events_notifications
+WHERE periodic_event_id = $1
+RETURNING id, created_at, periodic_event_id, send_time, sended, done
+`
+
+func (q *Queries) DeletePeriodicEventNotifications(ctx context.Context, periodicEventID int32) ([]PeriodicEventsNotification, error) {
+	rows, err := q.db.Query(ctx, deletePeriodicEventNotifications, periodicEventID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PeriodicEventsNotification
+	for rows.Next() {
+		var i PeriodicEventsNotification
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
 			&i.PeriodicEventID,
 			&i.SendTime,
 			&i.Sended,
@@ -280,7 +316,7 @@ func (q *Queries) GetPeriodicEvent(ctx context.Context, arg GetPeriodicEventPara
 }
 
 const listNearestPeriodicEvents = `-- name: ListNearestPeriodicEvents :many
-SELECT pe.id, created_at, text, description, user_id, start, smallest_period, biggest_period, notification_params, pen.id, periodic_event_id, send_time, sended, done
+SELECT pe.id, pe.created_at, text, description, user_id, start, smallest_period, biggest_period, notification_params, pen.id, pen.created_at, periodic_event_id, send_time, sended, done
 FROM periodic_events AS pe
          JOIN periodic_events_notifications AS pen
               ON pe.id = pen.periodic_event_id
@@ -301,6 +337,7 @@ type ListNearestPeriodicEventsRow struct {
 	BiggestPeriod      int32                       `db:"biggest_period"`
 	NotificationParams *domains.NotificationParams `db:"notification_params"`
 	ID_2               int32                       `db:"id_2"`
+	CreatedAt_2        pgtype.Timestamp            `db:"created_at_2"`
 	PeriodicEventID    int32                       `db:"periodic_event_id"`
 	SendTime           pgtype.Timestamptz          `db:"send_time"`
 	Sended             bool                        `db:"sended"`
@@ -327,6 +364,7 @@ func (q *Queries) ListNearestPeriodicEvents(ctx context.Context, nearestTime pgt
 			&i.BiggestPeriod,
 			&i.NotificationParams,
 			&i.ID_2,
+			&i.CreatedAt_2,
 			&i.PeriodicEventID,
 			&i.SendTime,
 			&i.Sended,
@@ -387,7 +425,7 @@ func (q *Queries) ListPeriodicEvents(ctx context.Context, arg ListPeriodicEvents
 }
 
 const listPeriodicEventsInPeriod = `-- name: ListPeriodicEventsInPeriod :many
-SELECT pe.id, created_at, text, description, user_id, start, smallest_period, biggest_period, notification_params, pen.id, periodic_event_id, send_time, sended, done
+SELECT pe.id, pe.created_at, text, description, user_id, start, smallest_period, biggest_period, notification_params, pen.id, pen.created_at, periodic_event_id, send_time, sended, done
 FROM periodic_events AS pe
          JOIN periodic_events_notifications AS pen
               ON pe.id = pen.periodic_event_id
@@ -416,6 +454,7 @@ type ListPeriodicEventsInPeriodRow struct {
 	BiggestPeriod      int32                       `db:"biggest_period"`
 	NotificationParams *domains.NotificationParams `db:"notification_params"`
 	ID_2               int32                       `db:"id_2"`
+	CreatedAt_2        pgtype.Timestamp            `db:"created_at_2"`
 	PeriodicEventID    int32                       `db:"periodic_event_id"`
 	SendTime           pgtype.Timestamptz          `db:"send_time"`
 	Sended             bool                        `db:"sended"`
@@ -448,6 +487,7 @@ func (q *Queries) ListPeriodicEventsInPeriod(ctx context.Context, arg ListPeriod
 			&i.BiggestPeriod,
 			&i.NotificationParams,
 			&i.ID_2,
+			&i.CreatedAt_2,
 			&i.PeriodicEventID,
 			&i.SendTime,
 			&i.Sended,
@@ -461,6 +501,99 @@ func (q *Queries) ListPeriodicEventsInPeriod(ctx context.Context, arg ListPeriod
 		return nil, err
 	}
 	return items, nil
+}
+
+const listPeriodicEventsWithNotifications = `-- name: ListPeriodicEventsWithNotifications :many
+SELECT pe.id, pe.created_at, text, description, user_id, start, smallest_period, biggest_period, notification_params, pen.id, pen.created_at, periodic_event_id, send_time, sended, done
+FROM periodic_events as pe
+JOIN periodic_events_notifications as pen
+ON pen.periodic_event_id = pe.id
+WHERE pen.done = FALSE
+  AND pe.user_id = $1
+ORDER BY send_time
+LIMIT $3 OFFSET $2
+`
+
+type ListPeriodicEventsWithNotificationsParams struct {
+	UserID int32 `db:"user_id"`
+	Off    int32 `db:"off"`
+	Lim    int32 `db:"lim"`
+}
+
+type ListPeriodicEventsWithNotificationsRow struct {
+	ID                 int32                       `db:"id"`
+	CreatedAt          pgtype.Timestamp            `db:"created_at"`
+	Text               string                      `db:"text"`
+	Description        pgtype.Text                 `db:"description"`
+	UserID             int32                       `db:"user_id"`
+	Start              pgtype.Timestamptz          `db:"start"`
+	SmallestPeriod     int32                       `db:"smallest_period"`
+	BiggestPeriod      int32                       `db:"biggest_period"`
+	NotificationParams *domains.NotificationParams `db:"notification_params"`
+	ID_2               int32                       `db:"id_2"`
+	CreatedAt_2        pgtype.Timestamp            `db:"created_at_2"`
+	PeriodicEventID    int32                       `db:"periodic_event_id"`
+	SendTime           pgtype.Timestamptz          `db:"send_time"`
+	Sended             bool                        `db:"sended"`
+	Done               bool                        `db:"done"`
+}
+
+func (q *Queries) ListPeriodicEventsWithNotifications(ctx context.Context, arg ListPeriodicEventsWithNotificationsParams) ([]ListPeriodicEventsWithNotificationsRow, error) {
+	rows, err := q.db.Query(ctx, listPeriodicEventsWithNotifications, arg.UserID, arg.Off, arg.Lim)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPeriodicEventsWithNotificationsRow
+	for rows.Next() {
+		var i ListPeriodicEventsWithNotificationsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.Text,
+			&i.Description,
+			&i.UserID,
+			&i.Start,
+			&i.SmallestPeriod,
+			&i.BiggestPeriod,
+			&i.NotificationParams,
+			&i.ID_2,
+			&i.CreatedAt_2,
+			&i.PeriodicEventID,
+			&i.SendTime,
+			&i.Sended,
+			&i.Done,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const markPeriodicEventNotificationDone = `-- name: MarkPeriodicEventNotificationDone :exec
+UPDATE periodic_events_notifications
+SET done = TRUE
+WHERE periodic_event_id = $1
+`
+
+func (q *Queries) MarkPeriodicEventNotificationDone(ctx context.Context, periodicEventID int32) error {
+	_, err := q.db.Exec(ctx, markPeriodicEventNotificationDone, periodicEventID)
+	return err
+}
+
+const markPeriodicEventNotificationSended = `-- name: MarkPeriodicEventNotificationSended :exec
+UPDATE periodic_events_notifications
+SET sended = TRUE
+WHERE id = $1
+`
+
+func (q *Queries) MarkPeriodicEventNotificationSended(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, markPeriodicEventNotificationSended, id)
+	return err
 }
 
 const nearestPeriodicEventTime = `-- name: NearestPeriodicEventTime :one
@@ -527,29 +660,4 @@ func (q *Queries) UpdatePeriodicEvent(ctx context.Context, arg UpdatePeriodicEve
 		&i.NotificationParams,
 	)
 	return i, err
-}
-
-const updatePeriodicEventNotification = `-- name: UpdatePeriodicEventNotification :exec
-UPDATE periodic_events_notifications
-SET sended = $1,
-    send_time = $2
-WHERE id = $3
-  AND periodic_event_id = $4
-`
-
-type UpdatePeriodicEventNotificationParams struct {
-	Sended          bool               `db:"sended"`
-	SendTime        pgtype.Timestamptz `db:"send_time"`
-	ID              int32              `db:"id"`
-	PeriodicEventID int32              `db:"periodic_event_id"`
-}
-
-func (q *Queries) UpdatePeriodicEventNotification(ctx context.Context, arg UpdatePeriodicEventNotificationParams) error {
-	_, err := q.db.Exec(ctx, updatePeriodicEventNotification,
-		arg.Sended,
-		arg.SendTime,
-		arg.ID,
-		arg.PeriodicEventID,
-	)
-	return err
 }

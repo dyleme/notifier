@@ -19,6 +19,7 @@ var eventIDSeq = utils.NewIntSequence()
 func newNotif(t time.Time, per time.Duration) domains.SendingNotification {
 	return domains.SendingNotification{
 		EventID:     eventIDSeq.Next(),
+		EventType:   domains.BasicEventType,
 		UserID:      0,
 		Message:     "",
 		Description: "",

@@ -5,28 +5,28 @@ import (
 	"fmt"
 	"time"
 
-	domains2 "github.com/Dyleme/Notifier/internal/domains"
+	"github.com/Dyleme/Notifier/internal/domains"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
 )
 
 //go:generate mockgen -destination=mocks/events_mocks.go -package=mocks . EventRepository
 type EventRepository interface { //nolint:interfacebloat //too many methods
-	Add(context.Context, domains2.Event) (domains2.Event, error)
-	List(ctx context.Context, userID int, params ListParams) ([]domains2.Event, error)
-	Update(ctx context.Context, event domains2.Event) (domains2.Event, error)
+	Add(context.Context, domains.Event) (domains.Event, error)
+	List(ctx context.Context, userID int, params ListParams) ([]domains.Event, error)
+	Update(ctx context.Context, event domains.Event) (domains.Event, error)
 	Delete(ctx context.Context, eventID, userID int) error
-	ListInPeriod(ctx context.Context, userID int, from, to time.Time, params ListParams) ([]domains2.Event, error)
-	Get(ctx context.Context, eventID, userID int) (domains2.Event, error)
+	ListInPeriod(ctx context.Context, userID int, from, to time.Time, params ListParams) ([]domains.Event, error)
+	Get(ctx context.Context, eventID, userID int) (domains.Event, error)
 	MarkNotified(ctx context.Context, eventID int) error
 	GetNearestEventSendTime(ctx context.Context) (time.Time, error)
-	ListEventsBefore(ctx context.Context, sendTime time.Time) ([]domains2.Event, error)
-	UpdateNotificationParams(ctx context.Context, eventID, userID int, params domains2.NotificationParams) (domains2.NotificationParams, error)
+	ListEventsBefore(ctx context.Context, sendTime time.Time) ([]domains.Event, error)
+	UpdateNotificationParams(ctx context.Context, eventID, userID int, params domains.NotificationParams) (domains.NotificationParams, error)
 	Delay(ctx context.Context, eventID, userID int, till time.Time) error
 }
 
-func (s *Service) CreateEvent(ctx context.Context, event domains2.Event) (domains2.Event, error) {
+func (s *Service) CreateEvent(ctx context.Context, event domains.Event) (domains.Event, error) {
 	op := "Service.CreateEvent: %w"
-	var createdEvent domains2.Event
+	var createdEvent domains.Event
 
 	err := s.repo.Atomic(ctx, func(ctx context.Context, r Repository) error {
 		var err error
@@ -42,7 +42,7 @@ func (s *Service) CreateEvent(ctx context.Context, event domains2.Event) (domain
 		err = fmt.Errorf(op, err)
 		logError(ctx, err)
 
-		return domains2.Event{}, err
+		return domains.Event{}, err
 	}
 
 	s.notifierJob.UpdateWithTime(ctx, createdEvent.SendTime)
@@ -50,9 +50,9 @@ func (s *Service) CreateEvent(ctx context.Context, event domains2.Event) (domain
 	return createdEvent, nil
 }
 
-func (s *Service) AddTaskToEvent(ctx context.Context, userID, taskID int, start time.Time, description string) (domains2.Event, error) {
+func (s *Service) AddTaskToEvent(ctx context.Context, userID, taskID int, start time.Time, description string) (domains.Event, error) {
 	op := "Servcie.AddTaskToEvent: %w"
-	var event domains2.Event
+	var event domains.Event
 
 	err := s.repo.Atomic(ctx, func(ctx context.Context, r Repository) error {
 		task, err := r.Tasks().Get(ctx, taskID, userID)
@@ -60,7 +60,7 @@ func (s *Service) AddTaskToEvent(ctx context.Context, userID, taskID int, start 
 			return err //nolint:wrapcheck //wrapping later
 		}
 
-		event = domains2.EventFromTask(task, start, description)
+		event = domains.EventFromTask(task, start, description)
 		event, err = r.Events().Add(ctx, event)
 		if err != nil {
 			return err //nolint:wrapcheck //wrapping later
@@ -72,7 +72,7 @@ func (s *Service) AddTaskToEvent(ctx context.Context, userID, taskID int, start 
 		err = fmt.Errorf(op, err)
 		logError(ctx, err)
 
-		return domains2.Event{}, err
+		return domains.Event{}, err
 	}
 
 	s.notifierJob.UpdateWithTime(ctx, event.SendTime)
@@ -80,20 +80,20 @@ func (s *Service) AddTaskToEvent(ctx context.Context, userID, taskID int, start 
 	return event, nil
 }
 
-func (s *Service) GetEvent(ctx context.Context, userID, eventID int) (domains2.Event, error) {
+func (s *Service) GetEvent(ctx context.Context, userID, eventID int) (domains.Event, error) {
 	op := "Service.GetEvent: %w"
 	tt, err := s.repo.Events().Get(ctx, eventID, userID)
 	if err != nil {
 		err = fmt.Errorf(op, err)
 		logError(ctx, err)
 
-		return domains2.Event{}, err
+		return domains.Event{}, err
 	}
 
 	return tt, nil
 }
 
-func (s *Service) ListEvents(ctx context.Context, userID int, listParams ListParams) ([]domains2.Event, error) {
+func (s *Service) ListEvents(ctx context.Context, userID int, listParams ListParams) ([]domains.Event, error) {
 	op := "Service.ListEvents: %w"
 	tts, err := s.repo.Events().List(ctx, userID, listParams)
 	if err != nil {
@@ -106,7 +106,7 @@ func (s *Service) ListEvents(ctx context.Context, userID int, listParams ListPar
 	return tts, nil
 }
 
-func (s *Service) ListEventsInPeriod(ctx context.Context, userID int, from, to time.Time, listParams ListParams) ([]domains2.Event, error) {
+func (s *Service) ListEventsInPeriod(ctx context.Context, userID int, from, to time.Time, listParams ListParams) ([]domains.Event, error) {
 	op := "Service.ListEventsInPeriod: %w"
 	tts, err := s.repo.Events().ListInPeriod(ctx, userID, from, to, listParams)
 	if err != nil {
@@ -127,9 +127,9 @@ type EventUpdateParams struct {
 	Start       time.Time
 }
 
-func (s *Service) UpdateEvent(ctx context.Context, params EventUpdateParams) (domains2.Event, error) {
+func (s *Service) UpdateEvent(ctx context.Context, params EventUpdateParams) (domains.Event, error) {
 	op := "Service.UpdateEvent: %w"
-	var event domains2.Event
+	var event domains.Event
 	err := s.repo.Atomic(ctx, func(ctx context.Context, repo Repository) error {
 		e, err := repo.Events().Get(ctx, params.ID, params.UserID)
 		if err != nil {
@@ -151,7 +151,7 @@ func (s *Service) UpdateEvent(ctx context.Context, params EventUpdateParams) (do
 		err = fmt.Errorf(op, err)
 		logError(ctx, err)
 
-		return domains2.Event{}, err
+		return domains.Event{}, err
 	}
 
 	s.notifierJob.UpdateWithTime(ctx, event.SendTime)
@@ -159,45 +159,94 @@ func (s *Service) UpdateEvent(ctx context.Context, params EventUpdateParams) (do
 	return event, nil
 }
 
-func (s *Service) SetEventDoneStatus(ctx context.Context, userID, eventID int, done bool) (domains2.Event, error) {
-	op := "Service.UpdateEvent: %w"
-	var event domains2.Event
+type AbstractEvent struct {
+	EventID   int
+	EventType domains.EventType
+	UserID    int
+	Done      bool
+}
+
+func (s *Service) setEventDoneStatusBasicEvent(ctx context.Context, absEvent AbstractEvent) error {
 	err := s.repo.Atomic(ctx, func(ctx context.Context, repo Repository) error {
-		e, err := repo.Events().Get(ctx, eventID, userID)
+		e, err := repo.Events().Get(ctx, absEvent.EventID, absEvent.UserID)
 		if err != nil {
-			return err //nolint:wrapcheck //wrapping later
+			return fmt.Errorf("events get[eventID=%v,userID=%v]: %w", absEvent.EventID, absEvent.UserID, err)
 		}
 
-		if e.Done == done {
-			return nil
-		}
-
-		if done {
-			err := s.notifier.Delete(ctx, e.ID) //nolint:govet //new error
-			if err != nil {
-				return serverrors.NewServiceError(err)
-			}
-		} else {
-			e.Sended = false
-		}
-
-		event, err = s.repo.Events().Update(ctx, e)
+		err = s.notifier.Delete(ctx, e.ID, e.UserID)
 		if err != nil {
-			return err //nolint:wrapcheck //wrapping later
+			return fmt.Errorf("delete[eventID=%v]: %w", absEvent.EventID, err)
+		}
+
+		_, err = repo.Events().Update(ctx, e)
+		if err != nil {
+			return fmt.Errorf("events update[eventID=%v]: %w", absEvent.EventID, err)
 		}
 
 		return nil
 	})
 	if err != nil {
-		err = fmt.Errorf(op, err)
+		err = fmt.Errorf("atomic: %w", err)
 		logError(ctx, err)
 
-		return domains2.Event{}, err
+		return err
 	}
 
-	s.notifierJob.UpdateWithTime(ctx, event.SendTime)
+	return nil
+}
 
-	return event, nil
+func (s *Service) setEventDoneStatusPeriodicEvent(ctx context.Context, absEvent AbstractEvent) error {
+	err := s.repo.Atomic(ctx, func(ctx context.Context, repo Repository) error {
+		ev, err := repo.PeriodicEvents().Get(ctx, absEvent.EventID, absEvent.UserID)
+		if err != nil {
+			return fmt.Errorf("periodic events get[eventID=%v,userID=%v]: %w", absEvent.EventID, absEvent.UserID, err)
+		}
+
+		err = repo.PeriodicEvents().MarkNotificationDone(ctx, ev.ID, ev.UserID)
+		if err != nil {
+			return fmt.Errorf("periodic events mark notified[notifID:%v]: %w", ev.Notification.ID, err)
+		}
+
+		nextNotif, err := ev.NextNotification()
+		if err != nil {
+			return fmt.Errorf("next notification: %w", serverrors.NewBusinessLogicError(err.Error()))
+		}
+		_, err = repo.PeriodicEvents().AddNotification(ctx, nextNotif)
+		if err != nil {
+			return fmt.Errorf("periodic events add notification: %w", err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("atmoic: %w", err)
+	}
+
+	return nil
+}
+
+func (s *Service) SetEventDoneStatus(ctx context.Context, absEvent AbstractEvent) error {
+	switch absEvent.EventType {
+	case domains.BasicEventType:
+		err := s.setEventDoneStatusBasicEvent(ctx, absEvent)
+		if err != nil {
+			return fmt.Errorf("setEventDoneStatusBasicEvent: %w", err)
+		}
+	case domains.PeriodicEventType:
+		err := s.setEventDoneStatusPeriodicEvent(ctx, absEvent)
+		if err != nil {
+			return fmt.Errorf("setEventDoneStatusPeriodicEvent: %w", err)
+		}
+	default:
+		return fmt.Errorf("unknown eventType[%v]", absEvent.EventType)
+	}
+
+	err := s.notifier.Delete(ctx, absEvent.EventID, absEvent.UserID)
+	if err != nil {
+		return fmt.Errorf("delete[eventID=%v]: %w", absEvent.EventID, err)
+	}
+
+	return nil
 }
 
 func (s *Service) DeleteEvent(ctx context.Context, userID, eventID int) error {
@@ -221,7 +270,7 @@ func (s *Service) DelayEvent(ctx context.Context, userID, eventID int, till time
 			return err //nolint:wrapcheck //wraping later
 		}
 
-		err = s.notifier.Delete(ctx, eventID)
+		err = s.notifier.Delete(ctx, eventID, userID)
 		if err != nil {
 			return err //nolint:wrapcheck //wraping later
 		}

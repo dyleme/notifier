@@ -2,13 +2,16 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/Dyleme/Notifier/internal/domains"
 	"github.com/Dyleme/Notifier/internal/service/repository/queries"
 	"github.com/Dyleme/Notifier/internal/service/service"
-	serverrors2 "github.com/Dyleme/Notifier/pkg/serverrors"
+	"github.com/Dyleme/Notifier/pkg/serverrors"
 	"github.com/Dyleme/Notifier/pkg/sql/pgxconv"
 	"github.com/Dyleme/Notifier/pkg/utils"
 )
@@ -21,16 +24,17 @@ func (r *Repository) PeriodicEvents() service.PeriodicEventsRepository {
 	return &PeriodicEventRepository{q: r.q}
 }
 
-func (p *PeriodicEventRepository) dtoPeriodicEvent(ev queries.PeriodicEvent) domains.PeriodicEvent {
+func (p *PeriodicEventRepository) combineEventAndNotification(ev queries.PeriodicEvent, notif queries.PeriodicEventsNotification) domains.PeriodicEvent {
 	return domains.PeriodicEvent{
 		ID:                 int(ev.ID),
 		Text:               ev.Text,
 		Description:        pgxconv.String(ev.Description),
 		UserID:             int(ev.UserID),
-		Start:              p.appStart(pgxconv.TimeWithZone(ev.Start)),
-		SmallestPeriod:     time.Duration(ev.SmallestPeriod),
-		BiggestPeriod:      time.Duration(ev.BiggestPeriod),
+		Start:              pgxconv.TimeWithZone(ev.Start).Sub(time.Time{}),
+		SmallestPeriod:     time.Duration(ev.SmallestPeriod) * time.Minute,
+		BiggestPeriod:      time.Duration(ev.BiggestPeriod) * time.Minute,
 		NotificationParams: ev.NotificationParams,
+		Notification:       p.dtoPeriodicEventNotification(notif),
 	}
 }
 
@@ -44,22 +48,29 @@ func (p *PeriodicEventRepository) dtoPeriodicEventNotification(n queries.Periodi
 	}
 }
 
-func (p *PeriodicEventRepository) Add(ctx context.Context, event domains.PeriodicEvent) (domains.PeriodicEvent, error) {
-	op := "PeriodicEventRepository.Add: %w"
+func (p *PeriodicEventRepository) Add(ctx context.Context, event domains.PeriodicEvent, notif domains.PeriodicEventNotification) (domains.PeriodicEvent, error) {
 	ev, err := p.q.AddPeriodicEvent(ctx, queries.AddPeriodicEventParams{
 		UserID:             int32(event.UserID),
 		Text:               event.Text,
 		Start:              pgxconv.Timestamptz(time.Time{}.Add(event.Start)),
-		SmallestPeriod:     int32(event.SmallestPeriod),
-		BiggestPeriod:      int32(event.BiggestPeriod),
+		SmallestPeriod:     int32(event.SmallestPeriod / time.Minute),
+		BiggestPeriod:      int32(event.BiggestPeriod / time.Minute),
 		Description:        pgxconv.Text(event.Description),
 		NotificationParams: event.NotificationParams,
 	})
 	if err != nil {
-		return domains.PeriodicEvent{}, fmt.Errorf(op, serverrors2.NewRepositoryError(err))
+		return domains.PeriodicEvent{}, fmt.Errorf("add periodic event: %w", serverrors.NewRepositoryError(err))
 	}
 
-	return p.dtoPeriodicEvent(ev), nil
+	n, err := p.q.AddPeriodicEventNotification(ctx, queries.AddPeriodicEventNotificationParams{
+		PeriodicEventID: ev.ID,
+		SendTime:        pgxconv.Timestamptz(notif.SendTime),
+	})
+	if err != nil {
+		return domains.PeriodicEvent{}, fmt.Errorf("add periodic event notification[eventID=%v]: %w", ev.ID, serverrors.NewRepositoryError(err))
+	}
+
+	return p.combineEventAndNotification(ev, n), nil
 }
 
 func (p *PeriodicEventRepository) Get(ctx context.Context, eventID, userID int) (domains.PeriodicEvent, error) {
@@ -70,38 +81,40 @@ func (p *PeriodicEventRepository) Get(ctx context.Context, eventID, userID int) 
 		UserID: int32(userID),
 	})
 	if err != nil {
-		return domains.PeriodicEvent{}, fmt.Errorf(op, serverrors2.NewRepositoryError(err))
+		return domains.PeriodicEvent{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
-	return p.dtoPeriodicEvent(ev), nil
+	notif, err := p.q.CurrentPeriodicEventNotification(ctx, ev.ID)
+	if err != nil {
+		return domains.PeriodicEvent{}, fmt.Errorf("current periodic event notif[eventID=%v]: %w", ev.ID, serverrors.NewRepositoryError(err))
+	}
+
+	return p.combineEventAndNotification(ev, notif), nil
 }
 
-func (p *PeriodicEventRepository) dbStart(duration time.Duration) time.Time {
-	return time.Time{}.Add(duration)
-}
-
-func (p *PeriodicEventRepository) appStart(t time.Time) time.Duration {
-	return time.Time{}.Sub(t)
-}
-
-func (p *PeriodicEventRepository) Update(ctx context.Context, event domains.PeriodicEvent) (domains.PeriodicEvent, error) {
+func (p *PeriodicEventRepository) Update(ctx context.Context, event service.UpdatePeriodicEventParams) (domains.PeriodicEvent, error) {
 	op := "PeriodicEventRepository.Update: %w"
 
 	ev, err := p.q.UpdatePeriodicEvent(ctx, queries.UpdatePeriodicEventParams{
 		ID:                 int32(event.ID),
 		UserID:             int32(event.UserID),
-		Start:              pgxconv.Timestamptz(p.dbStart(event.Start)),
+		Start:              pgxconv.Timestamptz(time.Time{}.Add(event.Start)),
 		Text:               event.Text,
 		Description:        pgxconv.Text(event.Description),
 		NotificationParams: event.NotificationParams,
-		SmallestPeriod:     int32(event.SmallestPeriod),
-		BiggestPeriod:      int32(event.BiggestPeriod),
+		SmallestPeriod:     int32(event.SmallestPeriod / time.Minute),
+		BiggestPeriod:      int32(event.BiggestPeriod / time.Minute),
 	})
 	if err != nil {
-		return domains.PeriodicEvent{}, fmt.Errorf(op, serverrors2.NewRepositoryError(err))
+		return domains.PeriodicEvent{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
-	return p.dtoPeriodicEvent(ev), nil
+	notif, err := p.q.CurrentPeriodicEventNotification(ctx, ev.ID)
+	if err != nil {
+		return domains.PeriodicEvent{}, fmt.Errorf("current periodic event notification[eventID=%v]: %w", ev.ID, serverrors.NewRepositoryError(err))
+	}
+
+	return p.combineEventAndNotification(ev, notif), nil
 }
 
 func (p *PeriodicEventRepository) Delete(ctx context.Context, eventID, userID int) error {
@@ -112,10 +125,22 @@ func (p *PeriodicEventRepository) Delete(ctx context.Context, eventID, userID in
 		UserID: int32(userID),
 	})
 	if err != nil {
-		return fmt.Errorf(op, serverrors2.NewRepositoryError(err))
+		return fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 	if len(evs) == 0 {
-		return fmt.Errorf(op, serverrors2.NewNoDeletionsError("periodic event"))
+		return fmt.Errorf(op, serverrors.NewNoDeletionsError("periodic event"))
+	}
+
+	return nil
+}
+
+func (p *PeriodicEventRepository) DeleteNotifications(ctx context.Context, eventID int) error {
+	evs, err := p.q.DeletePeriodicEventNotifications(ctx, int32(eventID))
+	if err != nil {
+		return fmt.Errorf("delete periodic notification: %w", serverrors.NewRepositoryError(err))
+	}
+	if len(evs) == 0 {
+		return fmt.Errorf("evs == 0: %w", serverrors.NewNoDeletionsError("periodic event"))
 	}
 
 	return nil
@@ -129,23 +154,16 @@ func (p *PeriodicEventRepository) AddNotification(ctx context.Context, notificat
 		SendTime:        pgxconv.Timestamptz(notification.SendTime),
 	})
 	if err != nil {
-		return domains.PeriodicEventNotification{}, fmt.Errorf(op, serverrors2.NewRepositoryError(err))
+		return domains.PeriodicEventNotification{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
 	return p.dtoPeriodicEventNotification(n), nil
 }
 
-func (p *PeriodicEventRepository) UpdateNotification(ctx context.Context, notif domains.PeriodicEventNotification) error {
-	op := "PeriodicEventRepository.UpdateNotification: %w"
-
-	err := p.q.UpdatePeriodicEventNotification(ctx, queries.UpdatePeriodicEventNotificationParams{
-		ID:              int32(notif.ID),
-		PeriodicEventID: int32(notif.PeriodicEventID),
-		Sended:          notif.Sended,
-		SendTime:        pgxconv.Timestamptz(notif.SendTime),
-	})
+func (p *PeriodicEventRepository) MarkNotificationSend(ctx context.Context, notifID int) error {
+	err := p.q.MarkPeriodicEventNotificationSended(ctx, int32(notifID))
 	if err != nil {
-		return fmt.Errorf(op, serverrors2.NewRepositoryError(err))
+		return fmt.Errorf("mark notified: %w", serverrors.NewRepositoryError(err))
 	}
 
 	return nil
@@ -156,7 +174,7 @@ func (p *PeriodicEventRepository) GetCurrentNotification(ctx context.Context, ev
 
 	notif, err := p.q.CurrentPeriodicEventNotification(ctx, int32(eventID))
 	if err != nil {
-		return domains.PeriodicEventNotification{}, fmt.Errorf(op, serverrors2.NewRepositoryError(err))
+		return domains.PeriodicEventNotification{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
 	return p.dtoPeriodicEventNotification(notif), nil
@@ -170,57 +188,108 @@ func (p *PeriodicEventRepository) DeleteNotification(ctx context.Context, notifI
 		PeriodicEventID: int32(eventID),
 	})
 	if err != nil {
-		return fmt.Errorf(op, serverrors2.NewRepositoryError(err))
+		return fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
 	if len(deletedNotifs) == 0 {
-		return fmt.Errorf(op, serverrors2.NewNoDeletionsError("periodic event notification"))
+		return fmt.Errorf(op, serverrors.NewNoDeletionsError("periodic event notification"))
 	}
 
 	return nil
 }
 
 func (p *PeriodicEventRepository) GetNearestNotificationSendTime(ctx context.Context) (time.Time, error) {
-	op := "PeriodicEventRepository.GetNearestNotificationSendTime: %w"
-
 	t, err := p.q.NearestPeriodicEventTime(ctx)
 	if err != nil {
-		return time.Time{}, fmt.Errorf(op, serverrors2.NewRepositoryError(err))
+		if errors.Is(err, pgx.ErrNoRows) {
+			return time.Time{}, fmt.Errorf("nearest notification send time: %w", serverrors.NewNotFoundError(err, "nearest time"))
+		}
+
+		return time.Time{}, fmt.Errorf("nearest notification send time: %w", serverrors.NewRepositoryError(err))
 	}
 
 	return pgxconv.TimeWithZone(t), nil
 }
 
-func (p *PeriodicEventRepository) ListNotificationsAtSendTime(ctx context.Context, sendTime time.Time) ([]domains.PeriodicEventWithNotification, error) {
+func (p *PeriodicEventRepository) ListNotificationsAtSendTime(ctx context.Context, sendTime time.Time) ([]domains.PeriodicEvent, error) {
 	op := "PeriodicEventRepository.ListNotificationsAtSendTime: %w"
 
 	events, err := p.q.ListNearestPeriodicEvents(ctx, pgxconv.Timestamptz(sendTime))
 	if err != nil {
-		return nil, fmt.Errorf(op, serverrors2.NewRepositoryError(err))
+		return nil, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
-	return utils.DtoSlice(events, func(row queries.ListNearestPeriodicEventsRow) domains.PeriodicEventWithNotification {
-		return domains.PeriodicEventWithNotification{
-			Event: p.dtoPeriodicEvent(queries.PeriodicEvent{
-				ID:                 row.ID,
-				CreatedAt:          row.CreatedAt,
-				Text:               row.Text,
-				Description:        row.Description,
-				UserID:             row.UserID,
-				Start:              row.Start,
-				SmallestPeriod:     row.SmallestPeriod,
-				BiggestPeriod:      row.BiggestPeriod,
-				NotificationParams: row.NotificationParams,
-			}),
-			Notification: p.dtoPeriodicEventNotification(
-				queries.PeriodicEventsNotification{
-					ID:              row.ID_2,
-					PeriodicEventID: row.PeriodicEventID,
-					SendTime:        row.SendTime,
-					Sended:          row.Sended,
-					Done:            row.Done,
-				},
-			),
-		}
+	return utils.DtoSlice(events, func(row queries.ListNearestPeriodicEventsRow) domains.PeriodicEvent {
+		return p.combineEventAndNotification(queries.PeriodicEvent{
+			ID:                 row.ID,
+			CreatedAt:          row.CreatedAt,
+			Text:               row.Text,
+			Description:        row.Description,
+			UserID:             row.UserID,
+			Start:              row.Start,
+			SmallestPeriod:     row.SmallestPeriod,
+			BiggestPeriod:      row.BiggestPeriod,
+			NotificationParams: row.NotificationParams,
+		}, queries.PeriodicEventsNotification{
+			ID:              row.ID_2,
+			CreatedAt:       row.CreatedAt_2,
+			PeriodicEventID: row.PeriodicEventID,
+			SendTime:        row.SendTime,
+			Sended:          row.Sended,
+			Done:            row.Done,
+		})
 	}), nil
+}
+
+func (p *PeriodicEventRepository) ListFutureEvents(ctx context.Context, userID int, listParams service.ListParams) ([]domains.PeriodicEvent, error) {
+	events, err := p.q.ListPeriodicEventsWithNotifications(ctx, queries.ListPeriodicEventsWithNotificationsParams{
+		Off:    int32(listParams.Offset),
+		Lim:    int32(listParams.Limit),
+		UserID: int32(userID),
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, serverrors.NewNotFoundError(err, "periodic user events")
+		}
+
+		return nil, fmt.Errorf("list user periodic events: %w", serverrors.NewRepositoryError(err))
+	}
+
+	return utils.DtoSlice(events, func(row queries.ListPeriodicEventsWithNotificationsRow) domains.PeriodicEvent {
+		return p.combineEventAndNotification(queries.PeriodicEvent{
+			ID:                 row.ID,
+			CreatedAt:          row.CreatedAt,
+			Text:               row.Text,
+			Description:        row.Description,
+			UserID:             row.UserID,
+			Start:              row.Start,
+			SmallestPeriod:     row.SmallestPeriod,
+			BiggestPeriod:      row.BiggestPeriod,
+			NotificationParams: row.NotificationParams,
+		}, queries.PeriodicEventsNotification{
+			ID:              row.ID_2,
+			CreatedAt:       row.CreatedAt_2,
+			PeriodicEventID: row.PeriodicEventID,
+			SendTime:        row.SendTime,
+			Sended:          row.Sended,
+			Done:            row.Done,
+		})
+	}), nil
+}
+
+func (p *PeriodicEventRepository) MarkNotificationDone(ctx context.Context, eventID, userID int) error {
+	_, err := p.q.GetPeriodicEvent(ctx, queries.GetPeriodicEventParams{
+		ID:     int32(eventID),
+		UserID: int32(userID),
+	})
+	if err != nil {
+		return fmt.Errorf("get periodic event: %w", serverrors.NewRepositoryError(err))
+	}
+
+	err = p.q.MarkPeriodicEventNotificationDone(ctx, int32(eventID))
+	if err != nil {
+		return fmt.Errorf("mark periodic event notif done: %w", serverrors.NewRepositoryError(err))
+	}
+
+	return nil
 }

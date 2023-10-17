@@ -190,7 +190,7 @@ func (er *EventRepository) ListEventsBefore(ctx context.Context, sendTime time.T
 }
 
 func (er *EventRepository) MarkNotified(ctx context.Context, eventID int) error {
-	op := "EventRepository.MarkNotified: %w"
+	op := "EventRepository.MarkNotificationSend: %w"
 	err := er.q.MarkSendedNotificationEvent(ctx, int32(eventID))
 	if err != nil {
 		return fmt.Errorf(op, serverrors2.NewRepositoryError(err))

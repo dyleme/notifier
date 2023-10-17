@@ -13,7 +13,8 @@ import (
 	reflect "reflect"
 	time "time"
 
-	domain "github.com/Dyleme/Notifier/internal/domains"
+	domains "github.com/Dyleme/Notifier/internal/domains"
+	service "github.com/Dyleme/Notifier/internal/service/service"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -41,25 +42,25 @@ func (m *MockPeriodicEventsRepository) EXPECT() *MockPeriodicEventsRepositoryMoc
 }
 
 // Add mocks base method.
-func (m *MockPeriodicEventsRepository) Add(arg0 context.Context, arg1 domain.PeriodicEvent) (domain.PeriodicEvent, error) {
+func (m *MockPeriodicEventsRepository) Add(arg0 context.Context, arg1 domains.PeriodicEvent, arg2 domains.PeriodicEventNotification) (domains.PeriodicEvent, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Add", arg0, arg1)
-	ret0, _ := ret[0].(domain.PeriodicEvent)
+	ret := m.ctrl.Call(m, "Add", arg0, arg1, arg2)
+	ret0, _ := ret[0].(domains.PeriodicEvent)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Add indicates an expected call of Add.
-func (mr *MockPeriodicEventsRepositoryMockRecorder) Add(arg0, arg1 any) *gomock.Call {
+func (mr *MockPeriodicEventsRepositoryMockRecorder) Add(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Add", reflect.TypeOf((*MockPeriodicEventsRepository)(nil).Add), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Add", reflect.TypeOf((*MockPeriodicEventsRepository)(nil).Add), arg0, arg1, arg2)
 }
 
 // AddNotification mocks base method.
-func (m *MockPeriodicEventsRepository) AddNotification(arg0 context.Context, arg1 domain.PeriodicEventNotification) (domain.PeriodicEventNotification, error) {
+func (m *MockPeriodicEventsRepository) AddNotification(arg0 context.Context, arg1 domains.PeriodicEventNotification) (domains.PeriodicEventNotification, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddNotification", arg0, arg1)
-	ret0, _ := ret[0].(domain.PeriodicEventNotification)
+	ret0, _ := ret[0].(domains.PeriodicEventNotification)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -98,11 +99,25 @@ func (mr *MockPeriodicEventsRepositoryMockRecorder) DeleteNotification(arg0, arg
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteNotification", reflect.TypeOf((*MockPeriodicEventsRepository)(nil).DeleteNotification), arg0, arg1, arg2)
 }
 
+// DeleteNotifications mocks base method.
+func (m *MockPeriodicEventsRepository) DeleteNotifications(arg0 context.Context, arg1 int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteNotifications", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteNotifications indicates an expected call of DeleteNotifications.
+func (mr *MockPeriodicEventsRepositoryMockRecorder) DeleteNotifications(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteNotifications", reflect.TypeOf((*MockPeriodicEventsRepository)(nil).DeleteNotifications), arg0, arg1)
+}
+
 // Get mocks base method.
-func (m *MockPeriodicEventsRepository) Get(arg0 context.Context, arg1, arg2 int) (domain.PeriodicEvent, error) {
+func (m *MockPeriodicEventsRepository) Get(arg0 context.Context, arg1, arg2 int) (domains.PeriodicEvent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2)
-	ret0, _ := ret[0].(domain.PeriodicEvent)
+	ret0, _ := ret[0].(domains.PeriodicEvent)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -111,21 +126,6 @@ func (m *MockPeriodicEventsRepository) Get(arg0 context.Context, arg1, arg2 int)
 func (mr *MockPeriodicEventsRepositoryMockRecorder) Get(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockPeriodicEventsRepository)(nil).Get), arg0, arg1, arg2)
-}
-
-// GetCurrentNotification mocks base method.
-func (m *MockPeriodicEventsRepository) GetCurrentNotification(arg0 context.Context, arg1 int) (domain.PeriodicEventNotification, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCurrentNotification", arg0, arg1)
-	ret0, _ := ret[0].(domain.PeriodicEventNotification)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetCurrentNotification indicates an expected call of GetCurrentNotification.
-func (mr *MockPeriodicEventsRepositoryMockRecorder) GetCurrentNotification(arg0, arg1 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCurrentNotification", reflect.TypeOf((*MockPeriodicEventsRepository)(nil).GetCurrentNotification), arg0, arg1)
 }
 
 // GetNearestNotificationSendTime mocks base method.
@@ -143,11 +143,26 @@ func (mr *MockPeriodicEventsRepositoryMockRecorder) GetNearestNotificationSendTi
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNearestNotificationSendTime", reflect.TypeOf((*MockPeriodicEventsRepository)(nil).GetNearestNotificationSendTime), arg0)
 }
 
+// ListFutureEvents mocks base method.
+func (m *MockPeriodicEventsRepository) ListFutureEvents(arg0 context.Context, arg1 int, arg2 service.ListParams) ([]domains.PeriodicEvent, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListFutureEvents", arg0, arg1, arg2)
+	ret0, _ := ret[0].([]domains.PeriodicEvent)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListFutureEvents indicates an expected call of ListFutureEvents.
+func (mr *MockPeriodicEventsRepositoryMockRecorder) ListFutureEvents(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListFutureEvents", reflect.TypeOf((*MockPeriodicEventsRepository)(nil).ListFutureEvents), arg0, arg1, arg2)
+}
+
 // ListNotificationsAtSendTime mocks base method.
-func (m *MockPeriodicEventsRepository) ListNotificationsAtSendTime(arg0 context.Context, arg1 time.Time) ([]domain.PeriodicEventWithNotification, error) {
+func (m *MockPeriodicEventsRepository) ListNotificationsAtSendTime(arg0 context.Context, arg1 time.Time) ([]domains.PeriodicEvent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListNotificationsAtSendTime", arg0, arg1)
-	ret0, _ := ret[0].([]domain.PeriodicEventWithNotification)
+	ret0, _ := ret[0].([]domains.PeriodicEvent)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -158,11 +173,39 @@ func (mr *MockPeriodicEventsRepositoryMockRecorder) ListNotificationsAtSendTime(
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNotificationsAtSendTime", reflect.TypeOf((*MockPeriodicEventsRepository)(nil).ListNotificationsAtSendTime), arg0, arg1)
 }
 
+// MarkNotificationDone mocks base method.
+func (m *MockPeriodicEventsRepository) MarkNotificationDone(arg0 context.Context, arg1, arg2 int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkNotificationDone", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MarkNotificationDone indicates an expected call of MarkNotificationDone.
+func (mr *MockPeriodicEventsRepositoryMockRecorder) MarkNotificationDone(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkNotificationDone", reflect.TypeOf((*MockPeriodicEventsRepository)(nil).MarkNotificationDone), arg0, arg1, arg2)
+}
+
+// MarkNotificationSend mocks base method.
+func (m *MockPeriodicEventsRepository) MarkNotificationSend(arg0 context.Context, arg1 int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkNotificationSend", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MarkNotificationSend indicates an expected call of MarkNotificationSend.
+func (mr *MockPeriodicEventsRepositoryMockRecorder) MarkNotificationSend(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkNotificationSend", reflect.TypeOf((*MockPeriodicEventsRepository)(nil).MarkNotificationSend), arg0, arg1)
+}
+
 // Update mocks base method.
-func (m *MockPeriodicEventsRepository) Update(arg0 context.Context, arg1 domain.PeriodicEvent) (domain.PeriodicEvent, error) {
+func (m *MockPeriodicEventsRepository) Update(arg0 context.Context, arg1 service.UpdatePeriodicEventParams) (domains.PeriodicEvent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Update", arg0, arg1)
-	ret0, _ := ret[0].(domain.PeriodicEvent)
+	ret0, _ := ret[0].(domains.PeriodicEvent)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -171,18 +214,4 @@ func (m *MockPeriodicEventsRepository) Update(arg0 context.Context, arg1 domain.
 func (mr *MockPeriodicEventsRepositoryMockRecorder) Update(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockPeriodicEventsRepository)(nil).Update), arg0, arg1)
-}
-
-// UpdateNotification mocks base method.
-func (m *MockPeriodicEventsRepository) UpdateNotification(arg0 context.Context, arg1 domain.PeriodicEventNotification) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateNotification", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// UpdateNotification indicates an expected call of UpdateNotification.
-func (mr *MockPeriodicEventsRepositoryMockRecorder) UpdateNotification(arg0, arg1 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateNotification", reflect.TypeOf((*MockPeriodicEventsRepository)(nil).UpdateNotification), arg0, arg1)
 }

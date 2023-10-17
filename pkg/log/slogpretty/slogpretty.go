@@ -7,6 +7,7 @@ import (
 	"io"
 	stdLog "log"
 	"log/slog"
+	"time"
 
 	"github.com/fatih/color"
 )
@@ -80,7 +81,7 @@ func (h *PrettyHandler) Handle(_ context.Context, r slog.Record) error {
 		fieldsMsg = "\n" + string(fieldsBytes)
 	}
 
-	timeStr := r.Time.Format("[15:05:05.000]")
+	timeStr := r.Time.Format("[" + time.DateTime + "]")
 
 	h.l.Println(
 		timeStr,

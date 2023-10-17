@@ -14,6 +14,7 @@ type Params struct {
 }
 
 type SendingNotification struct {
+	EventType        EventType
 	EventID          int
 	UserID           int
 	Message          string

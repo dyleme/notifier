@@ -194,8 +194,8 @@ func (ts *TimezoneSettings) UpdateInline(ctx context.Context, b *bot.Bot, msg *m
 func getTimezone(utcTime time.Time, userHours, userMinutes int) int {
 	utcTime = utcTime.Round(time.Hour)
 	userToday := time.Date(utcTime.Year(), utcTime.Month(), utcTime.Day(), userHours, userMinutes, 0, 0, time.UTC)
-	userYesterday := userToday.Add(-day)
-	userTomorrow := userToday.Add(day)
+	userYesterday := userToday.Add(-timeDay)
+	userTomorrow := userToday.Add(timeDay)
 
 	realUserTime := userYesterday
 	minDiff := absDur(utcTime.Sub(userYesterday))

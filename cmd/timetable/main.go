@@ -92,7 +92,7 @@ func main() { //nolint:funlen // main can be long
 
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.Go(func() error {
-		if err := serv.Run(ctx); err != nil { //nolint:govet //new error
+		if err := serv.Run(ctx); err != nil {
 			return fmt.Errorf("server: %w", err)
 		}
 

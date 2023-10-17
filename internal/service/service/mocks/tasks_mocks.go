@@ -12,7 +12,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	domain "github.com/Dyleme/Notifier/internal/domains"
+	domains "github.com/Dyleme/Notifier/internal/domains"
 	service "github.com/Dyleme/Notifier/internal/service/service"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -41,10 +41,10 @@ func (m *MockTaskRepository) EXPECT() *MockTaskRepositoryMockRecorder {
 }
 
 // Add mocks base method.
-func (m *MockTaskRepository) Add(arg0 context.Context, arg1 domain.Task) (domain.Task, error) {
+func (m *MockTaskRepository) Add(arg0 context.Context, arg1 domains.Task) (domains.Task, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Add", arg0, arg1)
-	ret0, _ := ret[0].(domain.Task)
+	ret0, _ := ret[0].(domains.Task)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -70,10 +70,10 @@ func (mr *MockTaskRepositoryMockRecorder) Delete(arg0, arg1, arg2 any) *gomock.C
 }
 
 // Get mocks base method.
-func (m *MockTaskRepository) Get(arg0 context.Context, arg1, arg2 int) (domain.Task, error) {
+func (m *MockTaskRepository) Get(arg0 context.Context, arg1, arg2 int) (domains.Task, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2)
-	ret0, _ := ret[0].(domain.Task)
+	ret0, _ := ret[0].(domains.Task)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -85,10 +85,10 @@ func (mr *MockTaskRepositoryMockRecorder) Get(arg0, arg1, arg2 any) *gomock.Call
 }
 
 // List mocks base method.
-func (m *MockTaskRepository) List(arg0 context.Context, arg1 int, arg2 service.ListParams) ([]domain.Task, error) {
+func (m *MockTaskRepository) List(arg0 context.Context, arg1 int, arg2 service.ListParams) ([]domains.Task, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2)
-	ret0, _ := ret[0].([]domain.Task)
+	ret0, _ := ret[0].([]domains.Task)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -100,7 +100,7 @@ func (mr *MockTaskRepositoryMockRecorder) List(arg0, arg1, arg2 any) *gomock.Cal
 }
 
 // Update mocks base method.
-func (m *MockTaskRepository) Update(arg0 context.Context, arg1 domain.Task) error {
+func (m *MockTaskRepository) Update(arg0 context.Context, arg1 domains.Task) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Update", arg0, arg1)
 	ret0, _ := ret[0].(error)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -20,139 +21,215 @@ import (
 	"github.com/Dyleme/Notifier/pkg/utils"
 )
 
+func setupTest(ctrl *gomock.Controller, testTime time.Duration) (context.Context, *mocksUnion, *mocklogger.MockHandler) {
+	mockHandler := mocklogger.NewHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}) //nolint:exhaustruct //testing
+	ctx, _ := context.WithTimeout(context.Background(), testTime)                                 //nolint:govet // testing
+	ctx = log.InCtx(ctx, slog.New(mockHandler))
+	allMocks := mocksUnion{
+		events:         mocks.NewMockEventRepository(ctrl),
+		periodicEvents: mocks.NewMockPeriodicEventsRepository(ctrl),
+		defaultNotif:   mocks.NewMockNotificationParamsRepository(ctrl),
+		notifier:       mocks.NewMockNotifier(ctrl),
+	}
+
+	return ctx, &allMocks, mockHandler
+}
+
+func listEvents(mcks *mocksUnion, basicEvents []domains.Event, periodicEvents []domains.PeriodicEvent) {
+	if len(basicEvents) != 0 {
+		mcks.events.EXPECT().ListEventsBefore(gomock.Any(), gomock.Any()).Return(basicEvents, nil)
+	} else {
+		mcks.events.EXPECT().ListEventsBefore(gomock.Any(), gomock.Any()).Return(nil, serverrors.NewNotFoundError(fmt.Errorf("err"), "event"))
+	}
+
+	if len(periodicEvents) != 0 {
+		mcks.periodicEvents.EXPECT().ListNotificationsAtSendTime(gomock.Any(), gomock.Any()).Return(periodicEvents, nil)
+	} else {
+		mcks.periodicEvents.EXPECT().ListNotificationsAtSendTime(gomock.Any(), gomock.Any()).Return(nil, serverrors.NewNotFoundError(fmt.Errorf("err"), "periodicEvent"))
+	}
+}
+
+func getTime(mcks *mocksUnion, basicEventTime, periodicEventTime time.Time) {
+	if !basicEventTime.IsZero() {
+		mcks.events.EXPECT().GetNearestEventSendTime(gomock.Any()).Return(basicEventTime, nil)
+	} else {
+		mcks.events.EXPECT().GetNearestEventSendTime(gomock.Any()).Return(time.Time{}, serverrors.NewNotFoundError(fmt.Errorf("err"), "event"))
+	}
+
+	if !periodicEventTime.IsZero() {
+		mcks.periodicEvents.EXPECT().GetNearestNotificationSendTime(gomock.Any()).Return(periodicEventTime, nil)
+	} else {
+		mcks.periodicEvents.EXPECT().GetNearestNotificationSendTime(gomock.Any()).Return(time.Time{}, serverrors.NewNotFoundError(fmt.Errorf("err"), "event"))
+	}
+}
+
+var defaultNotifParams = domains.NotificationParams{ //nolint:exhaustruct //no need to fill
+	Period: time.Hour,
+}
+
+func sendNotifications(mcks *mocksUnion, basicEvents []domains.Event, periodicEvents []domains.PeriodicEvent) {
+	listEvents(mcks, basicEvents, periodicEvents)
+	for _, basicEvent := range basicEvents {
+		mcks.defaultNotif.EXPECT().Get(gomock.Any(), basicEvent.UserID).Return(defaultNotifParams, nil)
+		mcks.notifier.EXPECT().Add(gomock.Any(), gomock.Any())
+		mcks.events.EXPECT().MarkNotified(gomock.Any(), basicEvent.ID)
+	}
+	for _, perEvent := range periodicEvents {
+		mcks.defaultNotif.EXPECT().Get(gomock.Any(), perEvent.UserID).Return(defaultNotifParams, nil)
+		mcks.notifier.EXPECT().Add(gomock.Any(), gomock.Any())
+		mcks.periodicEvents.EXPECT().Get(gomock.Any(), perEvent.ID, perEvent.UserID).Return(perEvent, nil)
+		mcks.periodicEvents.EXPECT().MarkNotificationSend(gomock.Any(), perEvent.ID)
+	}
+}
+
+var eventsSeq = utils.NewSequence(domains.Event{ //nolint:exhaustruct //test
+	ID:          1,
+	UserID:      1,
+	Text:        strconv.Itoa(1),
+	Description: strconv.Itoa(1),
+}, func(t domains.Event) domains.Event {
+	i := t.ID
+	i++
+
+	return domains.Event{ //nolint:exhaustruct //test
+		ID:          i,
+		UserID:      i,
+		Text:        strconv.Itoa(i),
+		Description: strconv.Itoa(i),
+	}
+})
+
+var periodicEventSeq = utils.NewSequence(domains.PeriodicEvent{ //nolint:exhaustruct //test
+	ID:             1,
+	Text:           strconv.Itoa(1),
+	Description:    strconv.Itoa(1),
+	UserID:         1,
+	SmallestPeriod: 1,
+	BiggestPeriod:  2,
+	Notification: domains.PeriodicEventNotification{ //nolint:exhaustruct //test
+		ID:              1,
+		PeriodicEventID: 1,
+	},
+}, func(t domains.PeriodicEvent) domains.PeriodicEvent {
+	i := t.ID
+	i++
+
+	return domains.PeriodicEvent{ //nolint:exhaustruct //test need to fill
+		ID:             i,
+		Text:           strconv.Itoa(i),
+		Description:    strconv.Itoa(i),
+		UserID:         i,
+		SmallestPeriod: 1,
+		BiggestPeriod:  2,
+		Notification: domains.PeriodicEventNotification{ //nolint:exhaustruct //test
+			ID:              i,
+			PeriodicEventID: i,
+		},
+	}
+})
+
+type mocksUnion struct {
+	events         *mocks.MockEventRepository
+	periodicEvents *mocks.MockPeriodicEventsRepository
+	defaultNotif   *mocks.MockNotificationParamsRepository
+	notifier       *mocks.MockNotifier
+}
+
 func Test_notifierJob_RunJob(t *testing.T) {
 	t.Parallel()
 
-	t.Run("all times", func(t *testing.T) {
+	t.Run("no notifications", func(t *testing.T) {
 		t.Parallel()
 
 		ctrl := gomock.NewController(t)
-		testTime := 180 * time.Millisecond
-		ctx, _ := context.WithTimeout(context.Background(), testTime)                                //nolint:govet // testing
-		mockLogger := mocklogger.NewHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}) //nolint:exhaustruct //testing
-		ctx = log.InCtx(ctx, slog.New(mockLogger))
-		eventsRepo := mocks.NewMockEventRepository(ctrl)
-		timeToNearestCall := 20 * time.Millisecond
-		nearestCallTime := time.Now().Add(timeToNearestCall)
+		testTime := 120 * time.Millisecond
 		checkTaskPeriod := 50 * time.Millisecond
-		defaultNotifParamsRepo := mocks.NewMockNotificationParamsRepository(ctrl)
-		notifier := mocks.NewMockNotifier(ctrl)
-		events := []domains.Event{
-			{ //nolint:exhaustruct //tests
-				ID:     1,
-				UserID: 1,
-			},
-			{ //nolint:exhaustruct //tests
-				ID:     2,
-				UserID: 2,
-			},
+		ctx, serviceMocks, mockLoggerHandler := setupTest(ctrl, testTime)
+
+		for i := 0; i < 3; i++ {
+			sendNotifications(serviceMocks, nil, nil)
+			getTime(serviceMocks, time.Time{}, time.Time{})
 		}
-		eventsRepo.EXPECT().GetNearestEventSendTime(ctx).Return(nearestCallTime, nil)
-		notifyEvents(ctx, eventsRepo, defaultNotifParamsRepo, notifier, events, nearestCallTime)
-		eventsRepo.EXPECT().GetNearestEventSendTime(ctx).Return(time.Time{}, serverrors.NewNotFoundError(fmt.Errorf("err"), "nearest time"))
-		notifyEventsJobCalls(ctx, int((testTime-timeToNearestCall)/checkTaskPeriod), eventsRepo)
+
 		repo := &RepositoryMock{ //nolint:exhaustruct //tests
-			DefaultNotificationRepo: defaultNotifParamsRepo,
-			EventsRepo:              eventsRepo,
+			DefaultNotificationRepo: serviceMocks.defaultNotif,
+			EventsRepo:              serviceMocks.events,
+			PeriodicEventsRepo:      serviceMocks.periodicEvents,
 		}
-		nj := service.NewNotifierJob(repo, notifier, service.Config{CheckTasksPeriod: checkTaskPeriod})
+		nj := service.NewNotifierJob(repo, serviceMocks.notifier, service.Config{CheckTasksPeriod: checkTaskPeriod})
 		nj.RunJob(ctx)
 
-		assert.NoError(t, mockLogger.Error())
+		assert.NoError(t, mockLoggerHandler.Error())
 	})
-}
 
-type callParams struct {
-	events         []domains.Event
-	timeToNextCall *time.Duration
-}
+	t.Run("only basic events", func(t *testing.T) {
+		t.Parallel()
 
-func anyNotifyEvents(ctx context.Context, eventsRepo *mocks.MockEventRepository, defaultNotifParamsRepo *mocks.MockNotificationParamsRepository, notifier *mocks.MockNotifier, params []callParams, nearestCallTime time.Time) {
-	eventsRepo.EXPECT().GetNearestEventSendTime(ctx).Return(nearestCallTime, nil)
-	for i, p := range params {
-		if i != len(params)-1 {
-			if len(p.events) != 0 {
-				eventsRepo.EXPECT().ListEventsBefore(ctx, gomock.Any()).Return(p.events, nil)
-				for _, ev := range p.events {
-					defaultNotifParamsRepo.EXPECT().Get(ctx, ev.UserID)
-					eventsRepo.EXPECT().MarkNotified(ctx, ev.ID)
-					notifier.EXPECT().Add(ctx, gomock.Any())
-				}
-			} else {
-				eventsRepo.EXPECT().ListEventsBefore(ctx, gomock.Any()).Return(nil, serverrors.NewNotFoundError(fmt.Errorf("not found"), "nearest time"))
-			}
+		ctrl := gomock.NewController(t)
+		testTime := 120 * time.Millisecond
+		checkTaskPeriod := 1000 * time.Millisecond
+		ctx, serviceMocks, mockLoggerHandler := setupTest(ctrl, testTime)
+
+		events := eventsSeq.Generate(2)
+		sendNotifications(serviceMocks, events, nil)
+		getTime(serviceMocks, time.Now().Add(20*time.Millisecond), time.Time{})
+		newEvents := eventsSeq.Generate(2)
+		sendNotifications(serviceMocks, newEvents, nil)
+		getTime(serviceMocks, time.Time{}, time.Time{})
+		repo := &RepositoryMock{ //nolint:exhaustruct //tests
+			DefaultNotificationRepo: serviceMocks.defaultNotif,
+			EventsRepo:              serviceMocks.events,
+			PeriodicEventsRepo:      serviceMocks.periodicEvents,
 		}
-		if p.timeToNextCall != nil {
-			eventsRepo.EXPECT().GetNearestEventSendTime(ctx).Return(time.Now().Add(*p.timeToNextCall), nil)
-		} else {
-			eventsRepo.EXPECT().GetNearestEventSendTime(ctx).Return(time.Time{}, serverrors.NewNotFoundError(fmt.Errorf("err"), "nearest time"))
+		nj := service.NewNotifierJob(repo, serviceMocks.notifier, service.Config{CheckTasksPeriod: checkTaskPeriod})
+		nj.RunJob(ctx)
+
+		assert.NoError(t, mockLoggerHandler.Error())
+	})
+
+	t.Run("only periodic events", func(t *testing.T) {
+		t.Parallel()
+
+		ctrl := gomock.NewController(t)
+		testTime := 120 * time.Millisecond
+		checkTaskPeriod := 1000 * time.Millisecond
+		ctx, serviceMocks, mockLoggerHandler := setupTest(ctrl, testTime)
+
+		events := periodicEventSeq.Generate(2)
+		sendNotifications(serviceMocks, nil, events)
+		getTime(serviceMocks, time.Time{}, time.Now().Add(20*time.Millisecond))
+		newEvents := periodicEventSeq.Generate(2)
+		sendNotifications(serviceMocks, nil, newEvents)
+		getTime(serviceMocks, time.Time{}, time.Time{})
+		repo := &RepositoryMock{ //nolint:exhaustruct //tests
+			DefaultNotificationRepo: serviceMocks.defaultNotif,
+			EventsRepo:              serviceMocks.events,
+			PeriodicEventsRepo:      serviceMocks.periodicEvents,
 		}
-	}
-}
+		nj := service.NewNotifierJob(repo, serviceMocks.notifier, service.Config{CheckTasksPeriod: checkTaskPeriod})
+		nj.RunJob(ctx)
 
-func notifyEvents(ctx context.Context, eventsRepo *mocks.MockEventRepository, defaultNotifParamsRepo *mocks.MockNotificationParamsRepository, notifier *mocks.MockNotifier, events []domains.Event, nearestCallTime time.Time) {
-	eventsRepo.EXPECT().ListEventsBefore(ctx, nearestCallTime).Return(events, nil)
-	for _, ev := range events {
-		defaultNotifParamsRepo.EXPECT().Get(ctx, ev.UserID)
-		eventsRepo.EXPECT().MarkNotified(ctx, ev.ID)
-		notifier.EXPECT().Add(ctx, gomock.Any())
-	}
-}
-
-func notifyEventsJobCalls(ctx context.Context, noEventsCalls int, eventsRepo *mocks.MockEventRepository) {
-	for i := 0; i < noEventsCalls; i++ {
-		eventsRepo.EXPECT().ListEventsBefore(ctx, gomock.Any()).Return([]domains.Event{}, nil)
-		eventsRepo.EXPECT().GetNearestEventSendTime(ctx).Return(time.Time{}, serverrors.NewNotFoundError(fmt.Errorf("err"), "nearest time"))
-	}
+		assert.NoError(t, mockLoggerHandler.Error())
+	})
 }
 
 func TestNotifierJob_UpdateWithTime(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
-		name   string
-		period time.Duration
-		params []callParams
+		name     string
+		period   time.Duration
+		isUpdate bool
 	}{
-		// {
-		// 	name:   "no update",
-		// 	period: time.Hour,
-		// 	params: []callParams{
-		// 		{
-		// 			events: []domains.Service{
-		// 				{
-		// 					ID:     1,
-		// 					UserID: 1,
-		// 				},
-		// 				{
-		// 					ID:     2,
-		// 					UserID: 2,
-		// 				},
-		// 			},
-		// 			timeToNextCall: ptr.Ptr(80 * time.Millisecond),
-		// 		},
-		// 		{},
-		// 	},
-		// },
 		{
-			name:   "with update",
-			period: 20 * time.Millisecond,
-			params: []callParams{
-				{
-					events: []domains.Event{
-						{ //nolint:exhaustruct //no need to fill
-							ID:     1,
-							UserID: 1,
-						},
-						{ //nolint:exhaustruct //no need to fill
-							ID:     2,
-							UserID: 2,
-						},
-					},
-					timeToNextCall: utils.Ptr(20 * time.Millisecond),
-				},
-				{}, //nolint:exhaustruct //no need to fill
-			},
+			name:     "no update",
+			period:   2 * time.Hour,
+			isUpdate: false,
+		},
+		{
+			name:     "with update",
+			period:   20 * time.Millisecond,
+			isUpdate: true,
 		},
 	}
 
@@ -162,31 +239,33 @@ func TestNotifierJob_UpdateWithTime(t *testing.T) {
 			t.Parallel()
 
 			ctrl := gomock.NewController(t)
-			testTime := 100 * time.Millisecond
-			ctx, _ := context.WithTimeout(context.Background(), testTime)                                //nolint:govet // testing
-			mockLogger := mocklogger.NewHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}) //nolint:exhaustruct // mock
-			ctx = log.InCtx(ctx, slog.New(mockLogger))
-			eventsRepo := mocks.NewMockEventRepository(ctrl)
-			defaultNotifParamsRepo := mocks.NewMockNotificationParamsRepository(ctrl)
-			notifier := mocks.NewMockNotifier(ctrl)
-			timeToNearestCall := 80 * time.Millisecond
-			nearestCallTime := time.Now().Add(timeToNearestCall)
-			anyNotifyEvents(ctx, eventsRepo, defaultNotifParamsRepo, notifier, tc.params, nearestCallTime)
-			repo := &RepositoryMock{ //nolint:exhaustruct // mock
-				DefaultNotificationRepo: defaultNotifParamsRepo,
-				EventsRepo:              eventsRepo,
+			testTime := 180 * time.Millisecond
+			checkPeriod := time.Hour
+			waitTime := 10 * time.Millisecond
+			ctx, serviceMocks, mockHandlerLogger := setupTest(ctrl, testTime)
+			sendNotifications(serviceMocks, nil, nil)
+			getTime(serviceMocks, time.Time{}, time.Time{})
+			if tc.isUpdate {
+				getTime(serviceMocks, time.Now().Add(waitTime+tc.period), time.Time{})
+				sendNotifications(serviceMocks, nil, nil)
+				getTime(serviceMocks, time.Time{}, time.Time{})
 			}
-			nj := service.NewNotifierJob(repo, notifier, service.Config{CheckTasksPeriod: time.Hour})
+			repo := &RepositoryMock{ //nolint:exhaustruct // mock
+				DefaultNotificationRepo: serviceMocks.defaultNotif,
+				EventsRepo:              serviceMocks.events,
+				PeriodicEventsRepo:      serviceMocks.periodicEvents,
+			}
+			nj := service.NewNotifierJob(repo, serviceMocks.notifier, service.Config{CheckTasksPeriod: checkPeriod})
 			wait := make(chan struct{})
 			go func() {
 				nj.RunJob(ctx)
 				wait <- struct{}{}
 			}()
-			time.Sleep(10 * time.Millisecond)
+			time.Sleep(waitTime)
 			nj.UpdateWithTime(ctx, time.Now().Add(tc.period))
 			<-wait
 
-			assert.NoError(t, mockLogger.Error())
+			assert.NoError(t, mockHandlerLogger.Error())
 		})
 	}
 }

@@ -74,3 +74,29 @@ func loggingMiddleware(next bot.HandlerFunc) bot.HandlerFunc {
 		next(ctx, bot, update)
 	}
 }
+
+func chatID(update *models.Update) int64 {
+	if update.Message != nil {
+		return update.Message.Chat.ID
+	}
+	if update.EditedMessage != nil {
+		return update.EditedMessage.Chat.ID
+	}
+	if update.CallbackQuery != nil {
+		return update.CallbackQuery.Sender.ID
+	}
+
+	return 0
+}
+
+func recoverPanicMiddleware(next bot.HandlerFunc) bot.HandlerFunc {
+	return func(ctx context.Context, bot *bot.Bot, update *models.Update) {
+		defer func() {
+			if r := recover(); r != nil {
+				handleError(log.WithCtx(ctx, "panic", "true"), bot, chatID(update), fmt.Errorf("%v", r))
+			}
+		}()
+
+		next(ctx, bot, update)
+	}
+}

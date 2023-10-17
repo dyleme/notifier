@@ -4,6 +4,8 @@ import (
 	"time"
 )
 
+const BasicEventType EventType = "basic event"
+
 type Event struct {
 	ID                 int
 	UserID             int
@@ -14,14 +16,6 @@ type Event struct {
 	NotificationParams *NotificationParams
 	SendTime           time.Time
 	Sended             bool
-}
-
-func (e *Event) IsGettingDone(newDone bool) bool {
-	if !e.Done && newDone {
-		return true
-	}
-
-	return false
 }
 
 func EventFromTask(t Task, start time.Time, description string) Event {

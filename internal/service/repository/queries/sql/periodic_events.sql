@@ -83,18 +83,15 @@ VALUES (@periodic_event_id,
        )
 RETURNING *;
 
--- name: UpdatePeriodicEventNotification :exec
+-- name: MarkPeriodicEventNotificationSended :exec
 UPDATE periodic_events_notifications
-SET sended = @sended,
-    send_time = @send_time
-WHERE id = @id
-  AND periodic_event_id = @periodic_event_id;
+SET sended = TRUE
+WHERE id = @id;
 
 -- name: CurrentPeriodicEventNotification :one
 SELECT *
 FROM periodic_events_notifications
 WHERE periodic_event_id = @periodic_event_id
-  AND sended = FALSE
 ORDER BY send_time DESC
 LIMIT 1;
 
@@ -123,7 +120,28 @@ WHERE pen.done = FALSE
 ORDER BY pen.send_time;
 
 -- name: DeletePeriodicEventNotification :many
-DELETE FROM periodic_events_notifications
+DELETE
+FROM periodic_events_notifications
 WHERE id = @id
   AND periodic_event_id = @periodic_event_id
+RETURNING *;
+
+-- name: ListPeriodicEventsWithNotifications :many
+SELECT *
+FROM periodic_events as pe
+JOIN periodic_events_notifications as pen
+ON pen.periodic_event_id = pe.id
+WHERE pen.done = FALSE
+  AND pe.user_id = @user_id
+ORDER BY send_time
+LIMIT @lim OFFSET @OFF;
+
+-- name: MarkPeriodicEventNotificationDone :exec
+UPDATE periodic_events_notifications
+SET done = TRUE
+WHERE periodic_event_id = @periodic_event_id;
+
+-- name: DeletePeriodicEventNotifications :many
+DELETE FROM periodic_events_notifications
+WHERE periodic_event_id = @periodic_event_id
 RETURNING *;

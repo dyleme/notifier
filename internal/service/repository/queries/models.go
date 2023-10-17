@@ -42,6 +42,7 @@ type PeriodicEvent struct {
 
 type PeriodicEventsNotification struct {
 	ID              int32              `db:"id"`
+	CreatedAt       pgtype.Timestamp   `db:"created_at"`
 	PeriodicEventID int32              `db:"periodic_event_id"`
 	SendTime        pgtype.Timestamptz `db:"send_time"`
 	Sended          bool               `db:"sended"`
