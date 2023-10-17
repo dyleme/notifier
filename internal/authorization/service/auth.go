@@ -7,8 +7,8 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/Dyleme/Notifier/internal/authorization/models"
-	"github.com/Dyleme/Notifier/internal/lib/serverrors"
+	"github.com/Dyleme/Notifier/internal/domains"
+	"github.com/Dyleme/Notifier/pkg/serverrors"
 )
 
 // HashGenerator interface providing you the ability to generate password hash
@@ -51,12 +51,12 @@ type ValidateUserInput struct {
 type UserRepo interface {
 	Atomic(context.Context, func(ctx context.Context, repo UserRepo) error) error
 	// CreateUser creates user in the repository.
-	Create(ctx context.Context, input CreateUserInput) (user models.User, err error)
+	Create(ctx context.Context, input CreateUserInput) (user domains.User, err error)
 
 	// GetPasswordHashAndID returns user password hash and id.
-	Get(ctx context.Context, authName string, tgID *int) (models.User, error)
+	Get(ctx context.Context, authName string, tgID *int) (domains.User, error)
 
-	UpdateTime(ctx context.Context, id int, tzOffset models.TimeZoneOffset, isDST bool) error
+	UpdateTime(ctx context.Context, id int, tzOffset domains.TimeZoneOffset, isDST bool) error
 }
 
 type NotifcationService interface {
@@ -125,9 +125,9 @@ func (s *AuthService) AuthUser(ctx context.Context, input ValidateUserInput) (st
 	return token, nil
 }
 
-func (s *AuthService) GetTGUserInfo(ctx context.Context, tgID int) (models.User, error) {
+func (s *AuthService) GetTGUserInfo(ctx context.Context, tgID int) (domains.User, error) {
 	op := "AuthService.GetTGUserInfo: %w"
-	var tgUser models.User
+	var tgUser domains.User
 	err := s.repo.Atomic(ctx, func(ctx context.Context, userRepo UserRepo) error {
 		user, err := userRepo.Get(ctx, "", &tgID)
 		if err == nil { // err equal nil
@@ -152,7 +152,7 @@ func (s *AuthService) GetTGUserInfo(ctx context.Context, tgID int) (models.User,
 		return nil
 	})
 	if err != nil {
-		return models.User{}, fmt.Errorf(op, err)
+		return domains.User{}, fmt.Errorf(op, err)
 	}
 
 	return tgUser, nil
@@ -160,7 +160,7 @@ func (s *AuthService) GetTGUserInfo(ctx context.Context, tgID int) (models.User,
 
 var ErrInvalidOffset = errors.New("invalid offset")
 
-func (s *AuthService) UpdateUserTime(ctx context.Context, id int, tzOffset models.TimeZoneOffset, isDst bool) error {
+func (s *AuthService) UpdateUserTime(ctx context.Context, id int, tzOffset domains.TimeZoneOffset, isDst bool) error {
 	op := "AuthService.UpdateUserTime: %w"
 
 	if !tzOffset.IsValid() {

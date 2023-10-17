@@ -3,150 +3,118 @@ package handler
 import (
 	"context"
 	"fmt"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 	inKbr "github.com/go-telegram/ui/keyboard/inline"
 
-	"github.com/Dyleme/Notifier/internal/lib/log"
-	"github.com/Dyleme/Notifier/internal/timetable-service/domains"
+	"github.com/Dyleme/Notifier/internal/domains"
+	"github.com/Dyleme/Notifier/internal/service/service"
+	"github.com/Dyleme/Notifier/internal/telegram/userinfo"
 )
 
 type Notification struct {
-	th             *TelegramHandler
-	deletionCancel func()
+	th        *TelegramHandler
+	eventType domains.EventType
+	done      bool
+	eventID   int
+	message   string
+	notifTime time.Time
 }
 
 func (th *TelegramHandler) Notify(ctx context.Context, notif domains.SendingNotification) error {
-	op := "TelegramHandler.Notify: %w"
 	user, err := th.userRepo.GetUserInfo(ctx, notif.Params.Params.Telegram)
 	if err != nil {
-		return fmt.Errorf(op, err)
+		return fmt.Errorf("get user info[tgID=%v]: %w", notif.Params.Params.Telegram, err)
 	}
-	n := Notification{th: th, deletionCancel: nil}
-	nd := notificationData{
-		eventID:         notif.EventID,
-		isNewStatusDone: true,
+	n := Notification{
+		th:        th,
+		eventType: notif.EventType,
+		done:      false,
+		eventID:   notif.EventID,
+		message:   notif.Message,
+		notifTime: notif.NotificationTime,
 	}
-	kb := inKbr.New(th.bot, inKbr.NoDeleteAfterClick()).Button("Done", nd.code(), errorHandling(n.setStatus))
-	_, err = th.bot.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
-		ChatID:      notif.Params.Params.Telegram,
-		Text:        notif.Message + " " + notif.NotificationTime.In(user.Location()).Format(dayTimeFormat),
+	err = n.sendMessage(ctx, int64(notif.Params.Params.Telegram), user)
+	if err != nil {
+		return fmt.Errorf("send message: %w", err)
+	}
+
+	return nil
+}
+
+func (n *Notification) sendMessage(ctx context.Context, chatID int64, user userinfo.User) error {
+	kb := inKbr.New(n.th.bot, inKbr.NoDeleteAfterClick()).Button("Done", nil, errorHandling(n.setDone))
+	_, err := n.th.bot.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
+		ChatID:      chatID,
+		Text:        n.message + " " + n.notifTime.In(user.Location()).Format(dayTimeFormat),
 		ReplyMarkup: kb,
 	})
 	if err != nil {
-		return fmt.Errorf(op, err)
+		return fmt.Errorf("send message: %w", err)
 	}
 
 	return nil
 }
 
-type notificationData struct {
-	eventID         int
-	isNewStatusDone bool
-}
-
-func (n *notificationData) code() []byte {
-	return []byte(strconv.Itoa(n.eventID) + " " + strconv.FormatBool(n.isNewStatusDone))
-}
-
-func (n *notificationData) read(bts []byte) error {
-	op := "notificationButtonData.read: %w"
-	splitted := strings.Split(string(bts), " ")
-	if len(splitted) != 2 { //nolint:gomnd // amount of parts in split
-		return fmt.Errorf(op, fmt.Errorf("bad bts: %q", string(bts)))
-	}
-
-	eventID, err := strconv.Atoi(splitted[0])
-	if err != nil {
-		return fmt.Errorf(op, err)
-	}
-
-	newStatus, err := strconv.ParseBool(splitted[1])
-	if err != nil {
-		return fmt.Errorf(op, err)
-	}
-	n.eventID = eventID
-	n.isNewStatusDone = newStatus
-
-	return nil
-}
-
-const msgDeltionTime = 10 * time.Second
-
-func (n *Notification) setStatus(ctx context.Context, b *bot.Bot, msg *models.Message, data []byte) error {
-	op := "Notification.setStatus: %w"
+func (n *Notification) setUndone(ctx context.Context, _ *bot.Bot, msg *models.Message, _ []byte) error {
+	n.done = false
 	user, err := UserFromCtx(ctx)
 	if err != nil {
-		return fmt.Errorf(op, err)
+		return fmt.Errorf("user from ctx: %w", err)
 	}
 
-	if n.deletionCancel != nil {
-		n.deletionCancel()
-	}
-
-	var notifData notificationData
-	err = notifData.read(data)
+	err = n.sendMessage(ctx, msg.Chat.ID, user)
 	if err != nil {
-		return fmt.Errorf(op, err)
+		return fmt.Errorf("send message: %w", err)
 	}
 
-	_, err = n.th.serv.SetEventDoneStatus(ctx, user.ID, notifData.eventID, notifData.isNewStatusDone)
-	if err != nil {
-		return fmt.Errorf(op, err)
-	}
+	return nil
+}
 
-	notifData.isNewStatusDone = !notifData.isNewStatusDone
-	text := "Service marked as done"
-	btnText := "Cancel done"
-	if notifData.isNewStatusDone {
-		btnText = "Done"
-		text = "Service undone"
-	}
+func (n *Notification) setDone(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
+	n.done = true
+
 	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick()).
-		Row().Button("Ok", nil, n.DeleteMsgInline).
-		Row().Button(btnText, notifData.code(), errorHandling(n.setStatus))
-	_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{ //nolint:exhaustruct //no need to fill
+		Row().Button("Yes", nil, errorHandling(n.SendDone)).
+		Row().Button("No", nil, errorHandling(n.setUndone))
+	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{ //nolint:exhaustruct //no need to fill
 		ChatID:      msg.Chat.ID,
 		MessageID:   msg.ID,
-		Text:        text,
+		Text:        "Are you sure?",
 		ReplyMarkup: kbr,
 	})
 	if err != nil {
-		return fmt.Errorf(op, err)
+		return fmt.Errorf("edit message text: %w", err)
 	}
-
-	deletionCtx, cancel := context.WithCancel(ctx)
-	n.deletionCancel = cancel
-
-	go func() {
-		select {
-		case <-deletionCtx.Done():
-			log.Ctx(ctx).Info("select deletion ctx done")
-
-			return
-		case <-time.After(msgDeltionTime):
-			log.Ctx(ctx).Info("select delete msg")
-			n.DeleteMsgInline(ctx, b, msg, nil)
-		}
-	}()
 
 	return nil
 }
 
-func (n *Notification) DeleteMsgInline(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) {
-	if n.deletionCancel != nil {
-		n.deletionCancel()
+func (n *Notification) SendDone(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
+	user, err := UserFromCtx(ctx)
+	if err != nil {
+		return fmt.Errorf("user from ctx: %w", err)
 	}
-	log.Ctx(ctx).Info("delete msg")
-	_, err := b.DeleteMessage(ctx, &bot.DeleteMessageParams{
+
+	err = n.th.serv.SetEventDoneStatus(ctx, service.AbstractEvent{
+		EventID:   n.eventID,
+		EventType: n.eventType,
+		UserID:    user.ID,
+		Done:      true,
+	})
+	if err != nil {
+		return fmt.Errorf("set event done status: %w", err)
+	}
+
+	_, err = b.DeleteMessage(ctx, &bot.DeleteMessageParams{
 		ChatID:    msg.Chat.ID,
 		MessageID: msg.ID,
 	})
 	if err != nil {
-		log.Ctx(ctx).Error("notify deletion", log.Err(err))
+		return fmt.Errorf("delete message: %w", err)
 	}
+
+	return nil
 }

@@ -7,7 +7,7 @@ import (
 
 	"github.com/Dyleme/timecache"
 
-	"github.com/Dyleme/Notifier/internal/authorization/models"
+	"github.com/Dyleme/Notifier/internal/domains"
 )
 
 type UserRepoCache struct {
@@ -16,8 +16,8 @@ type UserRepoCache struct {
 }
 
 type UserRepo interface {
-	GetTGUserInfo(ctx context.Context, tgID int) (models.User, error)
-	UpdateUserTime(ctx context.Context, id int, timezone models.TimeZoneOffset, isDst bool) error
+	GetTGUserInfo(ctx context.Context, tgID int) (domains.User, error)
+	UpdateUserTime(ctx context.Context, id int, timezone domains.TimeZoneOffset, isDst bool) error
 }
 
 func NewUserRepoCache(userRepo UserRepo) *UserRepoCache {
@@ -73,7 +73,7 @@ func (u *UserRepoCache) UpdateUserTime(ctx context.Context, tgID, tzOffset int, 
 		return fmt.Errorf(op, err)
 	}
 
-	err = u.userRepo.UpdateUserTime(ctx, user.ID, models.TimeZoneOffset(tzOffset), isDST)
+	err = u.userRepo.UpdateUserTime(ctx, user.ID, domains.TimeZoneOffset(tzOffset), isDST)
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}

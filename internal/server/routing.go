@@ -5,13 +5,13 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/Dyleme/Notifier/internal/authorization/handler/authapi"
-	"github.com/Dyleme/Notifier/internal/timetable-service/handler/timetableapi"
+	authApi "github.com/Dyleme/Notifier/internal/authorization/handler/api"
+	eventsApi "github.com/Dyleme/Notifier/internal/service/handler/api"
 )
 
 func Route(
-	timetableHandler timetableapi.ServerInterface,
-	authHandler authapi.ServerInterface,
+	timetableHandler eventsApi.ServerInterface,
+	authHandler authApi.ServerInterface,
 	jwtMiddleware func(handler http.Handler) http.Handler,
 	apiKeyMiddleware func(handler http.Handler) http.Handler,
 	middlewares []func(handler http.Handler) http.Handler,
@@ -23,8 +23,8 @@ func Route(
 	bearerTokenRouter := router.With(jwtMiddleware)
 	apiKeyRouter := router.With(apiKeyMiddleware)
 
-	authapi.HandlerFromMux(authHandler, apiKeyRouter)
-	timetableapi.HandlerFromMux(timetableHandler, bearerTokenRouter)
+	authApi.HandlerFromMux(authHandler, apiKeyRouter)
+	eventsApi.HandlerFromMux(timetableHandler, bearerTokenRouter)
 
 	return router
 }

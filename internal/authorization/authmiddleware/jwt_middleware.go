@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/Dyleme/Notifier/internal/authorization/jwt"
-	"github.com/Dyleme/Notifier/internal/lib/http/responses"
+	"github.com/Dyleme/Notifier/pkg/http/responses"
 )
 
 type Key string

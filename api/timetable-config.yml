@@ -1,8 +1,8 @@
-package: timetableapi
+package: api
 generate:
   chi-server: true
   models: true
-output: ./internal/timetable-service/handler/timetableapi/timetableapi.gen.go
+output: ./internal/service/handler/api/timetableapi.gen.go
 output-options:
   include-tags:
     - Tasks
