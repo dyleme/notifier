@@ -31,13 +31,14 @@ type NotifierJob struct {
 	tr           *trManager.Manager
 }
 
-func NewNotifierJob(repo Repository, notifier Notifier, config Config) *NotifierJob {
+func NewNotifierJob(repo Repository, notifier Notifier, config Config, tr *trManager.Manager) *NotifierJob {
 	return &NotifierJob{
 		repo:         repo,
 		notifier:     notifier,
 		checkPeriod:  config.CheckTasksPeriod,
 		timer:        time.NewTimer(config.CheckTasksPeriod),
 		nextSendTime: time.Now().Add(config.CheckTasksPeriod),
+		tr:           tr,
 	}
 }
 

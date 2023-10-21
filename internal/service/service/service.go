@@ -29,7 +29,7 @@ type Config struct {
 func New(_ context.Context, repo Repository, trManger *trManager.Manager, notifier Notifier, cfg Config) *Service {
 	s := &Service{
 		repo:        repo,
-		notifierJob: NewNotifierJob(repo, notifier, cfg),
+		notifierJob: NewNotifierJob(repo, notifier, cfg, trManger),
 		notifier:    notifier,
 		tr:          trManger,
 	}

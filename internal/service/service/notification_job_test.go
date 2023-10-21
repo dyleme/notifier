@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/avito-tech/go-transaction-manager/trm/manager"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/Dyleme/Notifier/pkg/log"
 	"github.com/Dyleme/Notifier/pkg/log/mocklogger"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
+	"github.com/Dyleme/Notifier/pkg/testutils"
 	"github.com/Dyleme/Notifier/pkg/utils"
 )
 
@@ -156,7 +158,7 @@ func Test_notifierJob_RunJob(t *testing.T) {
 			EventsRepo:              serviceMocks.events,
 			PeriodicEventsRepo:      serviceMocks.periodicEvents,
 		}
-		nj := service.NewNotifierJob(repo, serviceMocks.notifier, service.Config{CheckTasksPeriod: checkTaskPeriod})
+		nj := service.NewNotifierJob(repo, serviceMocks.notifier, service.Config{CheckTasksPeriod: checkTaskPeriod}, manager.Must(testutils.TxManager))
 		nj.RunJob(ctx)
 
 		assert.NoError(t, mockLoggerHandler.Error())
@@ -181,7 +183,7 @@ func Test_notifierJob_RunJob(t *testing.T) {
 			EventsRepo:              serviceMocks.events,
 			PeriodicEventsRepo:      serviceMocks.periodicEvents,
 		}
-		nj := service.NewNotifierJob(repo, serviceMocks.notifier, service.Config{CheckTasksPeriod: checkTaskPeriod})
+		nj := service.NewNotifierJob(repo, serviceMocks.notifier, service.Config{CheckTasksPeriod: checkTaskPeriod}, manager.Must(testutils.TxManager))
 		nj.RunJob(ctx)
 
 		assert.NoError(t, mockLoggerHandler.Error())
@@ -206,7 +208,7 @@ func Test_notifierJob_RunJob(t *testing.T) {
 			EventsRepo:              serviceMocks.events,
 			PeriodicEventsRepo:      serviceMocks.periodicEvents,
 		}
-		nj := service.NewNotifierJob(repo, serviceMocks.notifier, service.Config{CheckTasksPeriod: checkTaskPeriod})
+		nj := service.NewNotifierJob(repo, serviceMocks.notifier, service.Config{CheckTasksPeriod: checkTaskPeriod}, manager.Must(testutils.TxManager))
 		nj.RunJob(ctx)
 
 		assert.NoError(t, mockLoggerHandler.Error())
@@ -255,7 +257,7 @@ func TestNotifierJob_UpdateWithTime(t *testing.T) {
 				EventsRepo:              serviceMocks.events,
 				PeriodicEventsRepo:      serviceMocks.periodicEvents,
 			}
-			nj := service.NewNotifierJob(repo, serviceMocks.notifier, service.Config{CheckTasksPeriod: checkPeriod})
+			nj := service.NewNotifierJob(repo, serviceMocks.notifier, service.Config{CheckTasksPeriod: checkPeriod}, manager.Must(testutils.TxManager))
 			wait := make(chan struct{})
 			go func() {
 				nj.RunJob(ctx)

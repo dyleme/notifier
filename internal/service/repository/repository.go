@@ -9,7 +9,6 @@ import (
 
 type Repository struct {
 	db    *pgxpool.Pool
-	q     *queries.Queries
 	cache Cache
 
 	periodicEventRepository      *PeriodicEventRepository
@@ -27,6 +26,7 @@ type Cache interface {
 
 func New(pool *pgxpool.Pool, cache Cache, getter *trmpgx.CtxGetter) *Repository {
 	q := queries.New()
+
 	return &Repository{
 		db:    pool,
 		cache: cache,

@@ -54,7 +54,7 @@ func main() { //nolint:funlen // main can be long
 
 	notif := notifier.New(ctx, nil, cfg.Notifier)
 	cache := timetableRepository.NewUniversalCache()
-	trManager, err := manager.New(trmpgx.NewDefaultFactory(db))
+	trManager := manager.Must(trmpgx.NewDefaultFactory(db))
 	trCtxGetter := trmpgx.DefaultCtxGetter
 	repo := timetableRepository.New(db, cache, trCtxGetter)
 	service := timetableService.New(ctx, repo, trManager, notif, cfg.Service)
