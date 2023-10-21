@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/avito-tech/go-transaction-manager/trm/manager"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Dyleme/Notifier/internal/domains"
@@ -161,7 +161,7 @@ func Test_notifierJob_RunJob(t *testing.T) {
 		nj := service.NewNotifierJob(repo, serviceMocks.notifier, service.Config{CheckTasksPeriod: checkTaskPeriod}, manager.Must(testutils.TxManager))
 		nj.RunJob(ctx)
 
-		assert.NoError(t, mockLoggerHandler.Error())
+		require.NoError(t, mockLoggerHandler.Error())
 	})
 
 	t.Run("only basic events", func(t *testing.T) {
@@ -186,7 +186,7 @@ func Test_notifierJob_RunJob(t *testing.T) {
 		nj := service.NewNotifierJob(repo, serviceMocks.notifier, service.Config{CheckTasksPeriod: checkTaskPeriod}, manager.Must(testutils.TxManager))
 		nj.RunJob(ctx)
 
-		assert.NoError(t, mockLoggerHandler.Error())
+		require.NoError(t, mockLoggerHandler.Error())
 	})
 
 	t.Run("only periodic events", func(t *testing.T) {
@@ -211,7 +211,7 @@ func Test_notifierJob_RunJob(t *testing.T) {
 		nj := service.NewNotifierJob(repo, serviceMocks.notifier, service.Config{CheckTasksPeriod: checkTaskPeriod}, manager.Must(testutils.TxManager))
 		nj.RunJob(ctx)
 
-		assert.NoError(t, mockLoggerHandler.Error())
+		require.NoError(t, mockLoggerHandler.Error())
 	})
 }
 
@@ -267,7 +267,7 @@ func TestNotifierJob_UpdateWithTime(t *testing.T) {
 			nj.UpdateWithTime(ctx, time.Now().Add(tc.period))
 			<-wait
 
-			assert.NoError(t, mockHandlerLogger.Error())
+			require.NoError(t, mockHandlerLogger.Error())
 		})
 	}
 }

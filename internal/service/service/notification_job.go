@@ -18,7 +18,7 @@ import (
 
 //go:generate mockgen -destination=mocks/notification_job_mocks.go -package=mocks . Notifier
 type Notifier interface {
-	Add(context.Context, domains.SendingNotification) error
+	Add(ctx context.Context, notif domains.SendingNotification) error
 	Delete(ctx context.Context, eventID, userID int) error
 }
 

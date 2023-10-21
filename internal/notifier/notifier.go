@@ -15,7 +15,7 @@ import (
 
 //go:generate mockgen -destination=mocks/notifier_mocks.go -package=mocks . Notifier
 type Notifier interface {
-	Notify(context.Context, domains.SendingNotification) error
+	Notify(ctx context.Context, notif domains.SendingNotification) error
 }
 
 type Config struct {

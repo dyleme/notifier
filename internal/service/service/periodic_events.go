@@ -11,11 +11,11 @@ import (
 
 //go:generate mockgen -destination=mocks/periodic_events_mocks.go -package=mocks . PeriodicEventsRepository
 type PeriodicEventsRepository interface { //nolint:interfacebloat // need so many interfaces
-	Add(context.Context, domains.PeriodicEvent, domains.PeriodicEventNotification) (domains.PeriodicEvent, error)
+	Add(ctx context.Context, event domains.PeriodicEvent, notif domains.PeriodicEventNotification) (domains.PeriodicEvent, error)
 	Get(ctx context.Context, eventID, userID int) (domains.PeriodicEvent, error)
 	Update(ctx context.Context, event UpdatePeriodicEventParams) (domains.PeriodicEvent, error)
 	Delete(ctx context.Context, eventID, userID int) error
-	AddNotification(context.Context, domains.PeriodicEventNotification) (domains.PeriodicEventNotification, error)
+	AddNotification(ctx context.Context, notif domains.PeriodicEventNotification) (domains.PeriodicEventNotification, error)
 	MarkNotificationSend(ctx context.Context, notifID int) error
 	MarkNotificationDone(ctx context.Context, eventID, userID int) error
 	DeleteNotification(ctx context.Context, notifID, eventID int) error

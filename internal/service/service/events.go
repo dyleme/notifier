@@ -11,7 +11,7 @@ import (
 
 //go:generate mockgen -destination=mocks/events_mocks.go -package=mocks . EventRepository
 type EventRepository interface { //nolint:interfacebloat //too many methods
-	Add(context.Context, domains.Event) (domains.Event, error)
+	Add(ctx context.Context, event domains.Event) (domains.Event, error)
 	List(ctx context.Context, userID int, params ListParams) ([]domains.Event, error)
 	Update(ctx context.Context, event domains.Event) (domains.Event, error)
 	Delete(ctx context.Context, eventID, userID int) error
