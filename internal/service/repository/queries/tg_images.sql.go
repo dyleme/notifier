@@ -24,8 +24,8 @@ type AddTgImageParams struct {
 	TgFileID string `db:"tg_file_id"`
 }
 
-func (q *Queries) AddTgImage(ctx context.Context, arg AddTgImageParams) (TgImage, error) {
-	row := q.db.QueryRow(ctx, addTgImage, arg.Filename, arg.TgFileID)
+func (q *Queries) AddTgImage(ctx context.Context, db DBTX, arg AddTgImageParams) (TgImage, error) {
+	row := db.QueryRow(ctx, addTgImage, arg.Filename, arg.TgFileID)
 	var i TgImage
 	err := row.Scan(&i.ID, &i.Filename, &i.TgFileID)
 	return i, err
@@ -37,8 +37,8 @@ FROM tg_images
 WHERE filename = $1
 `
 
-func (q *Queries) GetTgImage(ctx context.Context, filename string) (TgImage, error) {
-	row := q.db.QueryRow(ctx, getTgImage, filename)
+func (q *Queries) GetTgImage(ctx context.Context, db DBTX, filename string) (TgImage, error) {
+	row := db.QueryRow(ctx, getTgImage, filename)
 	var i TgImage
 	err := row.Scan(&i.ID, &i.Filename, &i.TgFileID)
 	return i, err

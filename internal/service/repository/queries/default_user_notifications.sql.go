@@ -17,8 +17,8 @@ FROM default_user_notification_params
 WHERE user_id = $1
 `
 
-func (q *Queries) GetDefaultUserNotificationsParams(ctx context.Context, userID int32) (DefaultUserNotificationParam, error) {
-	row := q.db.QueryRow(ctx, getDefaultUserNotificationsParams, userID)
+func (q *Queries) GetDefaultUserNotificationsParams(ctx context.Context, db DBTX, userID int32) (DefaultUserNotificationParam, error) {
+	row := db.QueryRow(ctx, getDefaultUserNotificationsParams, userID)
 	var i DefaultUserNotificationParam
 	err := row.Scan(&i.UserID, &i.CreatedAt, &i.Params)
 	return i, err
@@ -41,8 +41,8 @@ type SetDefaultUserNotificationParamsParams struct {
 	Params domains.NotificationParams `db:"params"`
 }
 
-func (q *Queries) SetDefaultUserNotificationParams(ctx context.Context, arg SetDefaultUserNotificationParamsParams) (DefaultUserNotificationParam, error) {
-	row := q.db.QueryRow(ctx, setDefaultUserNotificationParams, arg.UserID, arg.Params)
+func (q *Queries) SetDefaultUserNotificationParams(ctx context.Context, db DBTX, arg SetDefaultUserNotificationParamsParams) (DefaultUserNotificationParam, error) {
+	row := db.QueryRow(ctx, setDefaultUserNotificationParams, arg.UserID, arg.Params)
 	var i DefaultUserNotificationParam
 	err := row.Scan(&i.UserID, &i.CreatedAt, &i.Params)
 	return i, err

@@ -44,8 +44,8 @@ func (s *Service) GetDefaultNotificationParams(ctx context.Context, userID int) 
 func (s *Service) GetNotificationParams(ctx context.Context, eventID, userID int) (*domains.NotificationParams, error) {
 	op := "Service.GetNotificationParams: %w"
 	var notifParams domains.NotificationParams
-	err := s.repo.Atomic(ctx, func(ctx context.Context, repo Repository) error {
-		event, err := repo.Events().Get(ctx, eventID, userID)
+	err := s.tr.Do(ctx, func(ctx context.Context) error {
+		event, err := s.repo.Events().Get(ctx, eventID, userID)
 		if err != nil {
 			return err //nolint:wrapcheck //wrapping later
 		}
@@ -56,7 +56,7 @@ func (s *Service) GetNotificationParams(ctx context.Context, eventID, userID int
 			return nil
 		}
 
-		defaultParams, err := repo.DefaultNotificationParams().Get(ctx, userID)
+		defaultParams, err := s.repo.DefaultNotificationParams().Get(ctx, userID)
 		if err != nil {
 			var notFoundErr serverrors.NotFoundError
 			if errors.As(err, &notFoundErr) {

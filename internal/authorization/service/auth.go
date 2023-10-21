@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	trManager "github.com/avito-tech/go-transaction-manager/trm/manager"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/Dyleme/Notifier/internal/domains"
@@ -49,7 +50,6 @@ type ValidateUserInput struct {
 
 // UserRepo is an interface which provides methods to implement with repository.
 type UserRepo interface {
-	Atomic(context.Context, func(ctx context.Context, repo UserRepo) error) error
 	// CreateUser creates user in the repository.
 	Create(ctx context.Context, input CreateUserInput) (user domains.User, err error)
 
@@ -74,11 +74,17 @@ type AuthService struct {
 	repo    UserRepo
 	hashGen HashGenerator
 	jwtGen  JwtGenerator
+	tr      *trManager.Manager
 }
 
 // NewAuth is the constructor to the AuthService.
-func NewAuth(repo UserRepo, hashGen HashGenerator, jwtGen JwtGenerator) *AuthService {
-	return &AuthService{repo: repo, hashGen: hashGen, jwtGen: jwtGen}
+func NewAuth(repo UserRepo, hashGen HashGenerator, jwtGen JwtGenerator, tr *trManager.Manager) *AuthService {
+	return &AuthService{
+		repo:    repo,
+		hashGen: hashGen,
+		jwtGen:  jwtGen,
+		tr:      tr,
+	}
 }
 
 // CreateUser function returns the id of the created user or error if any occures.
@@ -128,8 +134,8 @@ func (s *AuthService) AuthUser(ctx context.Context, input ValidateUserInput) (st
 func (s *AuthService) GetTGUserInfo(ctx context.Context, tgID int) (domains.User, error) {
 	op := "AuthService.GetTGUserInfo: %w"
 	var tgUser domains.User
-	err := s.repo.Atomic(ctx, func(ctx context.Context, userRepo UserRepo) error {
-		user, err := userRepo.Get(ctx, "", &tgID)
+	err := s.tr.Do(ctx, func(ctx context.Context) error {
+		user, err := s.repo.Get(ctx, "", &tgID)
 		if err == nil { // err equal nil
 			tgUser = user
 		}
@@ -139,7 +145,7 @@ func (s *AuthService) GetTGUserInfo(ctx context.Context, tgID int) (domains.User
 			return err //nolint:wrapcheck // wrapping later
 		}
 
-		user, err = userRepo.Create(ctx, CreateUserInput{
+		user, err = s.repo.Create(ctx, CreateUserInput{
 			Email:    "",
 			Password: "",
 			TGID:     &tgID,
@@ -167,8 +173,8 @@ func (s *AuthService) UpdateUserTime(ctx context.Context, id int, tzOffset domai
 		return fmt.Errorf(op, ErrInvalidOffset)
 	}
 
-	err := s.repo.Atomic(ctx, func(ctx context.Context, repo UserRepo) error {
-		err := repo.UpdateTime(ctx, id, tzOffset, isDst)
+	err := s.tr.Do(ctx, func(ctx context.Context) error {
+		err := s.repo.UpdateTime(ctx, id, tzOffset, isDst)
 		if err != nil {
 			return err //nolint:wrapcheck //wrapping later
 		}

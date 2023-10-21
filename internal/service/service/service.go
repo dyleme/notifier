@@ -3,10 +3,11 @@ package service
 import (
 	"context"
 	"time"
+
+	trManager "github.com/avito-tech/go-transaction-manager/trm/manager"
 )
 
 type Repository interface {
-	Atomic(ctx context.Context, fn func(ctx context.Context, repo Repository) error) error
 	DefaultNotificationParams() NotificationParamsRepository
 	Tasks() TaskRepository
 	Events() EventRepository
@@ -18,17 +19,19 @@ type Service struct {
 	repo        Repository
 	notifierJob *NotifierJob
 	notifier    Notifier
+	tr          *trManager.Manager
 }
 
 type Config struct {
 	CheckTasksPeriod time.Duration
 }
 
-func New(_ context.Context, repo Repository, notifier Notifier, cfg Config) *Service {
+func New(_ context.Context, repo Repository, trManger *trManager.Manager, notifier Notifier, cfg Config) *Service {
 	s := &Service{
 		repo:        repo,
-		notifierJob: NewNotifierJob(repo, notifier, cfg),
+		notifierJob: NewNotifierJob(repo, notifier, cfg, trManger),
 		notifier:    notifier,
+		tr:          trManger,
 	}
 
 	return s
