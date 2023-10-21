@@ -64,7 +64,7 @@ func main() { //nolint:funlen // main can be long
 	jwtGen := jwt.NewJwtGen(cfg.JWT)
 	jwtMiddleware := authmiddleware.NewJWT(jwtGen)
 	authRepo := authorizationRepository.New(db)
-	authService := authorizationService.NewAuth(authRepo, &authorizationService.HashGen{}, jwtGen)
+	authService := authorizationService.NewAuth(authRepo, &authorizationService.HashGen{}, jwtGen, trManager)
 	authHandler := authorizatoinHandler.New(authService)
 
 	router := server.Route(
