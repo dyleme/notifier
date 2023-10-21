@@ -9,6 +9,8 @@ import (
 	"os/signal"
 
 	"github.com/Dyleme/timecache"
+	trmpgx "github.com/avito-tech/go-transaction-manager/pgxv5"
+	"github.com/avito-tech/go-transaction-manager/trm/manager"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"golang.org/x/sync/errgroup"
@@ -52,8 +54,10 @@ func main() { //nolint:funlen // main can be long
 
 	notif := notifier.New(ctx, nil, cfg.Notifier)
 	cache := timetableRepository.NewUniversalCache()
-	repo := timetableRepository.New(db, cache)
-	service := timetableService.New(ctx, repo, notif, cfg.Service)
+	trManager, err := manager.New(trmpgx.NewDefaultFactory(db))
+	trCtxGetter := trmpgx.DefaultCtxGetter
+	repo := timetableRepository.New(db, cache, trCtxGetter)
+	service := timetableService.New(ctx, repo, trManager, notif, cfg.Service)
 	timeTableHandler := timetableHandler.New(service)
 
 	apiTokenMiddleware := authmiddleware.NewAPIToken(cfg.APIKey)

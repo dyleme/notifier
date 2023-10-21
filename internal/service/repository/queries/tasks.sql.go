@@ -25,8 +25,8 @@ type AddTaskParams struct {
 	Periodic bool   `db:"periodic"`
 }
 
-func (q *Queries) AddTask(ctx context.Context, arg AddTaskParams) (Task, error) {
-	row := q.db.QueryRow(ctx, addTask, arg.UserID, arg.Message, arg.Periodic)
+func (q *Queries) AddTask(ctx context.Context, db DBTX, arg AddTaskParams) (Task, error) {
+	row := db.QueryRow(ctx, addTask, arg.UserID, arg.Message, arg.Periodic)
 	var i Task
 	err := row.Scan(
 		&i.ID,
@@ -46,8 +46,8 @@ WHERE user_id = $1
   AND archived = FALSE
 `
 
-func (q *Queries) CountListTasks(ctx context.Context, userID int32) (int64, error) {
-	row := q.db.QueryRow(ctx, countListTasks, userID)
+func (q *Queries) CountListTasks(ctx context.Context, db DBTX, userID int32) (int64, error) {
+	row := db.QueryRow(ctx, countListTasks, userID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -65,8 +65,8 @@ type DeleteTaskParams struct {
 	UserID int32 `db:"user_id"`
 }
 
-func (q *Queries) DeleteTask(ctx context.Context, arg DeleteTaskParams) (int64, error) {
-	result, err := q.db.Exec(ctx, deleteTask, arg.ID, arg.UserID)
+func (q *Queries) DeleteTask(ctx context.Context, db DBTX, arg DeleteTaskParams) (int64, error) {
+	result, err := db.Exec(ctx, deleteTask, arg.ID, arg.UserID)
 	if err != nil {
 		return 0, err
 	}
@@ -85,8 +85,8 @@ type GetTaskParams struct {
 	UserID int32 `db:"user_id"`
 }
 
-func (q *Queries) GetTask(ctx context.Context, arg GetTaskParams) (Task, error) {
-	row := q.db.QueryRow(ctx, getTask, arg.ID, arg.UserID)
+func (q *Queries) GetTask(ctx context.Context, db DBTX, arg GetTaskParams) (Task, error) {
+	row := db.QueryRow(ctx, getTask, arg.ID, arg.UserID)
 	var i Task
 	err := row.Scan(
 		&i.ID,
@@ -115,8 +115,8 @@ type ListTasksParams struct {
 	Lim    int32 `db:"lim"`
 }
 
-func (q *Queries) ListTasks(ctx context.Context, arg ListTasksParams) ([]Task, error) {
-	rows, err := q.db.Query(ctx, listTasks, arg.UserID, arg.Off, arg.Lim)
+func (q *Queries) ListTasks(ctx context.Context, db DBTX, arg ListTasksParams) ([]Task, error) {
+	rows, err := db.Query(ctx, listTasks, arg.UserID, arg.Off, arg.Lim)
 	if err != nil {
 		return nil, err
 	}
@@ -159,8 +159,8 @@ type UpdateTaskParams struct {
 	UserID   int32  `db:"user_id"`
 }
 
-func (q *Queries) UpdateTask(ctx context.Context, arg UpdateTaskParams) error {
-	_, err := q.db.Exec(ctx, updateTask,
+func (q *Queries) UpdateTask(ctx context.Context, db DBTX, arg UpdateTaskParams) error {
+	_, err := db.Exec(ctx, updateTask,
 		arg.Message,
 		arg.Periodic,
 		arg.Archived,

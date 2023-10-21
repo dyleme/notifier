@@ -1,20 +1,22 @@
 package repository
 
 import (
-	"context"
-	"fmt"
-
-	"github.com/jackc/pgx/v5"
+	trmpgx "github.com/avito-tech/go-transaction-manager/pgxv5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Dyleme/Notifier/internal/service/repository/queries"
-	"github.com/Dyleme/Notifier/internal/service/service"
 )
 
 type Repository struct {
 	db    *pgxpool.Pool
 	q     *queries.Queries
 	cache Cache
+
+	periodicEventRepository      *PeriodicEventRepository
+	eventsRepository             *EventRepository
+	taskRepository               *TaskRepository
+	notificationParamsRepository *NotificationParamsRepository
+	tgImagesRepository           *TgImagesRepository
 }
 
 type Cache interface {
@@ -23,34 +25,36 @@ type Cache interface {
 	Add(key string, obj any) error
 }
 
-func New(pool *pgxpool.Pool, cache Cache) *Repository {
-	return &Repository{db: pool, q: queries.New(pool), cache: cache}
-}
-
-func (r *Repository) WithTx(tx pgx.Tx) *Repository {
-	return &Repository{q: r.q.WithTx(tx), db: nil, cache: r.cache}
-}
-
-func (r *Repository) Atomic(ctx context.Context, fn func(ctx context.Context, repository service.Repository) error) error {
-	op := "Repository.Atomic: %w"
-	if r.db == nil {
-		return fmt.Errorf(op, fmt.Errorf("cannot start transaction from another transaction"))
+func New(pool *pgxpool.Pool, cache Cache, getter *trmpgx.CtxGetter) *Repository {
+	q := queries.New()
+	return &Repository{
+		db:    pool,
+		cache: cache,
+		periodicEventRepository: &PeriodicEventRepository{
+			q:      q,
+			db:     pool,
+			getter: getter,
+		},
+		eventsRepository: &EventRepository{
+			q:      q,
+			db:     pool,
+			getter: getter,
+		},
+		taskRepository: &TaskRepository{
+			q:      q,
+			getter: getter,
+			db:     pool,
+		},
+		notificationParamsRepository: &NotificationParamsRepository{
+			q:      q,
+			getter: getter,
+			db:     pool,
+		},
+		tgImagesRepository: &TgImagesRepository{
+			q:      q,
+			cache:  cache,
+			getter: getter,
+			db:     pool,
+		},
 	}
-	tx, err := r.db.BeginTx(ctx, pgx.TxOptions{}) //nolint:exhaustruct // default value for transactions
-	if err != nil {
-		return fmt.Errorf(op, err)
-	}
-	if err := fn(ctx, r.WithTx(tx)); err != nil {
-		if rollErr := tx.Rollback(ctx); rollErr != nil {
-			return fmt.Errorf(op, fmt.Errorf("rolling back transaction %w, (original error %w)", rollErr, err))
-		}
-
-		return fmt.Errorf(op, err)
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf(op, fmt.Errorf("committing transaction: %w", err))
-	}
-
-	return nil
 }

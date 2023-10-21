@@ -28,10 +28,10 @@ func (s *Service) CreateEvent(ctx context.Context, event domains.Event) (domains
 	op := "Service.CreateEvent: %w"
 	var createdEvent domains.Event
 
-	err := s.repo.Atomic(ctx, func(ctx context.Context, r Repository) error {
+	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		var err error
 
-		createdEvent, err = r.Events().Add(ctx, event)
+		createdEvent, err = s.repo.Events().Add(ctx, event)
 		if err != nil {
 			return err //nolint:wrapcheck //wrapping later
 		}
@@ -54,14 +54,14 @@ func (s *Service) AddTaskToEvent(ctx context.Context, userID, taskID int, start 
 	op := "Servcie.AddTaskToEvent: %w"
 	var event domains.Event
 
-	err := s.repo.Atomic(ctx, func(ctx context.Context, r Repository) error {
-		task, err := r.Tasks().Get(ctx, taskID, userID)
+	err := s.tr.Do(ctx, func(ctx context.Context) error {
+		task, err := s.repo.Tasks().Get(ctx, taskID, userID)
 		if err != nil {
 			return err //nolint:wrapcheck //wrapping later
 		}
 
 		event = domains.EventFromTask(task, start, description)
-		event, err = r.Events().Add(ctx, event)
+		event, err = s.repo.Events().Add(ctx, event)
 		if err != nil {
 			return err //nolint:wrapcheck //wrapping later
 		}
@@ -130,8 +130,8 @@ type EventUpdateParams struct {
 func (s *Service) UpdateEvent(ctx context.Context, params EventUpdateParams) (domains.Event, error) {
 	op := "Service.UpdateEvent: %w"
 	var event domains.Event
-	err := s.repo.Atomic(ctx, func(ctx context.Context, repo Repository) error {
-		e, err := repo.Events().Get(ctx, params.ID, params.UserID)
+	err := s.tr.Do(ctx, func(ctx context.Context) error {
+		e, err := s.repo.Events().Get(ctx, params.ID, params.UserID)
 		if err != nil {
 			return err //nolint:wrapcheck //wrapping later
 		}
@@ -167,8 +167,8 @@ type AbstractEvent struct {
 }
 
 func (s *Service) setEventDoneStatusBasicEvent(ctx context.Context, absEvent AbstractEvent) error {
-	err := s.repo.Atomic(ctx, func(ctx context.Context, repo Repository) error {
-		e, err := repo.Events().Get(ctx, absEvent.EventID, absEvent.UserID)
+	err := s.tr.Do(ctx, func(ctx context.Context) error {
+		e, err := s.repo.Events().Get(ctx, absEvent.EventID, absEvent.UserID)
 		if err != nil {
 			return fmt.Errorf("events get[eventID=%v,userID=%v]: %w", absEvent.EventID, absEvent.UserID, err)
 		}
@@ -178,7 +178,7 @@ func (s *Service) setEventDoneStatusBasicEvent(ctx context.Context, absEvent Abs
 			return fmt.Errorf("delete[eventID=%v]: %w", absEvent.EventID, err)
 		}
 
-		_, err = repo.Events().Update(ctx, e)
+		_, err = s.repo.Events().Update(ctx, e)
 		if err != nil {
 			return fmt.Errorf("events update[eventID=%v]: %w", absEvent.EventID, err)
 		}
@@ -196,13 +196,13 @@ func (s *Service) setEventDoneStatusBasicEvent(ctx context.Context, absEvent Abs
 }
 
 func (s *Service) setEventDoneStatusPeriodicEvent(ctx context.Context, absEvent AbstractEvent) error {
-	err := s.repo.Atomic(ctx, func(ctx context.Context, repo Repository) error {
-		ev, err := repo.PeriodicEvents().Get(ctx, absEvent.EventID, absEvent.UserID)
+	err := s.tr.Do(ctx, func(ctx context.Context) error {
+		ev, err := s.repo.PeriodicEvents().Get(ctx, absEvent.EventID, absEvent.UserID)
 		if err != nil {
 			return fmt.Errorf("periodic events get[eventID=%v,userID=%v]: %w", absEvent.EventID, absEvent.UserID, err)
 		}
 
-		err = repo.PeriodicEvents().MarkNotificationDone(ctx, ev.ID, ev.UserID)
+		err = s.repo.PeriodicEvents().MarkNotificationDone(ctx, ev.ID, ev.UserID)
 		if err != nil {
 			return fmt.Errorf("periodic events mark notified[notifID:%v]: %w", ev.Notification.ID, err)
 		}
@@ -211,7 +211,7 @@ func (s *Service) setEventDoneStatusPeriodicEvent(ctx context.Context, absEvent 
 		if err != nil {
 			return fmt.Errorf("next notification: %w", serverrors.NewBusinessLogicError(err.Error()))
 		}
-		_, err = repo.PeriodicEvents().AddNotification(ctx, nextNotif)
+		_, err = s.repo.PeriodicEvents().AddNotification(ctx, nextNotif)
 		if err != nil {
 			return fmt.Errorf("periodic events add notification: %w", err)
 		}
@@ -264,8 +264,8 @@ func (s *Service) DeleteEvent(ctx context.Context, userID, eventID int) error {
 
 func (s *Service) DelayEvent(ctx context.Context, userID, eventID int, till time.Time) error {
 	op := "Service.DelayEvent: %w"
-	err := s.repo.Atomic(ctx, func(ctx context.Context, repo Repository) error {
-		err := repo.Events().Delay(ctx, eventID, userID, till)
+	err := s.tr.Do(ctx, func(ctx context.Context) error {
+		err := s.repo.Events().Delay(ctx, eventID, userID, till)
 		if err != nil {
 			return err //nolint:wrapcheck //wraping later
 		}

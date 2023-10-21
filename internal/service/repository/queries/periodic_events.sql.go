@@ -41,8 +41,8 @@ type AddPeriodicEventParams struct {
 	NotificationParams *domains.NotificationParams `db:"notification_params"`
 }
 
-func (q *Queries) AddPeriodicEvent(ctx context.Context, arg AddPeriodicEventParams) (PeriodicEvent, error) {
-	row := q.db.QueryRow(ctx, addPeriodicEvent,
+func (q *Queries) AddPeriodicEvent(ctx context.Context, db DBTX, arg AddPeriodicEventParams) (PeriodicEvent, error) {
+	row := db.QueryRow(ctx, addPeriodicEvent,
 		arg.UserID,
 		arg.Text,
 		arg.Start,
@@ -82,8 +82,8 @@ type AddPeriodicEventNotificationParams struct {
 	SendTime        pgtype.Timestamptz `db:"send_time"`
 }
 
-func (q *Queries) AddPeriodicEventNotification(ctx context.Context, arg AddPeriodicEventNotificationParams) (PeriodicEventsNotification, error) {
-	row := q.db.QueryRow(ctx, addPeriodicEventNotification, arg.PeriodicEventID, arg.SendTime)
+func (q *Queries) AddPeriodicEventNotification(ctx context.Context, db DBTX, arg AddPeriodicEventNotificationParams) (PeriodicEventsNotification, error) {
+	row := db.QueryRow(ctx, addPeriodicEventNotification, arg.PeriodicEventID, arg.SendTime)
 	var i PeriodicEventsNotification
 	err := row.Scan(
 		&i.ID,
@@ -102,8 +102,8 @@ FROM periodic_events
 WHERE user_id = $1
 `
 
-func (q *Queries) CountListPeriodicEvents(ctx context.Context, userID int32) (int64, error) {
-	row := q.db.QueryRow(ctx, countListPeriodicEvents, userID)
+func (q *Queries) CountListPeriodicEvents(ctx context.Context, db DBTX, userID int32) (int64, error) {
+	row := db.QueryRow(ctx, countListPeriodicEvents, userID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -124,8 +124,8 @@ type CountListPeriodicEventsInPeriodParams struct {
 	ToTime   pgtype.Timestamptz `db:"to_time"`
 }
 
-func (q *Queries) CountListPeriodicEventsInPeriod(ctx context.Context, arg CountListPeriodicEventsInPeriodParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countListPeriodicEventsInPeriod, arg.UserID, arg.FromTime, arg.ToTime)
+func (q *Queries) CountListPeriodicEventsInPeriod(ctx context.Context, db DBTX, arg CountListPeriodicEventsInPeriodParams) (int64, error) {
+	row := db.QueryRow(ctx, countListPeriodicEventsInPeriod, arg.UserID, arg.FromTime, arg.ToTime)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -139,8 +139,8 @@ ORDER BY send_time DESC
 LIMIT 1
 `
 
-func (q *Queries) CurrentPeriodicEventNotification(ctx context.Context, periodicEventID int32) (PeriodicEventsNotification, error) {
-	row := q.db.QueryRow(ctx, currentPeriodicEventNotification, periodicEventID)
+func (q *Queries) CurrentPeriodicEventNotification(ctx context.Context, db DBTX, periodicEventID int32) (PeriodicEventsNotification, error) {
+	row := db.QueryRow(ctx, currentPeriodicEventNotification, periodicEventID)
 	var i PeriodicEventsNotification
 	err := row.Scan(
 		&i.ID,
@@ -165,8 +165,8 @@ type DelayPeriodicEventNotificationParams struct {
 	ID   int32            `db:"id"`
 }
 
-func (q *Queries) DelayPeriodicEventNotification(ctx context.Context, arg DelayPeriodicEventNotificationParams) error {
-	_, err := q.db.Exec(ctx, delayPeriodicEventNotification, arg.Till, arg.ID)
+func (q *Queries) DelayPeriodicEventNotification(ctx context.Context, db DBTX, arg DelayPeriodicEventNotificationParams) error {
+	_, err := db.Exec(ctx, delayPeriodicEventNotification, arg.Till, arg.ID)
 	return err
 }
 
@@ -183,8 +183,8 @@ type DeletePeriodicEventParams struct {
 	UserID int32 `db:"user_id"`
 }
 
-func (q *Queries) DeletePeriodicEvent(ctx context.Context, arg DeletePeriodicEventParams) ([]PeriodicEvent, error) {
-	rows, err := q.db.Query(ctx, deletePeriodicEvent, arg.ID, arg.UserID)
+func (q *Queries) DeletePeriodicEvent(ctx context.Context, db DBTX, arg DeletePeriodicEventParams) ([]PeriodicEvent, error) {
+	rows, err := db.Query(ctx, deletePeriodicEvent, arg.ID, arg.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -226,8 +226,8 @@ type DeletePeriodicEventNotificationParams struct {
 	PeriodicEventID int32 `db:"periodic_event_id"`
 }
 
-func (q *Queries) DeletePeriodicEventNotification(ctx context.Context, arg DeletePeriodicEventNotificationParams) ([]PeriodicEventsNotification, error) {
-	rows, err := q.db.Query(ctx, deletePeriodicEventNotification, arg.ID, arg.PeriodicEventID)
+func (q *Queries) DeletePeriodicEventNotification(ctx context.Context, db DBTX, arg DeletePeriodicEventNotificationParams) ([]PeriodicEventsNotification, error) {
+	rows, err := db.Query(ctx, deletePeriodicEventNotification, arg.ID, arg.PeriodicEventID)
 	if err != nil {
 		return nil, err
 	}
@@ -259,8 +259,8 @@ WHERE periodic_event_id = $1
 RETURNING id, created_at, periodic_event_id, send_time, sended, done
 `
 
-func (q *Queries) DeletePeriodicEventNotifications(ctx context.Context, periodicEventID int32) ([]PeriodicEventsNotification, error) {
-	rows, err := q.db.Query(ctx, deletePeriodicEventNotifications, periodicEventID)
+func (q *Queries) DeletePeriodicEventNotifications(ctx context.Context, db DBTX, periodicEventID int32) ([]PeriodicEventsNotification, error) {
+	rows, err := db.Query(ctx, deletePeriodicEventNotifications, periodicEventID)
 	if err != nil {
 		return nil, err
 	}
@@ -298,8 +298,8 @@ type GetPeriodicEventParams struct {
 	UserID int32 `db:"user_id"`
 }
 
-func (q *Queries) GetPeriodicEvent(ctx context.Context, arg GetPeriodicEventParams) (PeriodicEvent, error) {
-	row := q.db.QueryRow(ctx, getPeriodicEvent, arg.ID, arg.UserID)
+func (q *Queries) GetPeriodicEvent(ctx context.Context, db DBTX, arg GetPeriodicEventParams) (PeriodicEvent, error) {
+	row := db.QueryRow(ctx, getPeriodicEvent, arg.ID, arg.UserID)
 	var i PeriodicEvent
 	err := row.Scan(
 		&i.ID,
@@ -344,8 +344,8 @@ type ListNearestPeriodicEventsRow struct {
 	Done               bool                        `db:"done"`
 }
 
-func (q *Queries) ListNearestPeriodicEvents(ctx context.Context, nearestTime pgtype.Timestamptz) ([]ListNearestPeriodicEventsRow, error) {
-	rows, err := q.db.Query(ctx, listNearestPeriodicEvents, nearestTime)
+func (q *Queries) ListNearestPeriodicEvents(ctx context.Context, db DBTX, nearestTime pgtype.Timestamptz) ([]ListNearestPeriodicEventsRow, error) {
+	rows, err := db.Query(ctx, listNearestPeriodicEvents, nearestTime)
 	if err != nil {
 		return nil, err
 	}
@@ -394,8 +394,8 @@ type ListPeriodicEventsParams struct {
 	Lim    int32 `db:"lim"`
 }
 
-func (q *Queries) ListPeriodicEvents(ctx context.Context, arg ListPeriodicEventsParams) ([]PeriodicEvent, error) {
-	rows, err := q.db.Query(ctx, listPeriodicEvents, arg.UserID, arg.Off, arg.Lim)
+func (q *Queries) ListPeriodicEvents(ctx context.Context, db DBTX, arg ListPeriodicEventsParams) ([]PeriodicEvent, error) {
+	rows, err := db.Query(ctx, listPeriodicEvents, arg.UserID, arg.Off, arg.Lim)
 	if err != nil {
 		return nil, err
 	}
@@ -461,8 +461,8 @@ type ListPeriodicEventsInPeriodRow struct {
 	Done               bool                        `db:"done"`
 }
 
-func (q *Queries) ListPeriodicEventsInPeriod(ctx context.Context, arg ListPeriodicEventsInPeriodParams) ([]ListPeriodicEventsInPeriodRow, error) {
-	rows, err := q.db.Query(ctx, listPeriodicEventsInPeriod,
+func (q *Queries) ListPeriodicEventsInPeriod(ctx context.Context, db DBTX, arg ListPeriodicEventsInPeriodParams) ([]ListPeriodicEventsInPeriodRow, error) {
+	rows, err := db.Query(ctx, listPeriodicEventsInPeriod,
 		arg.UserID,
 		arg.FromTime,
 		arg.ToTime,
@@ -538,8 +538,8 @@ type ListPeriodicEventsWithNotificationsRow struct {
 	Done               bool                        `db:"done"`
 }
 
-func (q *Queries) ListPeriodicEventsWithNotifications(ctx context.Context, arg ListPeriodicEventsWithNotificationsParams) ([]ListPeriodicEventsWithNotificationsRow, error) {
-	rows, err := q.db.Query(ctx, listPeriodicEventsWithNotifications, arg.UserID, arg.Off, arg.Lim)
+func (q *Queries) ListPeriodicEventsWithNotifications(ctx context.Context, db DBTX, arg ListPeriodicEventsWithNotificationsParams) ([]ListPeriodicEventsWithNotificationsRow, error) {
+	rows, err := db.Query(ctx, listPeriodicEventsWithNotifications, arg.UserID, arg.Off, arg.Lim)
 	if err != nil {
 		return nil, err
 	}
@@ -580,8 +580,8 @@ SET done = TRUE
 WHERE periodic_event_id = $1
 `
 
-func (q *Queries) MarkPeriodicEventNotificationDone(ctx context.Context, periodicEventID int32) error {
-	_, err := q.db.Exec(ctx, markPeriodicEventNotificationDone, periodicEventID)
+func (q *Queries) MarkPeriodicEventNotificationDone(ctx context.Context, db DBTX, periodicEventID int32) error {
+	_, err := db.Exec(ctx, markPeriodicEventNotificationDone, periodicEventID)
 	return err
 }
 
@@ -591,8 +591,8 @@ SET sended = TRUE
 WHERE id = $1
 `
 
-func (q *Queries) MarkPeriodicEventNotificationSended(ctx context.Context, id int32) error {
-	_, err := q.db.Exec(ctx, markPeriodicEventNotificationSended, id)
+func (q *Queries) MarkPeriodicEventNotificationSended(ctx context.Context, db DBTX, id int32) error {
+	_, err := db.Exec(ctx, markPeriodicEventNotificationSended, id)
 	return err
 }
 
@@ -605,8 +605,8 @@ ORDER BY send_time
 LIMIT 1
 `
 
-func (q *Queries) NearestPeriodicEventTime(ctx context.Context) (pgtype.Timestamptz, error) {
-	row := q.db.QueryRow(ctx, nearestPeriodicEventTime)
+func (q *Queries) NearestPeriodicEventTime(ctx context.Context, db DBTX) (pgtype.Timestamptz, error) {
+	row := db.QueryRow(ctx, nearestPeriodicEventTime)
 	var t pgtype.Timestamptz
 	err := row.Scan(&t)
 	return t, err
@@ -636,8 +636,8 @@ type UpdatePeriodicEventParams struct {
 	UserID             int32                       `db:"user_id"`
 }
 
-func (q *Queries) UpdatePeriodicEvent(ctx context.Context, arg UpdatePeriodicEventParams) (PeriodicEvent, error) {
-	row := q.db.QueryRow(ctx, updatePeriodicEvent,
+func (q *Queries) UpdatePeriodicEvent(ctx context.Context, db DBTX, arg UpdatePeriodicEventParams) (PeriodicEvent, error) {
+	row := db.QueryRow(ctx, updatePeriodicEvent,
 		arg.Start,
 		arg.Text,
 		arg.Description,

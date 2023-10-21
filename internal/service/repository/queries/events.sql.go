@@ -43,8 +43,8 @@ type AddEventParams struct {
 	Sended             bool                        `db:"sended"`
 }
 
-func (q *Queries) AddEvent(ctx context.Context, arg AddEventParams) (Event, error) {
-	row := q.db.QueryRow(ctx, addEvent,
+func (q *Queries) AddEvent(ctx context.Context, db DBTX, arg AddEventParams) (Event, error) {
+	row := db.QueryRow(ctx, addEvent,
 		arg.UserID,
 		arg.Text,
 		arg.Start,
@@ -83,8 +83,8 @@ type CountGetEventsInPeriodParams struct {
 	ToTime   pgtype.Timestamptz `db:"to_time"`
 }
 
-func (q *Queries) CountGetEventsInPeriod(ctx context.Context, arg CountGetEventsInPeriodParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countGetEventsInPeriod, arg.UserID, arg.FromTime, arg.ToTime)
+func (q *Queries) CountGetEventsInPeriod(ctx context.Context, db DBTX, arg CountGetEventsInPeriodParams) (int64, error) {
+	row := db.QueryRow(ctx, countGetEventsInPeriod, arg.UserID, arg.FromTime, arg.ToTime)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -96,8 +96,8 @@ FROM events
 WHERE user_id = $1
 `
 
-func (q *Queries) CountListEvents(ctx context.Context, userID int32) (int64, error) {
-	row := q.db.QueryRow(ctx, countListEvents, userID)
+func (q *Queries) CountListEvents(ctx context.Context, db DBTX, userID int32) (int64, error) {
+	row := db.QueryRow(ctx, countListEvents, userID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -117,8 +117,8 @@ type DelayEventParams struct {
 	UserID int32            `db:"user_id"`
 }
 
-func (q *Queries) DelayEvent(ctx context.Context, arg DelayEventParams) error {
-	_, err := q.db.Exec(ctx, delayEvent, arg.Till, arg.ID, arg.UserID)
+func (q *Queries) DelayEvent(ctx context.Context, db DBTX, arg DelayEventParams) error {
+	_, err := db.Exec(ctx, delayEvent, arg.Till, arg.ID, arg.UserID)
 	return err
 }
 
@@ -135,8 +135,8 @@ type DeleteEventParams struct {
 	UserID int32 `db:"user_id"`
 }
 
-func (q *Queries) DeleteEvent(ctx context.Context, arg DeleteEventParams) ([]Event, error) {
-	rows, err := q.db.Query(ctx, deleteEvent, arg.ID, arg.UserID)
+func (q *Queries) DeleteEvent(ctx context.Context, db DBTX, arg DeleteEventParams) ([]Event, error) {
+	rows, err := db.Query(ctx, deleteEvent, arg.ID, arg.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -178,8 +178,8 @@ type GetEventParams struct {
 	UserID int32 `db:"user_id"`
 }
 
-func (q *Queries) GetEvent(ctx context.Context, arg GetEventParams) (Event, error) {
-	row := q.db.QueryRow(ctx, getEvent, arg.ID, arg.UserID)
+func (q *Queries) GetEvent(ctx context.Context, db DBTX, arg GetEventParams) (Event, error) {
+	row := db.QueryRow(ctx, getEvent, arg.ID, arg.UserID)
 	var i Event
 	err := row.Scan(
 		&i.ID,
@@ -213,8 +213,8 @@ type GetEventsInPeriodParams struct {
 	Lim      int32              `db:"lim"`
 }
 
-func (q *Queries) GetEventsInPeriod(ctx context.Context, arg GetEventsInPeriodParams) ([]Event, error) {
-	rows, err := q.db.Query(ctx, getEventsInPeriod,
+func (q *Queries) GetEventsInPeriod(ctx context.Context, db DBTX, arg GetEventsInPeriodParams) ([]Event, error) {
+	rows, err := db.Query(ctx, getEventsInPeriod,
 		arg.UserID,
 		arg.FromTime,
 		arg.ToTime,
@@ -264,8 +264,8 @@ type ListEventsParams struct {
 	Lim    int32 `db:"lim"`
 }
 
-func (q *Queries) ListEvents(ctx context.Context, arg ListEventsParams) ([]Event, error) {
-	rows, err := q.db.Query(ctx, listEvents, arg.UserID, arg.Off, arg.Lim)
+func (q *Queries) ListEvents(ctx context.Context, db DBTX, arg ListEventsParams) ([]Event, error) {
+	rows, err := db.Query(ctx, listEvents, arg.UserID, arg.Off, arg.Lim)
 	if err != nil {
 		return nil, err
 	}
@@ -303,8 +303,8 @@ WHERE sended = FALSE
 ORDER BY start
 `
 
-func (q *Queries) ListNearestEvents(ctx context.Context, nearestTime pgtype.Timestamptz) ([]Event, error) {
-	rows, err := q.db.Query(ctx, listNearestEvents, nearestTime)
+func (q *Queries) ListNearestEvents(ctx context.Context, db DBTX, nearestTime pgtype.Timestamptz) ([]Event, error) {
+	rows, err := db.Query(ctx, listNearestEvents, nearestTime)
 	if err != nil {
 		return nil, err
 	}
@@ -340,8 +340,8 @@ SET sended = TRUE
 WHERE id = $1
 `
 
-func (q *Queries) MarkSendedNotificationEvent(ctx context.Context, eventID int32) error {
-	_, err := q.db.Exec(ctx, markSendedNotificationEvent, eventID)
+func (q *Queries) MarkSendedNotificationEvent(ctx context.Context, db DBTX, eventID int32) error {
+	_, err := db.Exec(ctx, markSendedNotificationEvent, eventID)
 	return err
 }
 
@@ -354,8 +354,8 @@ ORDER BY start
 LIMIT 1
 `
 
-func (q *Queries) NearestEventTime(ctx context.Context) (pgtype.Timestamptz, error) {
-	row := q.db.QueryRow(ctx, nearestEventTime)
+func (q *Queries) NearestEventTime(ctx context.Context, db DBTX) (pgtype.Timestamptz, error) {
+	row := db.QueryRow(ctx, nearestEventTime)
 	var t pgtype.Timestamptz
 	err := row.Scan(&t)
 	return t, err
@@ -387,8 +387,8 @@ type UpdateEventParams struct {
 	UserID             int32                       `db:"user_id"`
 }
 
-func (q *Queries) UpdateEvent(ctx context.Context, arg UpdateEventParams) (Event, error) {
-	row := q.db.QueryRow(ctx, updateEvent,
+func (q *Queries) UpdateEvent(ctx context.Context, db DBTX, arg UpdateEventParams) (Event, error) {
+	row := db.QueryRow(ctx, updateEvent,
 		arg.Start,
 		arg.Text,
 		arg.Description,
@@ -429,8 +429,8 @@ type UpdateNotificationParamsParams struct {
 	UserID int32                       `db:"user_id"`
 }
 
-func (q *Queries) UpdateNotificationParams(ctx context.Context, arg UpdateNotificationParamsParams) (*domains.NotificationParams, error) {
-	row := q.db.QueryRow(ctx, updateNotificationParams, arg.Params, arg.ID, arg.UserID)
+func (q *Queries) UpdateNotificationParams(ctx context.Context, db DBTX, arg UpdateNotificationParamsParams) (*domains.NotificationParams, error) {
+	row := db.QueryRow(ctx, updateNotificationParams, arg.Params, arg.ID, arg.UserID)
 	var notification_params *domains.NotificationParams
 	err := row.Scan(&notification_params)
 	return notification_params, err

@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"strings"
 
+	trmpgx "github.com/avito-tech/go-transaction-manager/pgxv5"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Dyleme/Notifier/internal/domains"
 	"github.com/Dyleme/Notifier/internal/service/repository/queries"
@@ -17,12 +19,14 @@ import (
 )
 
 type TgImagesRepository struct {
-	q     *queries.Queries
-	cache Cache
+	q      *queries.Queries
+	cache  Cache
+	getter *trmpgx.CtxGetter
+	db     *pgxpool.Pool
 }
 
 func (r *Repository) TgImages() service.TgImagesRepository {
-	return &TgImagesRepository{q: r.q, cache: r.cache}
+	return r.tgImagesRepository
 }
 
 func newTgImageKey(filename string) string {
@@ -32,7 +36,8 @@ func newTgImageKey(filename string) string {
 func (t TgImagesRepository) Add(ctx context.Context, filename, tgFileID string) error {
 	op := "TgImagesRepository.Add: %w"
 
-	tgImage, err := t.q.AddTgImage(ctx, queries.AddTgImageParams{
+	tx := t.getter.DefaultTrOrDB(ctx, t.db)
+	tgImage, err := t.q.AddTgImage(ctx, tx, queries.AddTgImageParams{
 		Filename: filename,
 		TgFileID: tgFileID,
 	})
@@ -76,7 +81,8 @@ func (t TgImagesRepository) Get(ctx context.Context, filename string) (domains.T
 		return dtoTgImage(tgImage), nil
 	}
 
-	tgImage, err := t.q.GetTgImage(ctx, filename)
+	tx := t.getter.DefaultTrOrDB(ctx, t.db)
+	tgImage, err := t.q.GetTgImage(ctx, tx, filename)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domains.TgImage{}, fmt.Errorf(op, serverrors2.NewNotFoundError(err, "tg image"))

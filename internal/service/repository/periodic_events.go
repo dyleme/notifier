@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"time"
 
+	trmpgx "github.com/avito-tech/go-transaction-manager/pgxv5"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Dyleme/Notifier/internal/domains"
 	"github.com/Dyleme/Notifier/internal/service/repository/queries"
@@ -17,11 +19,13 @@ import (
 )
 
 type PeriodicEventRepository struct {
-	q *queries.Queries
+	q      *queries.Queries
+	db     *pgxpool.Pool
+	getter *trmpgx.CtxGetter
 }
 
 func (r *Repository) PeriodicEvents() service.PeriodicEventsRepository {
-	return &PeriodicEventRepository{q: r.q}
+	return r.periodicEventRepository
 }
 
 func (p *PeriodicEventRepository) combineEventAndNotification(ev queries.PeriodicEvent, notif queries.PeriodicEventsNotification) domains.PeriodicEvent {
@@ -49,7 +53,8 @@ func (p *PeriodicEventRepository) dtoPeriodicEventNotification(n queries.Periodi
 }
 
 func (p *PeriodicEventRepository) Add(ctx context.Context, event domains.PeriodicEvent, notif domains.PeriodicEventNotification) (domains.PeriodicEvent, error) {
-	ev, err := p.q.AddPeriodicEvent(ctx, queries.AddPeriodicEventParams{
+	tx := p.getter.DefaultTrOrDB(ctx, p.db)
+	ev, err := p.q.AddPeriodicEvent(ctx, tx, queries.AddPeriodicEventParams{
 		UserID:             int32(event.UserID),
 		Text:               event.Text,
 		Start:              pgxconv.Timestamptz(time.Time{}.Add(event.Start)),
@@ -62,7 +67,7 @@ func (p *PeriodicEventRepository) Add(ctx context.Context, event domains.Periodi
 		return domains.PeriodicEvent{}, fmt.Errorf("add periodic event: %w", serverrors.NewRepositoryError(err))
 	}
 
-	n, err := p.q.AddPeriodicEventNotification(ctx, queries.AddPeriodicEventNotificationParams{
+	n, err := p.q.AddPeriodicEventNotification(ctx, tx, queries.AddPeriodicEventNotificationParams{
 		PeriodicEventID: ev.ID,
 		SendTime:        pgxconv.Timestamptz(notif.SendTime),
 	})
@@ -76,7 +81,8 @@ func (p *PeriodicEventRepository) Add(ctx context.Context, event domains.Periodi
 func (p *PeriodicEventRepository) Get(ctx context.Context, eventID, userID int) (domains.PeriodicEvent, error) {
 	op := "PeriodicEventRepository.Get: %w"
 
-	ev, err := p.q.GetPeriodicEvent(ctx, queries.GetPeriodicEventParams{
+	tx := p.getter.DefaultTrOrDB(ctx, p.db)
+	ev, err := p.q.GetPeriodicEvent(ctx, tx, queries.GetPeriodicEventParams{
 		ID:     int32(eventID),
 		UserID: int32(userID),
 	})
@@ -84,7 +90,7 @@ func (p *PeriodicEventRepository) Get(ctx context.Context, eventID, userID int) 
 		return domains.PeriodicEvent{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
-	notif, err := p.q.CurrentPeriodicEventNotification(ctx, ev.ID)
+	notif, err := p.q.CurrentPeriodicEventNotification(ctx, tx, ev.ID)
 	if err != nil {
 		return domains.PeriodicEvent{}, fmt.Errorf("current periodic event notif[eventID=%v]: %w", ev.ID, serverrors.NewRepositoryError(err))
 	}
@@ -95,7 +101,8 @@ func (p *PeriodicEventRepository) Get(ctx context.Context, eventID, userID int) 
 func (p *PeriodicEventRepository) Update(ctx context.Context, event service.UpdatePeriodicEventParams) (domains.PeriodicEvent, error) {
 	op := "PeriodicEventRepository.Update: %w"
 
-	ev, err := p.q.UpdatePeriodicEvent(ctx, queries.UpdatePeriodicEventParams{
+	tx := p.getter.DefaultTrOrDB(ctx, p.db)
+	ev, err := p.q.UpdatePeriodicEvent(ctx, tx, queries.UpdatePeriodicEventParams{
 		ID:                 int32(event.ID),
 		UserID:             int32(event.UserID),
 		Start:              pgxconv.Timestamptz(time.Time{}.Add(event.Start)),
@@ -109,7 +116,7 @@ func (p *PeriodicEventRepository) Update(ctx context.Context, event service.Upda
 		return domains.PeriodicEvent{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
-	notif, err := p.q.CurrentPeriodicEventNotification(ctx, ev.ID)
+	notif, err := p.q.CurrentPeriodicEventNotification(ctx, tx, ev.ID)
 	if err != nil {
 		return domains.PeriodicEvent{}, fmt.Errorf("current periodic event notification[eventID=%v]: %w", ev.ID, serverrors.NewRepositoryError(err))
 	}
@@ -120,7 +127,8 @@ func (p *PeriodicEventRepository) Update(ctx context.Context, event service.Upda
 func (p *PeriodicEventRepository) Delete(ctx context.Context, eventID, userID int) error {
 	op := "PeriodicEventRepository.Delete: %w"
 
-	evs, err := p.q.DeletePeriodicEvent(ctx, queries.DeletePeriodicEventParams{
+	tx := p.getter.DefaultTrOrDB(ctx, p.db)
+	evs, err := p.q.DeletePeriodicEvent(ctx, tx, queries.DeletePeriodicEventParams{
 		ID:     int32(eventID),
 		UserID: int32(userID),
 	})
@@ -135,7 +143,8 @@ func (p *PeriodicEventRepository) Delete(ctx context.Context, eventID, userID in
 }
 
 func (p *PeriodicEventRepository) DeleteNotifications(ctx context.Context, eventID int) error {
-	evs, err := p.q.DeletePeriodicEventNotifications(ctx, int32(eventID))
+	tx := p.getter.DefaultTrOrDB(ctx, p.db)
+	evs, err := p.q.DeletePeriodicEventNotifications(ctx, tx, int32(eventID))
 	if err != nil {
 		return fmt.Errorf("delete periodic notification: %w", serverrors.NewRepositoryError(err))
 	}
@@ -149,7 +158,8 @@ func (p *PeriodicEventRepository) DeleteNotifications(ctx context.Context, event
 func (p *PeriodicEventRepository) AddNotification(ctx context.Context, notification domains.PeriodicEventNotification) (domains.PeriodicEventNotification, error) {
 	op := "PeriodicEventRepository.AddNotification: %w"
 
-	n, err := p.q.AddPeriodicEventNotification(ctx, queries.AddPeriodicEventNotificationParams{
+	tx := p.getter.DefaultTrOrDB(ctx, p.db)
+	n, err := p.q.AddPeriodicEventNotification(ctx, tx, queries.AddPeriodicEventNotificationParams{
 		PeriodicEventID: int32(notification.PeriodicEventID),
 		SendTime:        pgxconv.Timestamptz(notification.SendTime),
 	})
@@ -161,7 +171,8 @@ func (p *PeriodicEventRepository) AddNotification(ctx context.Context, notificat
 }
 
 func (p *PeriodicEventRepository) MarkNotificationSend(ctx context.Context, notifID int) error {
-	err := p.q.MarkPeriodicEventNotificationSended(ctx, int32(notifID))
+	tx := p.getter.DefaultTrOrDB(ctx, p.db)
+	err := p.q.MarkPeriodicEventNotificationSended(ctx, tx, int32(notifID))
 	if err != nil {
 		return fmt.Errorf("mark notified: %w", serverrors.NewRepositoryError(err))
 	}
@@ -172,7 +183,8 @@ func (p *PeriodicEventRepository) MarkNotificationSend(ctx context.Context, noti
 func (p *PeriodicEventRepository) GetCurrentNotification(ctx context.Context, eventID int) (domains.PeriodicEventNotification, error) {
 	op := "PeriodicEventRepository.GetCurrentNotification: %w"
 
-	notif, err := p.q.CurrentPeriodicEventNotification(ctx, int32(eventID))
+	tx := p.getter.DefaultTrOrDB(ctx, p.db)
+	notif, err := p.q.CurrentPeriodicEventNotification(ctx, tx, int32(eventID))
 	if err != nil {
 		return domains.PeriodicEventNotification{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
@@ -183,7 +195,8 @@ func (p *PeriodicEventRepository) GetCurrentNotification(ctx context.Context, ev
 func (p *PeriodicEventRepository) DeleteNotification(ctx context.Context, notifID, eventID int) error {
 	op := "PeriodicEventRepository.DeleteNotification: %w"
 
-	deletedNotifs, err := p.q.DeletePeriodicEventNotification(ctx, queries.DeletePeriodicEventNotificationParams{
+	tx := p.getter.DefaultTrOrDB(ctx, p.db)
+	deletedNotifs, err := p.q.DeletePeriodicEventNotification(ctx, tx, queries.DeletePeriodicEventNotificationParams{
 		ID:              int32(notifID),
 		PeriodicEventID: int32(eventID),
 	})
@@ -199,7 +212,8 @@ func (p *PeriodicEventRepository) DeleteNotification(ctx context.Context, notifI
 }
 
 func (p *PeriodicEventRepository) GetNearestNotificationSendTime(ctx context.Context) (time.Time, error) {
-	t, err := p.q.NearestPeriodicEventTime(ctx)
+	tx := p.getter.DefaultTrOrDB(ctx, p.db)
+	t, err := p.q.NearestPeriodicEventTime(ctx, tx)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return time.Time{}, fmt.Errorf("nearest notification send time: %w", serverrors.NewNotFoundError(err, "nearest time"))
@@ -214,7 +228,8 @@ func (p *PeriodicEventRepository) GetNearestNotificationSendTime(ctx context.Con
 func (p *PeriodicEventRepository) ListNotificationsAtSendTime(ctx context.Context, sendTime time.Time) ([]domains.PeriodicEvent, error) {
 	op := "PeriodicEventRepository.ListNotificationsAtSendTime: %w"
 
-	events, err := p.q.ListNearestPeriodicEvents(ctx, pgxconv.Timestamptz(sendTime))
+	tx := p.getter.DefaultTrOrDB(ctx, p.db)
+	events, err := p.q.ListNearestPeriodicEvents(ctx, tx, pgxconv.Timestamptz(sendTime))
 	if err != nil {
 		return nil, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
@@ -242,7 +257,8 @@ func (p *PeriodicEventRepository) ListNotificationsAtSendTime(ctx context.Contex
 }
 
 func (p *PeriodicEventRepository) ListFutureEvents(ctx context.Context, userID int, listParams service.ListParams) ([]domains.PeriodicEvent, error) {
-	events, err := p.q.ListPeriodicEventsWithNotifications(ctx, queries.ListPeriodicEventsWithNotificationsParams{
+	tx := p.getter.DefaultTrOrDB(ctx, p.db)
+	events, err := p.q.ListPeriodicEventsWithNotifications(ctx, tx, queries.ListPeriodicEventsWithNotificationsParams{
 		Off:    int32(listParams.Offset),
 		Lim:    int32(listParams.Limit),
 		UserID: int32(userID),
@@ -278,7 +294,8 @@ func (p *PeriodicEventRepository) ListFutureEvents(ctx context.Context, userID i
 }
 
 func (p *PeriodicEventRepository) MarkNotificationDone(ctx context.Context, eventID, userID int) error {
-	_, err := p.q.GetPeriodicEvent(ctx, queries.GetPeriodicEventParams{
+	tx := p.getter.DefaultTrOrDB(ctx, p.db)
+	_, err := p.q.GetPeriodicEvent(ctx, tx, queries.GetPeriodicEventParams{
 		ID:     int32(eventID),
 		UserID: int32(userID),
 	})
@@ -286,7 +303,7 @@ func (p *PeriodicEventRepository) MarkNotificationDone(ctx context.Context, even
 		return fmt.Errorf("get periodic event: %w", serverrors.NewRepositoryError(err))
 	}
 
-	err = p.q.MarkPeriodicEventNotificationDone(ctx, int32(eventID))
+	err = p.q.MarkPeriodicEventNotificationDone(ctx, tx, int32(eventID))
 	if err != nil {
 		return fmt.Errorf("mark periodic event notif done: %w", serverrors.NewRepositoryError(err))
 	}

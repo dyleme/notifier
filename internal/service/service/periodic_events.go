@@ -48,12 +48,12 @@ func (s *Service) AddPeriodicEvent(ctx context.Context, perEvent domains.Periodi
 	}
 
 	var createdPerEvent domains.PeriodicEvent
-	err = s.repo.Atomic(ctx, func(ctx context.Context, repo Repository) error {
+	err = s.tr.Do(ctx, func(ctx context.Context) error {
 		notification, err := perEvent.NextNotification()
 		if err != nil {
 			return fmt.Errorf("next notification: %w", serverrors.NewBusinessLogicError(err.Error()))
 		}
-		createdPerEvent, err = repo.PeriodicEvents().Add(ctx, perEvent, notification)
+		createdPerEvent, err = s.repo.PeriodicEvents().Add(ctx, perEvent, notification)
 		if err != nil {
 			return fmt.Errorf("add: %w", err)
 		}
@@ -69,9 +69,9 @@ func (s *Service) AddPeriodicEvent(ctx context.Context, perEvent domains.Periodi
 
 func (s *Service) GetPeriodicEvent(ctx context.Context, eventID, userID int) (domains.PeriodicEvent, error) {
 	var ev domains.PeriodicEvent
-	err := s.repo.Atomic(ctx, func(ctx context.Context, repo Repository) error {
+	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		var err error
-		ev, err = repo.PeriodicEvents().Get(ctx, eventID, userID)
+		ev, err = s.repo.PeriodicEvents().Get(ctx, eventID, userID)
 		if err != nil {
 			return fmt.Errorf("get[eventID=%v,userID=%v]: %w", eventID, userID, err)
 		}
@@ -88,13 +88,13 @@ func (s *Service) GetPeriodicEvent(ctx context.Context, eventID, userID int) (do
 func (s *Service) DonePeriodicEvent(ctx context.Context, eventID, userID int) error {
 	op := "Service.DonePeriodicEvent: %w"
 
-	err := s.repo.Atomic(ctx, func(ctx context.Context, repo Repository) error {
-		event, err := repo.PeriodicEvents().Get(ctx, eventID, userID)
+	err := s.tr.Do(ctx, func(ctx context.Context) error {
+		event, err := s.repo.PeriodicEvents().Get(ctx, eventID, userID)
 		if err != nil {
 			return fmt.Errorf("get: %w", err)
 		}
 
-		err = repo.PeriodicEvents().MarkNotificationSend(ctx, event.Notification.ID)
+		err = s.repo.PeriodicEvents().MarkNotificationSend(ctx, event.Notification.ID)
 		if err != nil {
 			return fmt.Errorf("mark notified[notifID=%v]: %w", event.Notification.ID, err)
 		}
@@ -103,7 +103,7 @@ func (s *Service) DonePeriodicEvent(ctx context.Context, eventID, userID int) er
 		if err != nil {
 			return fmt.Errorf("next notification: %w", serverrors.NewBusinessLogicError(err.Error()))
 		}
-		_, err = repo.PeriodicEvents().AddNotification(ctx, nextNotif)
+		_, err = s.repo.PeriodicEvents().AddNotification(ctx, nextNotif)
 		if err != nil {
 			return fmt.Errorf("add notification: %w", err)
 		}
@@ -136,20 +136,20 @@ func (s *Service) UpdatePeriodicEvent(ctx context.Context, perEvent UpdatePeriod
 	}
 
 	var updatedEvent domains.PeriodicEvent
-	err = s.repo.Atomic(ctx, func(ctx context.Context, repo Repository) error {
+	err = s.tr.Do(ctx, func(ctx context.Context) error {
 		var ev domains.PeriodicEvent
-		ev, err = repo.PeriodicEvents().Get(ctx, perEvent.ID, userID)
+		ev, err = s.repo.PeriodicEvents().Get(ctx, perEvent.ID, userID)
 		if err != nil {
 			return fmt.Errorf("get[eventID=%v]: %w", perEvent.ID, err)
 		}
 
-		updatedEvent, err = repo.PeriodicEvents().Update(ctx, perEvent)
+		updatedEvent, err = s.repo.PeriodicEvents().Update(ctx, perEvent)
 		if err != nil {
 			return fmt.Errorf("update: %w", err)
 		}
 
 		if ev.NeedRegenerateNotification(updatedEvent) {
-			err = repo.PeriodicEvents().DeleteNotification(ctx, updatedEvent.Notification.ID, perEvent.ID)
+			err = s.repo.PeriodicEvents().DeleteNotification(ctx, updatedEvent.Notification.ID, perEvent.ID)
 			if err != nil {
 				return fmt.Errorf("delete notification: %w", err)
 			}
@@ -158,7 +158,7 @@ func (s *Service) UpdatePeriodicEvent(ctx context.Context, perEvent UpdatePeriod
 			if err != nil {
 				return fmt.Errorf("next notification: %w", serverrors.NewBusinessLogicError(err.Error()))
 			}
-			_, err = repo.PeriodicEvents().AddNotification(ctx, nextNotif)
+			_, err = s.repo.PeriodicEvents().AddNotification(ctx, nextNotif)
 			if err != nil {
 				return fmt.Errorf("add notification: %w", err)
 			}
@@ -176,18 +176,18 @@ func (s *Service) UpdatePeriodicEvent(ctx context.Context, perEvent UpdatePeriod
 func (s *Service) DeletePeriodicEvent(ctx context.Context, eventID, userID int) error {
 	op := "Service.DeletePeriodicEvent: %w"
 
-	err := s.repo.Atomic(ctx, func(ctx context.Context, repo Repository) error {
-		event, err := repo.PeriodicEvents().Get(ctx, eventID, userID)
+	err := s.tr.Do(ctx, func(ctx context.Context) error {
+		event, err := s.repo.PeriodicEvents().Get(ctx, eventID, userID)
 		if err != nil {
 			return fmt.Errorf("get current notifications: %w", err)
 		}
 
-		err = repo.PeriodicEvents().DeleteNotifications(ctx, event.ID)
+		err = s.repo.PeriodicEvents().DeleteNotifications(ctx, event.ID)
 		if err != nil {
 			return fmt.Errorf("delete notification: %w", err)
 		}
 
-		err = repo.PeriodicEvents().Delete(ctx, eventID, userID)
+		err = s.repo.PeriodicEvents().Delete(ctx, eventID, userID)
 		if err != nil {
 			return fmt.Errorf("delete: %w", err)
 		}

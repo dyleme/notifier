@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	trManager "github.com/avito-tech/go-transaction-manager/trm/manager"
+
 	"github.com/Dyleme/Notifier/internal/domains"
 	"github.com/Dyleme/Notifier/pkg/log"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
@@ -26,6 +28,7 @@ type NotifierJob struct {
 	checkPeriod  time.Duration
 	nextSendTime time.Time
 	timer        *time.Timer
+	tr           *trManager.Manager
 }
 
 func NewNotifierJob(repo Repository, notifier Notifier, config Config) *NotifierJob {
@@ -240,13 +243,13 @@ func (nj *NotifierJob) markNotified(ctx context.Context, notif domains.SendingNo
 			return fmt.Errorf("mark notified: %w", err)
 		}
 	case domains.PeriodicEventType:
-		err := nj.repo.Atomic(ctx, func(ctx context.Context, repo Repository) error {
-			ev, err := repo.PeriodicEvents().Get(ctx, notif.EventID, notif.UserID)
+		err := nj.tr.Do(ctx, func(ctx context.Context) error {
+			ev, err := nj.repo.PeriodicEvents().Get(ctx, notif.EventID, notif.UserID)
 			if err != nil {
 				return fmt.Errorf("get[eventID=%v,userID=%v]: %w", notif.EventID, notif.UserID, err)
 			}
 
-			err = repo.PeriodicEvents().MarkNotificationSend(ctx, ev.Notification.ID)
+			err = nj.repo.PeriodicEvents().MarkNotificationSend(ctx, ev.Notification.ID)
 			if err != nil {
 				return fmt.Errorf("mark notified: %w", err)
 			}
