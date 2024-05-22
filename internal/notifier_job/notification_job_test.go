@@ -1,4 +1,4 @@
-package service_test
+package notifier_job_test
 
 import (
 	"context"

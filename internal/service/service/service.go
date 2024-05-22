@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/Dyleme/Notifier/internal/domains"
 	trManager "github.com/avito-tech/go-transaction-manager/trm/manager"
 )
 
@@ -17,19 +18,24 @@ type Repository interface {
 
 type Service struct {
 	repo        Repository
-	notifierJob *NotifierJob
 	notifier    Notifier
+	notifierJob NotifierJob
 	tr          *trManager.Manager
 }
 
-type Config struct {
-	CheckTasksPeriod time.Duration
+type Notifier interface {
+	Add(ctx context.Context, notif domains.SendingNotification) error
+	Delete(ctx context.Context, eventID, userID int) error
 }
 
-func New(_ context.Context, repo Repository, trManger *trManager.Manager, notifier Notifier, cfg Config) *Service {
+type NotifierJob interface {
+	UpdateWithTime(ctx context.Context, t time.Time)
+}
+
+func New(repo Repository, trManger *trManager.Manager, notifier Notifier, notifierJob NotifierJob) *Service {
 	s := &Service{
 		repo:        repo,
-		notifierJob: NewNotifierJob(repo, notifier, cfg, trManger),
+		notifierJob: notifierJob,
 		notifier:    notifier,
 		tr:          trManger,
 	}

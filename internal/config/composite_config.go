@@ -8,14 +8,14 @@ import (
 )
 
 type compositeConfig struct {
-	Env          string `env:"ENV" env-required:"true"`
-	Database     databaseConfig
-	JWT          jwtConfig
-	APIKey       apiKeyConfig
-	Server       serverConfig
-	Notifier     notificationConfig
-	EventService timetableServiceConfig
-	Telegram     telegramConfig
+	Env         string `env:"ENV" env-required:"true"`
+	Database    databaseConfig
+	JWT         jwtConfig
+	APIKey      apiKeyConfig
+	Server      serverConfig
+	Notifier    notificationConfig
+	NotifierJob notifierJobConfig
+	Telegram    telegramConfig
 }
 
 type serverConfig struct {
@@ -48,7 +48,7 @@ type notificationConfig struct {
 	CheckPeriod time.Duration `env:"NOTIFICATIONS_CHECK_PERIOD" env-required:"true"`
 }
 
-type timetableServiceConfig struct {
+type notifierJobConfig struct {
 	CheckPeriod time.Duration `env:"TIMETABLE_TASK_CHECK_PERIOD" env-required:"true"`
 }
 

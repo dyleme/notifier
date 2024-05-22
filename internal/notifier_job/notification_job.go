@@ -1,4 +1,4 @@
-package service
+package notifier_job
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	trManager "github.com/avito-tech/go-transaction-manager/trm/manager"
 
 	"github.com/Dyleme/Notifier/internal/domains"
+	"github.com/Dyleme/Notifier/internal/service/service"
 	"github.com/Dyleme/Notifier/pkg/log"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
 	"github.com/Dyleme/Notifier/pkg/utils"
@@ -22,6 +23,30 @@ type Notifier interface {
 	Delete(ctx context.Context, eventID, userID int) error
 }
 
+type Repository interface {
+	DefaultNotificationParams() service.NotificationParamsRepository
+	Events() service.EventRepository
+	PeriodicEvents() service.PeriodicEventsRepository
+}
+
+type PeriodicEventsRepository interface {
+	Get(ctx context.Context, eventID, userID int) (domains.PeriodicEvent, error)
+	GetNearestNotificationSendTime(ctx context.Context) (time.Time, error)
+	ListNotificationsAtSendTime(ctx context.Context, sendTime time.Time) ([]domains.PeriodicEvent, error)
+	MarkNotificationSend(ctx context.Context, notificationID int) error
+}
+
+type EventRepository interface {
+	Get(ctx context.Context, eventID, userID int) (domains.Event, error)
+	GetNearestEventSendTime(ctx context.Context) (time.Time, error)
+	ListEventsBefore(ctx context.Context, sendTime time.Time) ([]domains.Event, error)
+	MarkNotified(ctx context.Context, eventID int) error
+}
+
+type NotificationParamsRepository interface {
+	Get(ctx context.Context, userID int) (domains.NotificationParams, error)
+}
+
 type NotifierJob struct {
 	repo         Repository
 	notifier     Notifier
@@ -31,7 +56,11 @@ type NotifierJob struct {
 	tr           *trManager.Manager
 }
 
-func NewNotifierJob(repo Repository, notifier Notifier, config Config, tr *trManager.Manager) *NotifierJob {
+type Config struct {
+	CheckTasksPeriod time.Duration
+}
+
+func New(repo Repository, notifier Notifier, config Config, tr *trManager.Manager) *NotifierJob {
 	return &NotifierJob{
 		repo:         repo,
 		notifier:     notifier,
@@ -42,7 +71,7 @@ func NewNotifierJob(repo Repository, notifier Notifier, config Config, tr *trMan
 	}
 }
 
-func (nj *NotifierJob) RunJob(ctx context.Context) {
+func (nj *NotifierJob) Run(ctx context.Context) {
 	nj.notify(ctx)
 	for {
 		select {
@@ -112,10 +141,6 @@ func (nj *NotifierJob) setNextNotificationTime(ctx context.Context, t time.Time)
 	log.Ctx(ctx).Debug("notifier service new time", "time", t)
 	nj.nextSendTime = t
 	nj.timer.Reset(time.Until(nj.nextSendTime))
-}
-
-func (s *Service) RunNotificationJob(ctx context.Context) {
-	s.notifierJob.RunJob(ctx)
 }
 
 func (nj *NotifierJob) notifiedBasicEvents(ctx context.Context) []domains.SendingNotification {

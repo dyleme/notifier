@@ -22,6 +22,7 @@ import (
 	authorizationService "github.com/Dyleme/Notifier/internal/authorization/service"
 	"github.com/Dyleme/Notifier/internal/config"
 	"github.com/Dyleme/Notifier/internal/notifier"
+	"github.com/Dyleme/Notifier/internal/notifier_job"
 	"github.com/Dyleme/Notifier/internal/server"
 	custMiddleware "github.com/Dyleme/Notifier/internal/server/middleware"
 	timetableHandler "github.com/Dyleme/Notifier/internal/service/handler"
@@ -57,7 +58,8 @@ func main() { //nolint:funlen // main can be long
 	trManager := manager.Must(trmpgx.NewDefaultFactory(db))
 	trCtxGetter := trmpgx.DefaultCtxGetter
 	repo := timetableRepository.New(db, cache, trCtxGetter)
-	service := timetableService.New(ctx, repo, trManager, notif, cfg.Service)
+	notifierJob := notifier_job.New(repo, notif, cfg.NotifierJob, trManager)
+	service := timetableService.New(repo, trManager, notif, notifierJob)
 	timeTableHandler := timetableHandler.New(service)
 
 	apiTokenMiddleware := authmiddleware.NewAPIToken(cfg.APIKey)
@@ -90,7 +92,7 @@ func main() { //nolint:funlen // main can be long
 
 	notif.SetNotifier(tg)
 
-	go service.RunNotificationJob(ctx)
+	go notifierJob.Run(ctx)
 
 	serv := server.New(router, cfg.Server)
 
