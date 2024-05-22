@@ -7,7 +7,7 @@ import (
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
-type collectableConfig struct {
+type compositeConfig struct {
 	Env          string `env:"ENV" env-required:"true"`
 	Database     databaseConfig
 	JWT          jwtConfig
@@ -58,7 +58,7 @@ type telegramConfig struct {
 
 func Load() (Config, error) {
 	op := "Load: %w"
-	var collectConfigs collectableConfig
+	var collectConfigs compositeConfig
 	err := cleanenv.ReadConfig(".env", &collectConfigs)
 	if err != nil {
 		err = cleanenv.ReadEnv(&collectConfigs)

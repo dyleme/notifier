@@ -20,7 +20,7 @@ type Config struct {
 	Telegram handler.Config
 }
 
-func mapConfig(cc *collectableConfig) Config {
+func mapConfig(cc *compositeConfig) Config {
 	return Config{
 		Env: cc.Env,
 		Database: &sqldatabase.Config{
