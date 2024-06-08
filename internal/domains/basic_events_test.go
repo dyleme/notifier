@@ -4,8 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Dyleme/Notifier/internal/domains"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Dyleme/Notifier/internal/domains"
 )
 
 func TestBasicEvent_NewNotification(t *testing.T) {

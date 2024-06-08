@@ -30,7 +30,7 @@ func (s *Sequence[T]) Next() T {
 
 func (s *Sequence[T]) Generate(amount int) []T {
 	ts := make([]T, 0, amount)
-	for i := 0; i < amount; i++ {
+	for range amount {
 		ts = append(ts, s.Next())
 	}
 
@@ -46,7 +46,7 @@ func NewInt() Sequence[int] {
 }
 
 func NewRandInt() Sequence[int] {
-	return New(rand.IntN(1<<16), func(i int) int {
+	return New(rand.IntN(1<<32), func(i int) int { //nolint:mnd,gosec // max int32, no need to be secure
 		i++
 
 		return i

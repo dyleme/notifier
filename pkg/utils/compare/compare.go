@@ -20,5 +20,6 @@ func TimeCmpWithoutZero(a, b time.Time) int {
 
 func Zero[T comparable](t T) bool {
 	var zero T
+
 	return t == zero
 }

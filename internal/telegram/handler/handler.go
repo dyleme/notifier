@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/go-telegram/bot"
@@ -167,5 +168,5 @@ func (th *TelegramHandler) chatID(update *models.Update) (int64, error) {
 		}
 	}
 
-	return 0, fmt.Errorf("no chat id")
+	return 0, errors.New("no chat id")
 }

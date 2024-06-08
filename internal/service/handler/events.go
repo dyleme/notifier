@@ -65,6 +65,7 @@ func (t EventHandler) PostEventSetTaskID(w http.ResponseWriter, r *http.Request,
 func mapAPIEvent(event domains.BasicEvent) api.Event {
 	return api.Event{
 		Description: &event.Description,
+		Done:        false,
 		Id:          event.ID,
 		Start:       event.Start,
 		Text:        event.Text,
@@ -112,11 +113,12 @@ func (t EventHandler) UpdateEvent(w http.ResponseWriter, r *http.Request, eventI
 	}
 
 	event, err := t.serv.UpdateBasicEvent(r.Context(), domains.BasicEvent{
-		ID:          eventID,
-		UserID:      userID,
-		Text:        description,
-		Description: description,
-		Start:       updateBody.Start,
+		ID:                 eventID,
+		UserID:             userID,
+		Text:               description,
+		Description:        description,
+		Start:              updateBody.Start,
+		NotificationParams: nil,
 	}, userID)
 	if err != nil {
 		responses.Error(w, http.StatusInternalServerError, err)

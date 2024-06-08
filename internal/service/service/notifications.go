@@ -10,7 +10,7 @@ import (
 )
 
 //go:generate mockgen -destination=mocks/notifications.go -package=mocks . NotificationsRepository
-type NotificationsRepository interface { //nolint:interfacebloat // need so many interfaces
+type NotificationsRepository interface {
 	Add(ctx context.Context, notification domains.Notification) (domains.Notification, error)
 	List(ctx context.Context, userID int, timeBorderes timeborders.TimeBorders, listParams ListParams) ([]domains.Notification, error)
 	Get(ctx context.Context, id int) (domains.Notification, error)
@@ -35,7 +35,8 @@ func (s *Service) ListNotifications(ctx context.Context, userID int, timeBorders
 	})
 	if err != nil {
 		logError(ctx, err)
-		return nil, err
+
+		return nil, fmt.Errorf("tr: %w", err)
 	}
 
 	return notifications, nil

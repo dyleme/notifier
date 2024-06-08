@@ -70,13 +70,24 @@ gen.go:
 .PHONY: lint
 lint:
 	@echo "----------- Lint project ----------------"
-	@$(LINTER) run
+	@$(LINTER) run -v
 
 
 .PHONY: test
 test:
 	@echo "----------- Test project ----------------"
 	@go test ./...
+
+.PHONY: format
+format:
+	@echo "----------- gci ----------------"
+	gci write cmd --skip-generated -s standard -s default -s prefix\(github.com/Dyleme/Notifier\) -s blank -s dot --custom-order
+	gci write internal --skip-generated -s standard -s default -s prefix\(github.com/Dyleme/Notifier\) -s blank -s dot --custom-order
+	gci write pkg --skip-generated -s standard -s default -s prefix\(github.com/Dyleme/Notifier\) -s blank -s dot --custom-order
+	@echo "----------- gofumpt ----------------"
+	gofumpt -w cmd
+	gofumpt -w internal
+	gofumpt -w pkg
 
 
 .PHONY: docker.build

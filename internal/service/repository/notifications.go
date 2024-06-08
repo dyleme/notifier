@@ -6,6 +6,10 @@ import (
 	"fmt"
 	"time"
 
+	trmpgx "github.com/avito-tech/go-transaction-manager/pgxv5"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/Dyleme/Notifier/internal/domains"
 	"github.com/Dyleme/Notifier/internal/service/repository/queries"
 	"github.com/Dyleme/Notifier/internal/service/service"
@@ -13,9 +17,6 @@ import (
 	"github.com/Dyleme/Notifier/pkg/sql/pgxconv"
 	"github.com/Dyleme/Notifier/pkg/utils"
 	"github.com/Dyleme/Notifier/pkg/utils/timeborders"
-	trmpgx "github.com/avito-tech/go-transaction-manager/pgxv5"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type NotificationsRepository struct {
@@ -30,7 +31,7 @@ func (r *Repository) Notifications() service.NotificationsRepository {
 
 const UnkownEventType = queries.EventType("unknown_type")
 
-func (_ *NotificationsRepository) repoEventType(eventType domains.EventType) (queries.EventType, error) {
+func (*NotificationsRepository) repoEventType(eventType domains.EventType) (queries.EventType, error) {
 	switch eventType {
 	case domains.PeriodicEventType:
 		return queries.EventTypePeriodicEvent, nil
@@ -41,7 +42,7 @@ func (_ *NotificationsRepository) repoEventType(eventType domains.EventType) (qu
 	}
 }
 
-func (_ *NotificationsRepository) domainEventType(eventType queries.EventType) (domains.EventType, error) {
+func (*NotificationsRepository) domainEventType(eventType queries.EventType) (domains.EventType, error) {
 	switch eventType {
 	case queries.EventTypePeriodicEvent:
 		return domains.PeriodicEventType, nil
@@ -57,13 +58,18 @@ func (n *NotificationsRepository) dto(notif queries.Notification) (domains.Notif
 	if err != nil {
 		return domains.Notification{}, fmt.Errorf("domain event type: %w", err)
 	}
+
 	return domains.Notification{
-		ID:        int(notif.ID),
-		UserID:    int(notif.UserID),
-		Text:      notif.Text,
-		EventID:   int(notif.EventID),
-		EventType: eventType,
-		SendTime:  pgxconv.TimeWithZone(notif.SendTime),
+		ID:          int(notif.ID),
+		UserID:      int(notif.UserID),
+		Text:        notif.Text,
+		Description: pgxconv.String(notif.Description),
+		EventType:   eventType,
+		EventID:     int(notif.EventID),
+		Params:      notif.NotificationParams,
+		SendTime:    pgxconv.TimeWithZone(notif.SendTime),
+		Sended:      notif.Sended,
+		Done:        notif.Done,
 	}, nil
 }
 
@@ -87,6 +93,7 @@ func (n *NotificationsRepository) Add(ctx context.Context, notification domains.
 
 	return n.dto(notif)
 }
+
 func (n *NotificationsRepository) List(ctx context.Context, userID int, timeBorderes timeborders.TimeBorders, listParams service.ListParams) ([]domains.Notification, error) {
 	tx := n.getter.DefaultTrOrDB(ctx, n.db)
 
@@ -105,8 +112,14 @@ func (n *NotificationsRepository) List(ctx context.Context, userID int, timeBord
 		return nil, fmt.Errorf("list user notifications: %w", serverrors.NewRepositoryError(err))
 	}
 
-	return utils.DtoErrorSlice(notifs, n.dto)
+	domainNotifs, err := utils.DtoErrorSlice(notifs, n.dto)
+	if err != nil {
+		return nil, fmt.Errorf("list user notifications: %w", serverrors.NewRepositoryError(err))
+	}
+
+	return domainNotifs, nil
 }
+
 func (n *NotificationsRepository) Get(ctx context.Context, id int) (domains.Notification, error) {
 	tx := n.getter.DefaultTrOrDB(ctx, n.db)
 
@@ -117,6 +130,7 @@ func (n *NotificationsRepository) Get(ctx context.Context, id int) (domains.Noti
 
 	return n.dto(notif)
 }
+
 func (n *NotificationsRepository) GetLatest(ctx context.Context, eventdID int) (domains.Notification, error) {
 	tx := n.getter.DefaultTrOrDB(ctx, n.db)
 
@@ -127,6 +141,7 @@ func (n *NotificationsRepository) GetLatest(ctx context.Context, eventdID int) (
 
 	return n.dto(notif)
 }
+
 func (n *NotificationsRepository) Update(ctx context.Context, notification domains.Notification) error {
 	tx := n.getter.DefaultTrOrDB(ctx, n.db)
 
@@ -171,7 +186,12 @@ func (n *NotificationsRepository) ListNotSended(ctx context.Context, till time.T
 		return nil, fmt.Errorf("list not sended notifiations: %w", serverrors.NewRepositoryError(err))
 	}
 
-	return utils.DtoErrorSlice(ns, n.dto)
+	domainNotifs, err := utils.DtoErrorSlice(ns, n.dto)
+	if err != nil {
+		return nil, fmt.Errorf("list not sended notifiations: %w", serverrors.NewRepositoryError(err))
+	}
+
+	return domainNotifs, nil
 }
 
 func (n *NotificationsRepository) GetNearest(ctx context.Context, till time.Time) (domains.Notification, error) {
@@ -180,7 +200,7 @@ func (n *NotificationsRepository) GetNearest(ctx context.Context, till time.Time
 	notif, err := n.q.GetNearestNotification(ctx, tx, pgxconv.Timestamptz(till))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return domains.Notification{}, serverrors.NewNotFoundError(err, "notification")
+			return domains.Notification{}, fmt.Errorf("get nearest notification: %w", serverrors.NewNotFoundError(err, "notification"))
 		}
 
 		return domains.Notification{}, fmt.Errorf("list not sended notifiations: %w", serverrors.NewRepositoryError(err))

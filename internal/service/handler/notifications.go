@@ -93,7 +93,7 @@ func mapNotificationParams(req api.NotificationParams) domains.NotificationParam
 	return params
 }
 
-func (t EventHandler) GetEventNotificationParams(w http.ResponseWriter, r *http.Request, eventID int) {
+func (t EventHandler) GetEventNotificationParams(w http.ResponseWriter, r *http.Request, _ int) {
 	userID, err := authmiddleware.UserIDFromCtx(r.Context())
 	if err != nil {
 		responses.Error(w, http.StatusInternalServerError, err)
@@ -111,7 +111,7 @@ func (t EventHandler) GetEventNotificationParams(w http.ResponseWriter, r *http.
 	responses.JSON(w, http.StatusOK, mapNotificationParamsResp(params))
 }
 
-func (t EventHandler) SetEventNotificationParams(w http.ResponseWriter, r *http.Request, eventID int) {
+func (t EventHandler) SetEventNotificationParams(w http.ResponseWriter, r *http.Request, _ int) {
 	userID, err := authmiddleware.UserIDFromCtx(r.Context())
 	if err != nil {
 		responses.Error(w, http.StatusInternalServerError, err)

@@ -4,8 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Dyleme/Notifier/pkg/utils/compare"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/Dyleme/Notifier/pkg/utils/compare"
 )
 
 func TestSmallestTimeWithoutZero(t *testing.T) {
@@ -55,7 +56,6 @@ func TestSmallestTimeWithoutZero(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 

@@ -58,6 +58,7 @@ func Timestamptz(t time.Time) pgtype.Timestamptz {
 			Valid:            true,
 		}
 	}
+
 	return pgtype.Timestamptz{
 		Time:             t,
 		InfinityModifier: pgtype.Finite,

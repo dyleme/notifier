@@ -71,17 +71,17 @@ type DefaultUserNotificationParam struct {
 }
 
 type Notification struct {
-	ID                 int32              `db:"id"`
-	CreatedAt          pgtype.Timestamp   `db:"created_at"`
-	UserID             int32              `db:"user_id"`
-	Text               string             `db:"text"`
-	Description        pgtype.Text        `db:"description"`
-	EventID            int32              `db:"event_id"`
-	EventType          EventType          `db:"event_type"`
-	SendTime           pgtype.Timestamptz `db:"send_time"`
-	Sended             bool               `db:"sended"`
-	Done               bool               `db:"done"`
-	NotificationParams []byte             `db:"notification_params"`
+	ID                 int32                       `db:"id"`
+	CreatedAt          pgtype.Timestamp            `db:"created_at"`
+	UserID             int32                       `db:"user_id"`
+	Text               string                      `db:"text"`
+	Description        pgtype.Text                 `db:"description"`
+	EventID            int32                       `db:"event_id"`
+	EventType          EventType                   `db:"event_type"`
+	SendTime           pgtype.Timestamptz          `db:"send_time"`
+	Sended             bool                        `db:"sended"`
+	Done               bool                        `db:"done"`
+	NotificationParams *domains.NotificationParams `db:"notification_params"`
 }
 
 type PeriodicEvent struct {

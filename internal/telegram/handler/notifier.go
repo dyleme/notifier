@@ -16,7 +16,7 @@ import (
 type Notification struct {
 	th        *TelegramHandler
 	done      bool
-	notifId   int
+	id        int
 	message   string
 	notifTime time.Time
 }
@@ -29,7 +29,7 @@ func (th *TelegramHandler) Notify(ctx context.Context, notif domains.SendingNoti
 	n := Notification{
 		th:        th,
 		done:      false,
-		notifId:   notif.NotificationID,
+		id:        notif.NotificationID,
 		message:   notif.Message,
 		notifTime: notif.SendTime,
 	}
@@ -96,9 +96,9 @@ func (n *Notification) SendDone(ctx context.Context, b *bot.Bot, msg *models.Mes
 		return fmt.Errorf("user from ctx: %w", err)
 	}
 
-	err = n.th.serv.SetNotificationDoneStatus(ctx, n.notifId, user.ID, n.done)
+	err = n.th.serv.SetNotificationDoneStatus(ctx, n.id, user.ID, n.done)
 	if err != nil {
-		return fmt.Errorf("set event done status [notificationID=%v, userID=%v]: %w", n.notifId, user.ID, err)
+		return fmt.Errorf("set event done status [notificationID=%v, userID=%v]: %w", n.id, user.ID, err)
 	}
 
 	_, err = b.DeleteMessage(ctx, &bot.DeleteMessageParams{

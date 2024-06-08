@@ -10,7 +10,7 @@ import (
 )
 
 //go:generate mockgen -destination=mocks/events_mocks.go -package=mocks . EventRepository
-type BasicEventRepository interface { //nolint:interfacebloat //too many methods
+type BasicEventRepository interface {
 	Add(ctx context.Context, event domains.BasicEvent) (domains.BasicEvent, error)
 	List(ctx context.Context, userID int, params ListParams) ([]domains.BasicEvent, error)
 	Update(ctx context.Context, event domains.BasicEvent) (domains.BasicEvent, error)
@@ -90,13 +90,14 @@ func (s *Service) GetEvent(ctx context.Context, userID, eventID int) (domains.Ba
 	op := "Service.GetEvent: %w"
 	tt, err := s.repo.Events().Get(ctx, eventID)
 	if err != nil {
-		if !tt.BelongsTo(userID) {
-
-		}
 		err = fmt.Errorf(op, err)
 		logError(ctx, err)
 
 		return domains.BasicEvent{}, err
+	}
+
+	if !tt.BelongsTo(userID) {
+		return domains.BasicEvent{}, fmt.Errorf("belongs to: %w", serverrors.NewNotFoundError(err, "event"))
 	}
 
 	return tt, nil
@@ -185,6 +186,7 @@ func (s *Service) createNewNotificationForPeriodicEvent(ctx context.Context, eve
 		}
 
 		s.notifierJob.UpdateWithTime(ctx, nextNotif.SendTime)
+
 		return nil
 	})
 	if err != nil {
@@ -234,7 +236,7 @@ func (s *Service) SetNotificationDoneStatus(ctx context.Context, notifID, userID
 	return nil
 }
 
-func (s *Service) DeleteBasicEvent(ctx context.Context, userID int, eventID int) error {
+func (s *Service) DeleteBasicEvent(ctx context.Context, userID, eventID int) error {
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		event, err := s.repo.Events().Get(ctx, eventID)
 		if err != nil {

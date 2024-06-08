@@ -28,6 +28,8 @@ linters-settings:
       - standard
       - default
       - prefix(github.com/Dyleme/Notifier)
+      - blank
+      - dot
 
 
 issues:
@@ -36,31 +38,24 @@ issues:
     - path: _test.go
       linters:
         - funlen
+        - exhaustruct
+  exclude-dirs:
+    - cmd/playground
 
 linters:
   enable-all: true
   disable:
-    - deadcode # deprecated since 1.49
-    - ifshort  # deprecated since 1.48
-    - structcheck # deprecated since 1.49
-    - varcheck  # deprecated since 1.49
-    - nosnakecase # deprecated since 1.48
-    - scopelint # deprecated since 1.39
-    - exhaustivestruct # deprecated since 1.46
-    - interfacer # deprecate since 1.38
-    - maligned # deprecated since 1.38
-    - golint # deprecated since 1.41
     - varnamelen # short variable names is normal for go
-    - goerr113 # not possible to use errors.As()
     - depguard # not necessary for small project
     - gochecknoglobals # global variables are widely used in go code
     - wsl # to many empty lines
     - lll # long lines is not always bad
     - testpackage # I want to test logic in not exported functions
-    - ireturn # TODO:remove
     - dupl # some code is boilerplate
+    - gomnd
+    - execinquery
+    - ireturn
+    - err113
 run:
   issues-exit-code: 1
-  skip-dirs:
-    - cmd/playground
   timeout: 2m

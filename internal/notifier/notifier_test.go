@@ -25,7 +25,7 @@ func newNotif(t time.Time, per time.Duration) domains.SendingNotification {
 		Description:    strconv.Itoa(idSeq.Next()),
 		Params: domains.NotificationParams{
 			Period: per,
-			Params: domains.Params{}, //nolint:exhaustruct // test
+			Params: domains.Params{},
 		},
 		SendTime: t,
 	}

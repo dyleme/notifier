@@ -3,7 +3,7 @@ package config
 import (
 	"github.com/Dyleme/Notifier/internal/authorization/jwt"
 	"github.com/Dyleme/Notifier/internal/notifier"
-	"github.com/Dyleme/Notifier/internal/notifier_job"
+	"github.com/Dyleme/Notifier/internal/notifierjob"
 	"github.com/Dyleme/Notifier/internal/server"
 	"github.com/Dyleme/Notifier/internal/telegram/handler"
 	"github.com/Dyleme/Notifier/pkg/sqldatabase"
@@ -16,7 +16,7 @@ type Config struct {
 	APIKey      string
 	Server      *server.Config
 	Notifier    notifier.Config
-	NotifierJob notifier_job.Config
+	NotifierJob notifierjob.Config
 	Telegram    handler.Config
 }
 
@@ -46,7 +46,7 @@ func mapConfig(cc *compositeConfig) Config {
 		Notifier: notifier.Config{
 			Period: cc.Notifier.CheckPeriod,
 		},
-		NotifierJob: notifier_job.Config{
+		NotifierJob: notifierjob.Config{
 			CheckTasksPeriod: cc.NotifierJob.CheckPeriod,
 		},
 		Telegram: handler.Config{

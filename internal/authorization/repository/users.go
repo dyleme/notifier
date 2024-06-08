@@ -13,7 +13,7 @@ import (
 	"github.com/Dyleme/Notifier/internal/authorization/repository/queries"
 	"github.com/Dyleme/Notifier/internal/authorization/service"
 	"github.com/Dyleme/Notifier/internal/domains"
-	serverrors2 "github.com/Dyleme/Notifier/pkg/serverrors"
+	"github.com/Dyleme/Notifier/pkg/serverrors"
 	"github.com/Dyleme/Notifier/pkg/sql/pgxconv"
 )
 
@@ -26,10 +26,10 @@ func (r *Repository) Create(ctx context.Context, input service.CreateUserInput) 
 	})
 	if err != nil {
 		if intersection, isUnique := uniqueError(err); isUnique {
-			return domains.User{}, fmt.Errorf(op, serverrors2.NewUniqueError(intersection, input.Email))
+			return domains.User{}, fmt.Errorf(op, serverrors.NewUniqueError(intersection, input.Email))
 		}
 
-		return domains.User{}, fmt.Errorf(op, serverrors2.NewRepositoryError(err))
+		return domains.User{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
 	return domains.User{
@@ -65,10 +65,10 @@ func (r *Repository) Get(ctx context.Context, email string, tgID *int) (domains.
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return domains.User{}, fmt.Errorf(op, serverrors2.NewNotFoundError(err, "user"))
+			return domains.User{}, fmt.Errorf(op, serverrors.NewNotFoundError(err, "user"))
 		}
 
-		return domains.User{}, fmt.Errorf(op, serverrors2.NewRepositoryError(err))
+		return domains.User{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
 	return domains.User{
@@ -90,7 +90,7 @@ func (r *Repository) UpdateTime(ctx context.Context, id int, tzOffset domains.Ti
 		ID:             int32(id),
 	})
 	if err != nil {
-		return fmt.Errorf(op, serverrors2.NewRepositoryError(err))
+		return fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
 	return nil

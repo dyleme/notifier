@@ -93,7 +93,7 @@ func (g *Gen) ParseToken(tokenString string) (userID int, err error) { //nolint:
 func getUserID(claims jwt.MapClaims) (int, error) {
 	userIDFloat, ok := claims["userID"].(float64)
 	if !ok {
-		return 0, fmt.Errorf("some error")
+		return 0, errors.New("can't cust userID claims to flat64")
 	}
 	userID := int(userIDFloat)
 	if !ok || userID == 0 {

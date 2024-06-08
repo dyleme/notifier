@@ -2,7 +2,6 @@ package authmiddleware
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/Dyleme/Notifier/pkg/http/responses"
@@ -42,11 +41,11 @@ func (am *APITokenMiddleware) Handle(next http.Handler) http.Handler {
 func getAPIKey(r *http.Request) (string, error) {
 	apiKeys, exist := r.Header[apiKeyHeader]
 	if !exist {
-		return "", fmt.Errorf("no api key in request")
+		return "", errors.New("no api key in request")
 	}
 
 	if len(apiKeys) != 1 {
-		return "", fmt.Errorf("more than one auth header")
+		return "", errors.New("more than one auth header")
 	}
 
 	return apiKeys[0], nil

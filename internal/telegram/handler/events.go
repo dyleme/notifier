@@ -67,7 +67,6 @@ func (l *ListEvents) listInline(ctx context.Context, b *bot.Bot, mes *models.Mes
 			MessageID: mes.ID,
 			Caption:   "No events",
 		})
-
 		if err != nil {
 			return fmt.Errorf(op, err)
 		}
@@ -516,11 +515,12 @@ func (se *SingleEvent) UpdateInline(ctx context.Context, b *bot.Bot, msg *models
 	}
 
 	_, err = se.th.serv.UpdateBasicEvent(ctx, domains.BasicEvent{
-		ID:          se.id,
-		Text:        se.text,
-		UserID:      user.ID,
-		Description: se.description,
-		Start:       computeTime(se.date, se.time, user.Location()),
+		ID:                 se.id,
+		Text:               se.text,
+		UserID:             user.ID,
+		Description:        se.description,
+		Start:              computeTime(se.date, se.time, user.Location()),
+		NotificationParams: nil,
 	}, user.ID)
 	if err != nil {
 		return fmt.Errorf(op, err)

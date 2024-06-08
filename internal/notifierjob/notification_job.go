@@ -1,4 +1,4 @@
-package notifier_job
+package notifierjob
 
 import (
 	"context"

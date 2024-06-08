@@ -2,12 +2,13 @@ package handler
 
 import (
 	"context"
-	_ "embed"
 	"fmt"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 	inKbr "github.com/go-telegram/ui/keyboard/inline"
+
+	_ "embed"
 )
 
 func (th *TelegramHandler) mainMenuKeyboard(b *bot.Bot) models.ReplyMarkup {

@@ -20,7 +20,7 @@ type PeriodicEventsRepository interface {
 
 func (s *Service) AddPeriodicEvent(ctx context.Context, perEvent domains.PeriodicEvent, userID int) (domains.PeriodicEvent, error) {
 	if !perEvent.BelongsTo(userID) {
-		return domains.PeriodicEvent{}, serverrors.NewBusinessLogicError("you are not allowed to add event to another user")
+		return domains.PeriodicEvent{}, fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError("you are not allowed to add event to another user"))
 	}
 
 	var createdPerEvent domains.PeriodicEvent

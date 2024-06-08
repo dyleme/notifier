@@ -4,8 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Dyleme/Notifier/internal/domains"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Dyleme/Notifier/internal/domains"
 )
 
 func TestPeriodicEvent_NewNotification(t *testing.T) {
@@ -99,7 +100,7 @@ func TestPeriodicEvent_NewNotification(t *testing.T) {
 				notif, err := tc.pe.NewNotification(tc.now)
 				actual := notif.SendTime
 
-				require.True(t, tc.isError == (err != nil), "check error")
+				require.Equal(t, tc.isError, err != nil, "check error")
 				if tc.isError != (err != nil) {
 					t.Errorf("[waiting err = %v, actualError=%v]", tc.isError, err)
 				}

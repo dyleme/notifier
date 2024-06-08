@@ -64,7 +64,6 @@ func (l *ListPeriodicEvents) listInline(ctx context.Context, b *bot.Bot, mes *mo
 			MessageID: mes.ID,
 			Caption:   "No events",
 		})
-
 		if err != nil {
 			return fmt.Errorf(op, err)
 		}
