@@ -4,16 +4,16 @@ import (
 	"context"
 	"time"
 
-	"github.com/Dyleme/Notifier/internal/domains"
 	trManager "github.com/avito-tech/go-transaction-manager/trm/manager"
 )
 
 type Repository interface {
 	DefaultNotificationParams() NotificationParamsRepository
 	Tasks() TaskRepository
-	Events() EventRepository
+	Events() BasicEventRepository
 	TgImages() TgImagesRepository
 	PeriodicEvents() PeriodicEventsRepository
+	Notifications() NotificationsRepository
 }
 
 type Service struct {
@@ -24,8 +24,7 @@ type Service struct {
 }
 
 type Notifier interface {
-	Add(ctx context.Context, notif domains.SendingNotification) error
-	Delete(ctx context.Context, eventID, userID int) error
+	Delete(ctx context.Context, notifID int) error
 }
 
 type NotifierJob interface {

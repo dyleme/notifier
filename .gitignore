@@ -31,3 +31,7 @@ go.work
 
 # Playground binaries
 cmd/playground
+
+# SQL requests
+sql-requests
+

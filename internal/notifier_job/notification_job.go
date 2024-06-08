@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -20,31 +20,12 @@ import (
 //go:generate mockgen -destination=mocks/notification_job_mocks.go -package=mocks . Notifier
 type Notifier interface {
 	Add(ctx context.Context, notif domains.SendingNotification) error
-	Delete(ctx context.Context, eventID, userID int) error
+	Delete(ctx context.Context, notifID int) error
 }
 
 type Repository interface {
 	DefaultNotificationParams() service.NotificationParamsRepository
-	Events() service.EventRepository
-	PeriodicEvents() service.PeriodicEventsRepository
-}
-
-type PeriodicEventsRepository interface {
-	Get(ctx context.Context, eventID, userID int) (domains.PeriodicEvent, error)
-	GetNearestNotificationSendTime(ctx context.Context) (time.Time, error)
-	ListNotificationsAtSendTime(ctx context.Context, sendTime time.Time) ([]domains.PeriodicEvent, error)
-	MarkNotificationSend(ctx context.Context, notificationID int) error
-}
-
-type EventRepository interface {
-	Get(ctx context.Context, eventID, userID int) (domains.Event, error)
-	GetNearestEventSendTime(ctx context.Context) (time.Time, error)
-	ListEventsBefore(ctx context.Context, sendTime time.Time) ([]domains.Event, error)
-	MarkNotified(ctx context.Context, eventID int) error
-}
-
-type NotificationParamsRepository interface {
-	Get(ctx context.Context, userID int) (domains.NotificationParams, error)
+	Notifications() service.NotificationsRepository
 }
 
 type NotifierJob struct {
@@ -52,6 +33,7 @@ type NotifierJob struct {
 	notifier     Notifier
 	checkPeriod  time.Duration
 	nextSendTime time.Time
+	sendTimeMx   *sync.RWMutex
 	timer        *time.Timer
 	tr           *trManager.Manager
 }
@@ -67,16 +49,18 @@ func New(repo Repository, notifier Notifier, config Config, tr *trManager.Manage
 		checkPeriod:  config.CheckTasksPeriod,
 		timer:        time.NewTimer(config.CheckTasksPeriod),
 		nextSendTime: time.Now().Add(config.CheckTasksPeriod),
+		sendTimeMx:   &sync.RWMutex{},
 		tr:           tr,
 	}
 }
 
 func (nj *NotifierJob) Run(ctx context.Context) {
-	nj.notify(ctx)
+	nj.setNextNotificationTime(ctx)
 	for {
 		select {
 		case <-nj.timer.C:
 			nj.notify(ctx)
+			nj.setNextNotificationTime(ctx)
 		case <-ctx.Done():
 			nj.timer.Stop()
 
@@ -86,208 +70,87 @@ func (nj *NotifierJob) Run(ctx context.Context) {
 }
 
 func (nj *NotifierJob) UpdateWithTime(ctx context.Context, t time.Time) {
-	if t.Before(nj.nextSendTime) {
-		nj.nextNotification(ctx)
+	nj.sendTimeMx.RLock()
+	newTimeIsBeforeCurrent := t.Before(nj.nextSendTime)
+	nj.sendTimeMx.RUnlock()
+
+	if newTimeIsBeforeCurrent {
+		nj.setNextNotificationTime(ctx)
 	}
 }
 
-func (nj *NotifierJob) nextNotification(ctx context.Context) {
-	op := "NotifierJob.nextNotification: %w"
-	var nearestTime time.Time
-	var (
-		wg                sync.WaitGroup
-		eventTime         time.Time
-		periodicEventTime time.Time
-	)
+func (nj *NotifierJob) setNextNotificationTime(ctx context.Context) {
+	nj.sendTimeMx.Lock()
+	defer nj.sendTimeMx.Unlock()
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		var err error
-		eventTime, err = nj.repo.Events().GetNearestEventSendTime(ctx)
-		if err != nil {
-			var notFoundErr serverrors.NotFoundError
-			if !errors.As(err, &notFoundErr) {
-				log.Ctx(ctx).Error("event time", log.Err(fmt.Errorf(op, err)))
-			}
-		}
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		var err error
-		periodicEventTime, err = nj.repo.PeriodicEvents().GetNearestNotificationSendTime(ctx)
-		if err != nil {
-			var notFoundErr serverrors.NotFoundError
-			if !errors.As(err, &notFoundErr) {
-				log.Ctx(ctx).Error("periodic event time", log.Err(fmt.Errorf("get nearest notification send time: %w", err)))
-			}
-		}
-	}()
-
-	wg.Wait()
-	log.Ctx(ctx).Debug("nearest event times", "basicEvent", eventTime, "periodcEvent", periodicEventTime)
-
-	nearestTime = slices.MinFunc([]time.Time{eventTime, periodicEventTime}, utils.TimeCmpWithoutZero)
-	if nearestTime.Before(time.Now()) {
-		nearestTime = time.Now().Add(nj.checkPeriod)
-	}
-
-	nj.setNextNotificationTime(ctx, nearestTime)
-}
-
-func (nj *NotifierJob) setNextNotificationTime(ctx context.Context, t time.Time) {
-	log.Ctx(ctx).Debug("notifier service new time", "time", t)
+	t := nj.nearestCheckTime(ctx)
+	log.Ctx(ctx).Debug("next notification time", slog.Time("time", t))
 	nj.nextSendTime = t
 	nj.timer.Reset(time.Until(nj.nextSendTime))
 }
 
-func (nj *NotifierJob) notifiedBasicEvents(ctx context.Context) []domains.SendingNotification {
-	events, err := nj.repo.Events().ListEventsBefore(ctx, nj.nextSendTime)
+func (nj *NotifierJob) nearestCheckTime(ctx context.Context) time.Time {
+	var nearestTime time.Time
+	notif, err := nj.repo.Notifications().GetNearest(ctx, time.Now())
 	if err != nil {
 		var notFoundErr serverrors.NotFoundError
 		if !errors.As(err, &notFoundErr) {
-			log.Ctx(ctx).Error("notified basic events", log.Err(fmt.Errorf("list events before: %w", err)))
+			log.Ctx(ctx).Error("get nearest notification", log.Err(err))
 		}
+		log.Ctx(ctx).Debug("no nearest notifications found")
+		nearestTime = time.Now().Truncate(time.Minute).Add(nj.checkPeriod)
+	} else {
+		nearestTime = notif.SendTime
 	}
 
-	notifs := make([]domains.SendingNotification, 0, len(events))
-	for _, ev := range events {
-		if ev.NotificationParams == nil {
-			params, err := nj.repo.DefaultNotificationParams().Get(ctx, ev.UserID)
-			if err != nil {
-				log.Ctx(ctx).Error("notified basic events", log.Err(fmt.Errorf("default notification params get: %w", err)))
-
-				continue
-			}
-
-			ev.NotificationParams = &params
-		}
-		notifs = append(notifs, domains.SendingNotification{
-			EventType:        domains.BasicEventType,
-			EventID:          ev.ID,
-			UserID:           ev.UserID,
-			Message:          ev.Text,
-			Description:      ev.Description,
-			Params:           *ev.NotificationParams,
-			NotificationTime: ev.SendTime,
-		})
-	}
-
-	return notifs
-}
-
-func (nj *NotifierJob) notifiedPeriodicEvents(ctx context.Context) []domains.SendingNotification {
-	events, err := nj.repo.PeriodicEvents().ListNotificationsAtSendTime(ctx, nj.nextSendTime)
-	if err != nil {
-		var notFoundErr serverrors.NotFoundError
-		if !errors.As(err, &notFoundErr) {
-			log.Ctx(ctx).Error("notified basic events", log.Err(fmt.Errorf("list events before: %w", err)))
-		}
-	}
-
-	notifs := make([]domains.SendingNotification, 0, len(events))
-	for _, ev := range events {
-		if ev.NotificationParams == nil {
-			params, err := nj.repo.DefaultNotificationParams().Get(ctx, ev.UserID)
-			if err != nil {
-				log.Ctx(ctx).Error("notified basic events", log.Err(fmt.Errorf("default notification params get: %w", err)))
-
-				continue
-			}
-
-			ev.NotificationParams = &params
-		}
-		notifs = append(notifs, domains.SendingNotification{
-			EventType:        domains.PeriodicEventType,
-			EventID:          ev.ID,
-			UserID:           ev.UserID,
-			Message:          ev.Text,
-			Description:      ev.Description,
-			Params:           *ev.NotificationParams,
-			NotificationTime: ev.Notification.SendTime,
-		})
-	}
-
-	return notifs
-}
-
-func (nj *NotifierJob) getEventsToNotify(ctx context.Context) []domains.SendingNotification {
-	var (
-		wg             sync.WaitGroup
-		basicNotifs    []domains.SendingNotification
-		periodicNotifs []domains.SendingNotification
-	)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		basicNotifs = nj.notifiedBasicEvents(ctx)
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		periodicNotifs = nj.notifiedPeriodicEvents(ctx)
-	}()
-	wg.Wait()
-
-	return append(basicNotifs, periodicNotifs...)
+	return nearestTime
 }
 
 func (nj *NotifierJob) notify(ctx context.Context) {
-	ns := nj.getEventsToNotify(ctx)
-	log.Ctx(ctx).Debug("notifcation service notification", "", fmt.Sprintf("%#v", ns))
-	for i := 0; i < len(ns); i++ {
-		err := nj.send(ctx, ns[i])
+	err := nj.tr.Do(ctx, func(ctx context.Context) error {
+		notifs, err := nj.repo.Notifications().ListNotSended(ctx, time.Now())
 		if err != nil {
-			log.Ctx(ctx).Error("send", log.Err(fmt.Errorf("send[eventID=%v,eventType=%v]: %w", ns[i].EventID, ns[i].EventType, err)))
+			return fmt.Errorf("list not sended notifications: %w", err)
 		}
-	}
+		log.Ctx(ctx).Debug("found not sended notifications", slog.Any("notifications", utils.DtoSlice(notifs, func(n domains.Notification) int { return n.ID })))
 
-	nj.nextNotification(ctx)
-}
+		ids := make([]int, 0, len(notifs))
+		for _, n := range notifs {
+			ids = append(ids, n.ID)
 
-func (nj *NotifierJob) send(ctx context.Context, notif domains.SendingNotification) error {
-	err := nj.markNotified(ctx, notif)
-	if err != nil {
-		return fmt.Errorf("mark notified: %w", err)
-	}
-
-	err = nj.notifier.Add(ctx, notif)
-	if err != nil {
-		return fmt.Errorf("notifer add: %w", err)
-	}
-
-	return nil
-}
-
-func (nj *NotifierJob) markNotified(ctx context.Context, notif domains.SendingNotification) error {
-	switch notif.EventType {
-	case domains.BasicEventType:
-		err := nj.repo.Events().MarkNotified(ctx, notif.EventID)
-		if err != nil {
-			return fmt.Errorf("mark notified: %w", err)
-		}
-	case domains.PeriodicEventType:
-		err := nj.tr.Do(ctx, func(ctx context.Context) error {
-			ev, err := nj.repo.PeriodicEvents().Get(ctx, notif.EventID, notif.UserID)
+			notificationParams, err := nj.getNotificationParams(ctx, n)
 			if err != nil {
-				return fmt.Errorf("get[eventID=%v,userID=%v]: %w", notif.EventID, notif.UserID, err)
+				return fmt.Errorf("get notification params: %w", err)
 			}
 
-			err = nj.repo.PeriodicEvents().MarkNotificationSend(ctx, ev.Notification.ID)
+			sendingNotification := domains.NewSendingNotification(n, notificationParams)
+			err = nj.notifier.Add(ctx, sendingNotification)
 			if err != nil {
-				return fmt.Errorf("mark notified: %w", err)
+				return fmt.Errorf("notifier add: %w", err)
 			}
-
-			return nil
-		})
-		if err != nil {
-			return fmt.Errorf("atomic: %w", err)
 		}
-	default:
-		return fmt.Errorf("invalid event type")
+
+		err = nj.repo.Notifications().MarkSended(ctx, ids)
+		if err != nil {
+			return fmt.Errorf("mark sended notifications: %w", err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		log.Ctx(ctx).Error("notify error", log.Err(err), slog.Time("run_time", nj.nextSendTime))
+	}
+}
+
+func (nj *NotifierJob) getNotificationParams(ctx context.Context, notif domains.Notification) (domains.NotificationParams, error) {
+	if notif.Params != nil {
+		return *notif.Params, nil
 	}
 
-	return nil
+	params, err := nj.repo.DefaultNotificationParams().Get(ctx, notif.UserID)
+	if err != nil {
+		return domains.NotificationParams{}, fmt.Errorf("get default notification params: %w", err)
+	}
+
+	return params, nil
 }

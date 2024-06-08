@@ -56,16 +56,15 @@ type telegramConfig struct {
 	Token string `env:"TELEGRAM_TOKEN" env-required:"true"`
 }
 
-func Load() (Config, error) {
-	op := "Load: %w"
+func Load() Config {
 	var collectConfigs compositeConfig
 	err := cleanenv.ReadConfig(".env", &collectConfigs)
 	if err != nil {
 		err = cleanenv.ReadEnv(&collectConfigs)
 		if err != nil {
-			return Config{}, fmt.Errorf(op, err)
+			panic(fmt.Errorf("can't read env: %w", err))
 		}
 	}
 
-	return mapConfig(&collectConfigs), nil
+	return mapConfig(&collectConfigs)
 }

@@ -1,10 +1,11 @@
-package utils
+package sequences
 
 import (
+	"math/rand/v2"
 	"sync"
 )
 
-func NewSequence[T any](first T, next func(t T) T) Sequence[T] {
+func New[T any](first T, next func(t T) T) Sequence[T] {
 	return Sequence[T]{
 		x:    first,
 		next: next,
@@ -36,8 +37,16 @@ func (s *Sequence[T]) Generate(amount int) []T {
 	return ts
 }
 
-func NewIntSequence() Sequence[int] {
-	return NewSequence(0, func(i int) int {
+func NewInt() Sequence[int] {
+	return New(0, func(i int) int {
+		i++
+
+		return i
+	})
+}
+
+func NewRandInt() Sequence[int] {
+	return New(rand.IntN(1<<16), func(i int) int {
 		i++
 
 		return i

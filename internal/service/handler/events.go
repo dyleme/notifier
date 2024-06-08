@@ -2,12 +2,10 @@ package handler
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/Dyleme/Notifier/internal/authorization/authmiddleware"
 	"github.com/Dyleme/Notifier/internal/domains"
 	"github.com/Dyleme/Notifier/internal/service/handler/api"
-	"github.com/Dyleme/Notifier/internal/service/service"
 	"github.com/Dyleme/Notifier/pkg/http/requests"
 	"github.com/Dyleme/Notifier/pkg/http/responses"
 )
@@ -19,18 +17,10 @@ func (t EventHandler) ListEvents(w http.ResponseWriter, r *http.Request, params 
 
 		return
 	}
-	var from, to time.Time
-
-	if params.From == nil {
-		from = time.Time{}
-	}
-	if params.To == nil {
-		to = time.Now().Add(30 * 24 * time.Hour)
-	}
 
 	listParams := parseListParams(params.Offset, params.Limit)
 
-	tasks, err := t.serv.ListEventsInPeriod(r.Context(), userID, from, to, listParams)
+	tasks, err := t.serv.ListEvents(r.Context(), userID, listParams)
 	if err != nil {
 		responses.KnownError(w, err)
 
@@ -72,10 +62,9 @@ func (t EventHandler) PostEventSetTaskID(w http.ResponseWriter, r *http.Request,
 	responses.JSON(w, http.StatusOK, apiEvent)
 }
 
-func mapAPIEvent(event domains.Event) api.Event {
+func mapAPIEvent(event domains.BasicEvent) api.Event {
 	return api.Event{
 		Description: &event.Description,
-		Done:        event.Done,
 		Id:          event.ID,
 		Start:       event.Start,
 		Text:        event.Text,
@@ -122,13 +111,13 @@ func (t EventHandler) UpdateEvent(w http.ResponseWriter, r *http.Request, eventI
 		description = *updateBody.Description
 	}
 
-	event, err := t.serv.UpdateEvent(r.Context(), service.EventUpdateParams{
+	event, err := t.serv.UpdateBasicEvent(r.Context(), domains.BasicEvent{
 		ID:          eventID,
 		UserID:      userID,
 		Text:        description,
 		Description: description,
 		Start:       updateBody.Start,
-	})
+	}, userID)
 	if err != nil {
 		responses.Error(w, http.StatusInternalServerError, err)
 
@@ -140,21 +129,18 @@ func (t EventHandler) UpdateEvent(w http.ResponseWriter, r *http.Request, eventI
 	responses.JSON(w, http.StatusOK, apiEvent)
 }
 
-func mapCreateEvent(body api.CreateEventReqBody, userID int) domains.Event {
+func mapCreateEvent(body api.CreateEventReqBody, userID int) domains.BasicEvent {
 	description := ""
 	if body.Description != nil {
 		description = *body.Description
 	}
 
-	event := domains.Event{ //nolint:exhaustruct //creation object we don't know ids
+	event := domains.BasicEvent{ //nolint:exhaustruct //creation object we don't know ids
 		UserID:             userID,
 		Text:               body.Message,
 		Description:        description,
 		Start:              body.Start,
-		Done:               false,
-		Sended:             false,
 		NotificationParams: nil,
-		SendTime:           body.Start,
 	}
 
 	return event

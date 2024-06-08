@@ -1,12 +1,11 @@
-package utils_test
+package compare_test
 
 import (
 	"testing"
 	"time"
 
+	"github.com/Dyleme/Notifier/pkg/utils/compare"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/Dyleme/Notifier/pkg/utils"
 )
 
 func TestSmallestTimeWithoutZero(t *testing.T) {
@@ -48,13 +47,19 @@ func TestSmallestTimeWithoutZero(t *testing.T) {
 			b:      time.Date(2023, 10, 17, 23, 27, 0, 0, time.UTC),
 			result: 1,
 		},
+		{
+			name:   "equal times",
+			a:      time.Date(2024, 10, 17, 23, 27, 0, 0, time.UTC),
+			b:      time.Date(2024, 10, 17, 23, 27, 0, 0, time.UTC),
+			result: 0,
+		},
 	}
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			assert.Equal(t, tt.result, utils.TimeCmpWithoutZero(tt.a, tt.b))
+			assert.Equal(t, tt.result, compare.TimeCmpWithoutZero(tt.a, tt.b))
 		})
 	}
 }

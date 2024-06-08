@@ -54,10 +54,7 @@ func (l *ListEvents) listInline(ctx context.Context, b *bot.Bot, mes *models.Mes
 		return fmt.Errorf(op, err)
 	}
 
-	events, err := l.th.serv.ListEventsInPeriod(ctx, user.ID, time.Now(), time.Now().AddDate(1, 0, 0), service.ListParams{
-		Offset: 0,
-		Limit:  defaultListLimit,
-	})
+	events, err := l.th.serv.ListEvents(ctx, user.ID, defaultListParams)
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}
@@ -490,15 +487,12 @@ func (se *SingleEvent) CreateInline(ctx context.Context, b *bot.Bot, msg *models
 		return fmt.Errorf(op, ErrTimeInPast)
 	}
 
-	event := domains.Event{ //nolint:exhaustruct // don't know id on creation
+	event := domains.BasicEvent{ //nolint:exhaustruct // don't know id on creation
 		UserID:             user.ID,
 		Text:               se.text,
 		Description:        se.description,
 		Start:              utcTime,
-		Done:               false,
-		Sended:             false,
 		NotificationParams: nil,
-		SendTime:           utcTime,
 	}
 
 	_, err = se.th.serv.CreateEvent(ctx, event)
@@ -521,13 +515,13 @@ func (se *SingleEvent) UpdateInline(ctx context.Context, b *bot.Bot, msg *models
 		return fmt.Errorf(op, err)
 	}
 
-	_, err = se.th.serv.UpdateEvent(ctx, service.EventUpdateParams{
+	_, err = se.th.serv.UpdateBasicEvent(ctx, domains.BasicEvent{
 		ID:          se.id,
 		Text:        se.text,
 		UserID:      user.ID,
 		Description: se.description,
 		Start:       computeTime(se.date, se.time, user.Location()),
-	})
+	}, user.ID)
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}
@@ -550,7 +544,7 @@ func (se *SingleEvent) DeleteInline(ctx context.Context, b *bot.Bot, msg *models
 		return fmt.Errorf(op, err)
 	}
 
-	err = se.th.serv.DeleteEvent(ctx, user.ID, se.id)
+	err = se.th.serv.DeleteBasicEvent(ctx, user.ID, se.id)
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}

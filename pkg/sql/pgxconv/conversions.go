@@ -34,11 +34,30 @@ func Timestamp(t time.Time) pgtype.Timestamp {
 	}
 }
 
+var (
+	minTime = time.Unix(0, 0)
+	maxTime = time.Unix(1<<63-1, 0)
+)
+
 func Time(timestamp pgtype.Timestamp) time.Time {
 	return timestamp.Time
 }
 
 func Timestamptz(t time.Time) pgtype.Timestamptz {
+	if t == minTime {
+		return pgtype.Timestamptz{
+			Time:             time.Time{},
+			InfinityModifier: pgtype.NegativeInfinity,
+			Valid:            true,
+		}
+	}
+	if t == maxTime {
+		return pgtype.Timestamptz{
+			Time:             time.Time{},
+			InfinityModifier: pgtype.Infinity,
+			Valid:            true,
+		}
+	}
 	return pgtype.Timestamptz{
 		Time:             t,
 		InfinityModifier: pgtype.Finite,

@@ -10,58 +10,40 @@ import (
 )
 
 //go:generate mockgen -destination=mocks/periodic_events_mocks.go -package=mocks . PeriodicEventsRepository
-type PeriodicEventsRepository interface { //nolint:interfacebloat // need so many interfaces
-	Add(ctx context.Context, event domains.PeriodicEvent, notif domains.PeriodicEventNotification) (domains.PeriodicEvent, error)
-	Get(ctx context.Context, eventID, userID int) (domains.PeriodicEvent, error)
-	Update(ctx context.Context, event UpdatePeriodicEventParams) (domains.PeriodicEvent, error)
-	Delete(ctx context.Context, eventID, userID int) error
-	AddNotification(ctx context.Context, notif domains.PeriodicEventNotification) (domains.PeriodicEventNotification, error)
-	MarkNotificationSend(ctx context.Context, notifID int) error
-	MarkNotificationDone(ctx context.Context, eventID, userID int) error
-	DeleteNotification(ctx context.Context, notifID, eventID int) error
-	DeleteNotifications(ctx context.Context, eventID int) error
-	GetNearestNotificationSendTime(ctx context.Context) (time.Time, error)
-	ListNotificationsAtSendTime(ctx context.Context, sendTime time.Time) ([]domains.PeriodicEvent, error)
-	ListFutureEvents(ctx context.Context, userID int, listParams ListParams) ([]domains.PeriodicEvent, error)
-}
-
-func equalOrChangeIfZero[T comparable](check, val T) (T, error) {
-	if check == val {
-		return check, nil
-	}
-
-	var zero T
-	if check == zero {
-		return val, nil
-	}
-
-	return check, serverrors.NewBusinessLogicError("not equal")
+type PeriodicEventsRepository interface {
+	Add(ctx context.Context, event domains.PeriodicEvent) (domains.PeriodicEvent, error)
+	Get(ctx context.Context, eventID int) (domains.PeriodicEvent, error)
+	Update(ctx context.Context, event domains.PeriodicEvent) (domains.PeriodicEvent, error)
+	Delete(ctx context.Context, eventID int) error
+	List(ctx context.Context, userID int, listParams ListParams) ([]domains.PeriodicEvent, error)
 }
 
 func (s *Service) AddPeriodicEvent(ctx context.Context, perEvent domains.PeriodicEvent, userID int) (domains.PeriodicEvent, error) {
-	op := "Service.AddPeriodicEvent: %w"
-
-	var err error
-	perEvent.UserID, err = equalOrChangeIfZero(perEvent.UserID, userID)
-	if err != nil {
-		return domains.PeriodicEvent{}, fmt.Errorf("equal or change if zero[ev.UserID=%v,userID=%v]: %w", perEvent.UserID, userID, err)
+	if !perEvent.BelongsTo(userID) {
+		return domains.PeriodicEvent{}, serverrors.NewBusinessLogicError("you are not allowed to add event to another user")
 	}
 
 	var createdPerEvent domains.PeriodicEvent
-	err = s.tr.Do(ctx, func(ctx context.Context) error {
-		notification, err := perEvent.NextNotification()
+	err := s.tr.Do(ctx, func(ctx context.Context) error {
+		createdPerEvent, err := s.repo.PeriodicEvents().Add(ctx, perEvent)
+		if err != nil {
+			return fmt.Errorf("add periodic event: %w", err)
+		}
+
+		notification, err := createdPerEvent.NewNotification(time.Now())
 		if err != nil {
 			return fmt.Errorf("next notification: %w", serverrors.NewBusinessLogicError(err.Error()))
 		}
-		createdPerEvent, err = s.repo.PeriodicEvents().Add(ctx, perEvent, notification)
+
+		_, err = s.repo.Notifications().Add(ctx, notification)
 		if err != nil {
-			return fmt.Errorf("add: %w", err)
+			return fmt.Errorf("add notification: %w", err)
 		}
 
 		return nil
 	})
 	if err != nil {
-		return domains.PeriodicEvent{}, fmt.Errorf(op, err)
+		return domains.PeriodicEvent{}, fmt.Errorf("tr: %w", err)
 	}
 
 	return createdPerEvent, nil
@@ -71,50 +53,22 @@ func (s *Service) GetPeriodicEvent(ctx context.Context, eventID, userID int) (do
 	var ev domains.PeriodicEvent
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		var err error
-		ev, err = s.repo.PeriodicEvents().Get(ctx, eventID, userID)
+		ev, err = s.repo.PeriodicEvents().Get(ctx, eventID)
 		if err != nil {
-			return fmt.Errorf("get[eventID=%v,userID=%v]: %w", eventID, userID, err)
+			return fmt.Errorf("get[eventID=%v]: %w", eventID, err)
+		}
+
+		if !ev.BelongsTo(userID) {
+			return serverrors.NewNotFoundError(err, "periodic event")
 		}
 
 		return nil
 	})
 	if err != nil {
-		return domains.PeriodicEvent{}, fmt.Errorf("atmoic: %w", err)
+		return domains.PeriodicEvent{}, fmt.Errorf("tr: %w", err)
 	}
 
 	return ev, nil
-}
-
-func (s *Service) DonePeriodicEvent(ctx context.Context, eventID, userID int) error {
-	op := "Service.DonePeriodicEvent: %w"
-
-	err := s.tr.Do(ctx, func(ctx context.Context) error {
-		event, err := s.repo.PeriodicEvents().Get(ctx, eventID, userID)
-		if err != nil {
-			return fmt.Errorf("get: %w", err)
-		}
-
-		err = s.repo.PeriodicEvents().MarkNotificationSend(ctx, event.Notification.ID)
-		if err != nil {
-			return fmt.Errorf("mark notified[notifID=%v]: %w", event.Notification.ID, err)
-		}
-
-		nextNotif, err := event.NextNotification()
-		if err != nil {
-			return fmt.Errorf("next notification: %w", serverrors.NewBusinessLogicError(err.Error()))
-		}
-		_, err = s.repo.PeriodicEvents().AddNotification(ctx, nextNotif)
-		if err != nil {
-			return fmt.Errorf("add notification: %w", err)
-		}
-
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf(op, err)
-	}
-
-	return nil
 }
 
 type UpdatePeriodicEventParams struct {
@@ -128,19 +82,16 @@ type UpdatePeriodicEventParams struct {
 	NotificationParams *domains.NotificationParams
 }
 
-func (s *Service) UpdatePeriodicEvent(ctx context.Context, perEvent UpdatePeriodicEventParams, userID int) error {
-	var err error
-	perEvent.UserID, err = equalOrChangeIfZero(perEvent.UserID, userID)
-	if err != nil {
-		return fmt.Errorf("equal or change if zero[ev.UserID=%v,userID=%v]: %w", perEvent.UserID, userID, err)
-	}
-
+func (s *Service) UpdatePeriodicEvent(ctx context.Context, perEvent domains.PeriodicEvent, userID int) error {
 	var updatedEvent domains.PeriodicEvent
-	err = s.tr.Do(ctx, func(ctx context.Context) error {
+	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		var ev domains.PeriodicEvent
-		ev, err = s.repo.PeriodicEvents().Get(ctx, perEvent.ID, userID)
+		ev, err := s.repo.PeriodicEvents().Get(ctx, perEvent.ID)
 		if err != nil {
 			return fmt.Errorf("get[eventID=%v]: %w", perEvent.ID, err)
+		}
+		if !ev.BelongsTo(userID) {
+			return serverrors.NewNotFoundError(err, "periodic event")
 		}
 
 		updatedEvent, err = s.repo.PeriodicEvents().Update(ctx, perEvent)
@@ -148,20 +99,21 @@ func (s *Service) UpdatePeriodicEvent(ctx context.Context, perEvent UpdatePeriod
 			return fmt.Errorf("update: %w", err)
 		}
 
-		if ev.NeedRegenerateNotification(updatedEvent) {
-			err = s.repo.PeriodicEvents().DeleteNotification(ctx, updatedEvent.Notification.ID, perEvent.ID)
-			if err != nil {
-				return fmt.Errorf("delete notification: %w", err)
-			}
+		notif, err := s.repo.Notifications().GetLatest(ctx, ev.ID)
+		if err != nil {
+			return fmt.Errorf("delete notification: %w", err)
+		}
 
-			nextNotif, err := updatedEvent.NextNotification()
-			if err != nil {
-				return fmt.Errorf("next notification: %w", serverrors.NewBusinessLogicError(err.Error()))
-			}
-			_, err = s.repo.PeriodicEvents().AddNotification(ctx, nextNotif)
-			if err != nil {
-				return fmt.Errorf("add notification: %w", err)
-			}
+		nextNotif, err := updatedEvent.NewNotification(time.Now())
+		if err != nil {
+			return fmt.Errorf("next notification: %w", serverrors.NewBusinessLogicError(err.Error()))
+		}
+
+		nextNotif.ID = notif.ID
+
+		err = s.repo.Notifications().Update(ctx, nextNotif)
+		if err != nil {
+			return fmt.Errorf("add notification: %w", err)
 		}
 
 		return nil
@@ -177,19 +129,28 @@ func (s *Service) DeletePeriodicEvent(ctx context.Context, eventID, userID int) 
 	op := "Service.DeletePeriodicEvent: %w"
 
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
-		event, err := s.repo.PeriodicEvents().Get(ctx, eventID, userID)
+		event, err := s.repo.PeriodicEvents().Get(ctx, eventID)
 		if err != nil {
 			return fmt.Errorf("get current notifications: %w", err)
 		}
 
-		err = s.repo.PeriodicEvents().DeleteNotifications(ctx, event.ID)
+		if event.BelongsTo(userID) {
+			return serverrors.NewNotFoundError(err, "periodic event")
+		}
+
+		notif, err := s.repo.Notifications().GetLatest(ctx, eventID)
+		if err != nil {
+			return fmt.Errorf("get latest notification: %w", err)
+		}
+
+		err = s.repo.Notifications().Delete(ctx, notif.ID)
 		if err != nil {
 			return fmt.Errorf("delete notification: %w", err)
 		}
 
-		err = s.repo.PeriodicEvents().Delete(ctx, eventID, userID)
+		err = s.repo.PeriodicEvents().Delete(ctx, eventID)
 		if err != nil {
-			return fmt.Errorf("delete: %w", err)
+			return fmt.Errorf("delete periodic event: %w", err)
 		}
 
 		return nil
@@ -201,15 +162,14 @@ func (s *Service) DeletePeriodicEvent(ctx context.Context, eventID, userID int) 
 	return nil
 }
 
-func (s *Service) ListFuturePeriodicEvents(ctx context.Context, userID int, listParams ListParams) ([]domains.PeriodicEvent, error) {
-	op := "Service.ListEventsInPeriod: %w"
-	evWithNotifs, err := s.repo.PeriodicEvents().ListFutureEvents(ctx, userID, listParams)
+func (s *Service) ListPeriodicEvents(ctx context.Context, userID int, listParams ListParams) ([]domains.PeriodicEvent, error) {
+	events, err := s.repo.PeriodicEvents().List(ctx, userID, listParams)
 	if err != nil {
-		err = fmt.Errorf(op, err)
+		err = fmt.Errorf("list periodic events: %w", err)
 		logError(ctx, err)
 
 		return nil, err
 	}
 
-	return evWithNotifs, nil
+	return events, nil
 }

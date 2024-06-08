@@ -51,7 +51,7 @@ func (l *ListPeriodicEvents) listInline(ctx context.Context, b *bot.Bot, mes *mo
 		return fmt.Errorf(op, err)
 	}
 
-	events, err := l.th.serv.ListFuturePeriodicEvents(ctx, user.ID, defaultListParams)
+	events, err := l.th.serv.ListPeriodicEvents(ctx, user.ID, defaultListParams)
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}
@@ -75,7 +75,7 @@ func (l *ListPeriodicEvents) listInline(ctx context.Context, b *bot.Bot, mes *mo
 	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick())
 	for _, event := range events {
 		pe := PeriodicEvent{th: l.th} //nolint:exhaustruct //fill it in pe.HandleBtnEventChosen
-		text := event.Text + "\t|\t" + event.Notification.SendTime.In(user.Location()).Format(dayTimeFormat)
+		text := event.Text
 		kbr.Row().Button(text, []byte(strconv.Itoa(event.ID)), errorHandling(pe.HandleBtnEventChosen))
 	}
 	kbr.Row().Button("Cancel", nil, errorHandling(l.th.MainMenuInline))
@@ -526,7 +526,7 @@ func (pe *PeriodicEvent) UpdateInline(ctx context.Context, b *bot.Bot, msg *mode
 		return fmt.Errorf(op, err)
 	}
 
-	params := service.UpdatePeriodicEventParams{
+	params := domains.PeriodicEvent{
 		ID:                 pe.id,
 		Text:               pe.text,
 		Description:        pe.description,

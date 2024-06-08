@@ -45,7 +45,6 @@ func (u User) Location() *time.Location {
 }
 
 func (u *UserRepoCache) GetUserInfo(ctx context.Context, tgID int) (User, error) {
-	op := "UserRepoCache.GerUserInfo: %w"
 	userID, err := u.cache.Get(tgID)
 	if err == nil { // err equal nil
 		return userID, nil
@@ -53,7 +52,7 @@ func (u *UserRepoCache) GetUserInfo(ctx context.Context, tgID int) (User, error)
 
 	user, err := u.userRepo.GetTGUserInfo(ctx, tgID)
 	if err != nil {
-		return User{}, fmt.Errorf(op, err)
+		return User{}, fmt.Errorf("get tg user info [tgID: %v]: %w", tgID, err)
 	}
 
 	u.cache.StoreDefDur(tgID, User{

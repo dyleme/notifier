@@ -19,7 +19,6 @@ type PeriodicEvent struct {
 	SmallestPeriod     time.Duration
 	BiggestPeriod      time.Duration
 	NotificationParams *NotificationParams
-	Notification       PeriodicEventNotification
 }
 
 type InvalidPeriodTimeError struct {
@@ -31,25 +30,30 @@ func (i InvalidPeriodTimeError) Error() string {
 	return fmt.Sprintf("invalid period error biggest is before smallest %v < %v", i.biggest, i.smallest)
 }
 
-func (pe PeriodicEvent) NextNotification() (PeriodicEventNotification, error) {
+func (pe PeriodicEvent) NewNotification(t time.Time) (Notification, error) {
 	minDays := int(pe.SmallestPeriod / timeDay)
 	maxDays := int(pe.BiggestPeriod / timeDay)
 	if maxDays < minDays {
-		return PeriodicEventNotification{}, InvalidPeriodTimeError{smallest: pe.SmallestPeriod, biggest: pe.BiggestPeriod} //nolint:exhaustruct //returning error
+		return Notification{}, InvalidPeriodTimeError{smallest: pe.SmallestPeriod, biggest: pe.BiggestPeriod} //nolint:exhaustruct //returning error
 	}
 	days := int(pe.SmallestPeriod / timeDay)
 	if maxDays < minDays {
 		days = minDays + rand.Intn(maxDays-minDays) //nolint:gosec // no need to use crypto rand
 	}
-	dayBeginning := time.Now().Add(time.Duration(days) * timeDay).Truncate(timeDay)
+	dayBeginning := t.Add(time.Duration(days) * timeDay).Truncate(timeDay)
 	sendTime := dayBeginning.Add(pe.Start)
 
-	return PeriodicEventNotification{
-		ID:              0,
-		PeriodicEventID: pe.ID,
-		SendTime:        sendTime,
-		Sended:          false,
-		Done:            false,
+	return Notification{
+		ID:          0,
+		UserID:      pe.UserID,
+		Text:        pe.Text,
+		Description: pe.Description,
+		EventType:   PeriodicEventType,
+		EventID:     pe.ID,
+		Params:      pe.NotificationParams,
+		SendTime:    sendTime,
+		Sended:      false,
+		Done:        false,
 	}, nil
 }
 
@@ -63,6 +67,10 @@ func (pe PeriodicEvent) NeedRegenerateNotification(updated PeriodicEvent) bool {
 	}
 
 	return false
+}
+
+func (pe PeriodicEvent) BelongsTo(userID int) bool {
+	return pe.UserID == userID
 }
 
 type PeriodicEventNotification struct {
