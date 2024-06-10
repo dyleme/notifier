@@ -42,7 +42,7 @@ func (h *MockHandler) Handle(_ context.Context, r slog.Record) error {
 	h.errMx.Lock()
 	defer h.errMx.Unlock()
 	if h.err != nil {
-		return nil //nolint:nilerr // return non nil as error is already recordeed
+		return nil
 	}
 
 	fields := make(map[string]interface{}, r.NumAttrs())
