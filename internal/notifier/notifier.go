@@ -3,14 +3,14 @@ package notifier
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"slices"
-	"strconv"
 	"sync"
 	"time"
 
 	"github.com/Dyleme/Notifier/internal/domains"
 	"github.com/Dyleme/Notifier/pkg/log"
-	"github.com/Dyleme/Notifier/pkg/utils"
+	"github.com/Dyleme/Notifier/pkg/utils/compare"
 )
 
 //go:generate mockgen -destination=mocks/notifier_mocks.go -package=mocks . Notifier
@@ -24,7 +24,7 @@ type Config struct {
 
 type Service struct {
 	notifier      Notifier
-	notifications map[string]*Notification
+	notifications map[int]*Notification
 	mx            *sync.Mutex
 	nextNotifTime time.Time
 	timer         *time.Timer
@@ -37,7 +37,7 @@ func New(ctx context.Context, notifier Notifier, cfg Config) *Service {
 		period:        cfg.Period,
 		nextNotifTime: time.Now().Add(cfg.Period),
 		timer:         time.NewTimer(cfg.Period),
-		notifications: make(map[string]*Notification),
+		notifications: make(map[int]*Notification),
 		mx:            &sync.Mutex{},
 	}
 	go s.RunJob(ctx)
@@ -75,7 +75,6 @@ func (s *Service) notify(ctx context.Context) {
 }
 
 func (s *Service) RunJob(ctx context.Context) {
-	s.notify(ctx)
 	for {
 		select {
 		case <-s.timer.C:
@@ -110,17 +109,13 @@ func (s *Service) setTimerForNextNotification(ctx context.Context, t time.Time) 
 	s.timer.Reset(time.Until(s.nextNotifTime))
 }
 
-func key(eventID, userID int) string {
-	return strconv.Itoa(eventID) + "_" + strconv.Itoa(userID)
-}
-
-func (s *Service) Add(ctx context.Context, n domains.SendingNotification) error {
+func (s *Service) Add(ctx context.Context, notif domains.SendingNotification) error {
 	s.mx.Lock()
 	defer s.mx.Unlock()
-	notifTime := slices.MaxFunc([]time.Time{time.Now(), n.NotificationTime}, utils.TimeCmpWithoutZero)
-	s.notifications[key(n.EventID, n.UserID)] = &Notification{notification: n, nextNotifTime: notifTime}
+	notifTime := slices.MaxFunc([]time.Time{time.Now(), notif.SendTime}, compare.TimeCmpWithoutZero)
+	s.notifications[notif.NotificationID] = &Notification{notification: notif, nextNotifTime: notifTime}
 
-	log.Ctx(ctx).Debug("add", "notif", n)
+	log.Ctx(ctx).Debug("add", slog.Any("notification", notif))
 
 	if notifTime.Before(s.nextNotifTime) {
 		s.setTimerForNextNotification(ctx, notifTime)
@@ -129,10 +124,10 @@ func (s *Service) Add(ctx context.Context, n domains.SendingNotification) error 
 	return nil
 }
 
-func (s *Service) Delete(_ context.Context, eventID, userID int) error {
+func (s *Service) Delete(_ context.Context, notifID int) error {
 	s.mx.Lock()
 	defer s.mx.Unlock()
-	delete(s.notifications, key(eventID, userID))
+	delete(s.notifications, notifID)
 
 	return nil
 }

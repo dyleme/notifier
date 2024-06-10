@@ -14,11 +14,38 @@ type Params struct {
 }
 
 type SendingNotification struct {
-	EventType        EventType
-	EventID          int
-	UserID           int
-	Message          string
-	Description      string
-	Params           NotificationParams
-	NotificationTime time.Time
+	NotificationID int
+	UserID         int
+	Message        string
+	Description    string
+	Params         NotificationParams
+	SendTime       time.Time
+}
+
+func NewSendingNotification(n Notification, notificationParams NotificationParams) SendingNotification {
+	return SendingNotification{
+		NotificationID: n.ID,
+		UserID:         n.UserID,
+		Message:        n.Text,
+		Description:    n.Description,
+		Params:         notificationParams,
+		SendTime:       n.SendTime,
+	}
+}
+
+type Notification struct {
+	ID          int
+	UserID      int
+	Text        string
+	Description string
+	EventType   EventType
+	EventID     int
+	Params      *NotificationParams
+	SendTime    time.Time
+	Sended      bool
+	Done        bool
+}
+
+func (n Notification) BelongsTo(userID int) bool {
+	return n.UserID == userID
 }

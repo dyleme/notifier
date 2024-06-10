@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/go-telegram/bot"
@@ -75,7 +74,7 @@ func onSelectErrorHandling(f func(ctx context.Context, b *bot.Bot, relatedMsgID 
 	return func(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) {
 		err := f(ctx, b, msg.ID, msg.Chat.ID)
 		if err != nil {
-			handleError(ctx, b, msg.Chat.ID, fmt.Errorf("on select error handling: %w", err))
+			handleError(ctx, b, msg.Chat.ID, err)
 		}
 	}
 }
@@ -84,7 +83,7 @@ func errorHandling(f func(ctx context.Context, b *bot.Bot, msg *models.Message, 
 	return func(ctx context.Context, b *bot.Bot, msg *models.Message, bts []byte) {
 		err := f(ctx, b, msg, bts)
 		if err != nil {
-			handleError(ctx, b, msg.Chat.ID, fmt.Errorf("error handling: %w", err))
+			handleError(ctx, b, msg.Chat.ID, err)
 		}
 	}
 }

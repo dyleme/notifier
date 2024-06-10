@@ -20,7 +20,7 @@ func (th *TelegramHandler) tgUserID(update *models.Update) (int64, error) {
 		return update.CallbackQuery.Sender.ID, nil
 	}
 
-	return 0, fmt.Errorf("unknown id")
+	return 0, errors.New("unknown id")
 }
 
 func (th *TelegramHandler) UserMiddleware(next bot.HandlerFunc) bot.HandlerFunc {
@@ -67,7 +67,7 @@ func UserFromCtx(ctx context.Context) (userinfo.User, error) {
 	return userID, nil
 }
 
-func loggingMiddleware(next bot.HandlerFunc) bot.HandlerFunc {
+func loggingMiddleware(next bot.HandlerFunc) bot.HandlerFunc { //nolint:unused // no need for now
 	return func(ctx context.Context, bot *bot.Bot, update *models.Update) {
 		log.Ctx(ctx).Debug("got update", "update", update)
 

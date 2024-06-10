@@ -42,10 +42,10 @@ func (m *MockEventRepository) EXPECT() *MockEventRepositoryMockRecorder {
 }
 
 // Add mocks base method.
-func (m *MockEventRepository) Add(arg0 context.Context, arg1 domains.Event) (domains.Event, error) {
+func (m *MockEventRepository) Add(arg0 context.Context, arg1 domains.BasicEvent) (domains.BasicEvent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Add", arg0, arg1)
-	ret0, _ := ret[0].(domains.Event)
+	ret0, _ := ret[0].(domains.BasicEvent)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -85,10 +85,10 @@ func (mr *MockEventRepositoryMockRecorder) Delete(arg0, arg1, arg2 any) *gomock.
 }
 
 // Get mocks base method.
-func (m *MockEventRepository) Get(arg0 context.Context, arg1, arg2 int) (domains.Event, error) {
+func (m *MockEventRepository) Get(arg0 context.Context, arg1, arg2 int) (domains.BasicEvent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2)
-	ret0, _ := ret[0].(domains.Event)
+	ret0, _ := ret[0].(domains.BasicEvent)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -115,10 +115,10 @@ func (mr *MockEventRepositoryMockRecorder) GetNearestEventSendTime(arg0 any) *go
 }
 
 // List mocks base method.
-func (m *MockEventRepository) List(arg0 context.Context, arg1 int, arg2 service.ListParams) ([]domains.Event, error) {
+func (m *MockEventRepository) List(arg0 context.Context, arg1 int, arg2 service.ListParams) ([]domains.BasicEvent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2)
-	ret0, _ := ret[0].([]domains.Event)
+	ret0, _ := ret[0].([]domains.BasicEvent)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -130,10 +130,10 @@ func (mr *MockEventRepositoryMockRecorder) List(arg0, arg1, arg2 any) *gomock.Ca
 }
 
 // ListEventsBefore mocks base method.
-func (m *MockEventRepository) ListEventsBefore(arg0 context.Context, arg1 time.Time) ([]domains.Event, error) {
+func (m *MockEventRepository) ListEventsBefore(arg0 context.Context, arg1 time.Time) ([]domains.BasicEvent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListEventsBefore", arg0, arg1)
-	ret0, _ := ret[0].([]domains.Event)
+	ret0, _ := ret[0].([]domains.BasicEvent)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -145,10 +145,10 @@ func (mr *MockEventRepositoryMockRecorder) ListEventsBefore(arg0, arg1 any) *gom
 }
 
 // ListInPeriod mocks base method.
-func (m *MockEventRepository) ListInPeriod(arg0 context.Context, arg1 int, arg2, arg3 time.Time, arg4 service.ListParams) ([]domains.Event, error) {
+func (m *MockEventRepository) ListInPeriod(arg0 context.Context, arg1 int, arg2, arg3 time.Time, arg4 service.ListParams) ([]domains.BasicEvent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListInPeriod", arg0, arg1, arg2, arg3, arg4)
-	ret0, _ := ret[0].([]domains.Event)
+	ret0, _ := ret[0].([]domains.BasicEvent)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -174,10 +174,10 @@ func (mr *MockEventRepositoryMockRecorder) MarkNotified(arg0, arg1 any) *gomock.
 }
 
 // Update mocks base method.
-func (m *MockEventRepository) Update(arg0 context.Context, arg1 domains.Event) (domains.Event, error) {
+func (m *MockEventRepository) Update(arg0 context.Context, arg1 domains.BasicEvent) (domains.BasicEvent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Update", arg0, arg1)
-	ret0, _ := ret[0].(domains.Event)
+	ret0, _ := ret[0].(domains.BasicEvent)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

@@ -10,15 +10,13 @@ import (
 	inKbr "github.com/go-telegram/ui/keyboard/inline"
 
 	"github.com/Dyleme/Notifier/internal/domains"
-	"github.com/Dyleme/Notifier/internal/service/service"
 	"github.com/Dyleme/Notifier/internal/telegram/userinfo"
 )
 
 type Notification struct {
 	th        *TelegramHandler
-	eventType domains.EventType
 	done      bool
-	eventID   int
+	id        int
 	message   string
 	notifTime time.Time
 }
@@ -30,15 +28,14 @@ func (th *TelegramHandler) Notify(ctx context.Context, notif domains.SendingNoti
 	}
 	n := Notification{
 		th:        th,
-		eventType: notif.EventType,
 		done:      false,
-		eventID:   notif.EventID,
+		id:        notif.NotificationID,
 		message:   notif.Message,
-		notifTime: notif.NotificationTime,
+		notifTime: notif.SendTime,
 	}
-	err = n.sendMessage(ctx, int64(notif.Params.Params.Telegram), user)
+	err = n.sendMessage(ctx, int64(user.TGID), user)
 	if err != nil {
-		return fmt.Errorf("send message: %w", err)
+		return fmt.Errorf("send message [user: %v]: %w", user, err)
 	}
 
 	return nil
@@ -46,13 +43,14 @@ func (th *TelegramHandler) Notify(ctx context.Context, notif domains.SendingNoti
 
 func (n *Notification) sendMessage(ctx context.Context, chatID int64, user userinfo.User) error {
 	kb := inKbr.New(n.th.bot, inKbr.NoDeleteAfterClick()).Button("Done", nil, errorHandling(n.setDone))
+	text := n.message + " " + n.notifTime.In(user.Location()).Format(dayTimeFormat)
 	_, err := n.th.bot.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
 		ChatID:      chatID,
-		Text:        n.message + " " + n.notifTime.In(user.Location()).Format(dayTimeFormat),
+		Text:        text,
 		ReplyMarkup: kb,
 	})
 	if err != nil {
-		return fmt.Errorf("send message: %w", err)
+		return fmt.Errorf("send message [chatID=%v, text=%q]: %w", chatID, text, err)
 	}
 
 	return nil
@@ -98,14 +96,9 @@ func (n *Notification) SendDone(ctx context.Context, b *bot.Bot, msg *models.Mes
 		return fmt.Errorf("user from ctx: %w", err)
 	}
 
-	err = n.th.serv.SetEventDoneStatus(ctx, service.AbstractEvent{
-		EventID:   n.eventID,
-		EventType: n.eventType,
-		UserID:    user.ID,
-		Done:      true,
-	})
+	err = n.th.serv.SetNotificationDoneStatus(ctx, n.id, user.ID, n.done)
 	if err != nil {
-		return fmt.Errorf("set event done status: %w", err)
+		return fmt.Errorf("set event done status [notificationID=%v, userID=%v]: %w", n.id, user.ID, err)
 	}
 
 	_, err = b.DeleteMessage(ctx, &bot.DeleteMessageParams{

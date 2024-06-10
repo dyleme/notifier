@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/go-telegram/bot"
@@ -32,7 +33,7 @@ func New(service *timetableService.Service, userRepo UserRepo, cfg Config, actio
 		bot:                 nil, // set this field later by calling SetBot method
 	}
 	opts := []bot.Option{
-		bot.WithMiddlewares(recoverPanicMiddleware, loggingMiddleware, tgHandler.UserMiddleware),
+		bot.WithMiddlewares(recoverPanicMiddleware /*loggingMiddleware,*/, tgHandler.UserMiddleware),
 		bot.WithMessageTextHandler("/start", bot.MatchTypeExact, tgHandler.StartListener),
 		bot.WithMessageTextHandler("/info", bot.MatchTypeExact, tgHandler.InfoListener),
 		bot.WithMessageTextHandler("/cancel", bot.MatchTypeExact, tgHandler.CancelListener),
@@ -167,5 +168,5 @@ func (th *TelegramHandler) chatID(update *models.Update) (int64, error) {
 		}
 	}
 
-	return 0, fmt.Errorf("no chat id")
+	return 0, errors.New("no chat id")
 }

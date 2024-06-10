@@ -15,7 +15,7 @@ import (
 	"github.com/Dyleme/Notifier/internal/domains"
 	"github.com/Dyleme/Notifier/internal/service/repository/queries"
 	"github.com/Dyleme/Notifier/internal/service/service"
-	serverrors2 "github.com/Dyleme/Notifier/pkg/serverrors"
+	"github.com/Dyleme/Notifier/pkg/serverrors"
 )
 
 type TgImagesRepository struct {
@@ -43,14 +43,14 @@ func (t TgImagesRepository) Add(ctx context.Context, filename, tgFileID string) 
 	})
 	if err != nil {
 		if intersection, isUnique := uniqueError(err, []string{"filename"}); isUnique {
-			return fmt.Errorf(op, serverrors2.NewUniqueError(intersection, filename))
+			return fmt.Errorf(op, serverrors.NewUniqueError(intersection, filename))
 		}
 
-		return fmt.Errorf(op, serverrors2.NewRepositoryError(err))
+		return fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
 	if err = t.cache.Add(newTgImageKey(filename), tgImage); err != nil {
-		return fmt.Errorf(op, serverrors2.NewRepositoryError(err))
+		return fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
 	return nil
@@ -85,10 +85,10 @@ func (t TgImagesRepository) Get(ctx context.Context, filename string) (domains.T
 	tgImage, err := t.q.GetTgImage(ctx, tx, filename)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return domains.TgImage{}, fmt.Errorf(op, serverrors2.NewNotFoundError(err, "tg image"))
+			return domains.TgImage{}, fmt.Errorf(op, serverrors.NewNotFoundError(err, "tg image"))
 		}
 
-		return domains.TgImage{}, fmt.Errorf(op, serverrors2.NewRepositoryError(err))
+		return domains.TgImage{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
 	return domains.TgImage{

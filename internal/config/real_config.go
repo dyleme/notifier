@@ -3,24 +3,24 @@ package config
 import (
 	"github.com/Dyleme/Notifier/internal/authorization/jwt"
 	"github.com/Dyleme/Notifier/internal/notifier"
+	"github.com/Dyleme/Notifier/internal/notifierjob"
 	"github.com/Dyleme/Notifier/internal/server"
-	"github.com/Dyleme/Notifier/internal/service/service"
 	"github.com/Dyleme/Notifier/internal/telegram/handler"
 	"github.com/Dyleme/Notifier/pkg/sqldatabase"
 )
 
 type Config struct {
-	Env      string
-	Database *sqldatabase.Config
-	JWT      *jwt.Config
-	APIKey   string
-	Server   *server.Config
-	Notifier notifier.Config
-	Service  service.Config
-	Telegram handler.Config
+	Env         string
+	Database    *sqldatabase.Config
+	JWT         *jwt.Config
+	APIKey      string
+	Server      *server.Config
+	Notifier    notifier.Config
+	NotifierJob notifierjob.Config
+	Telegram    handler.Config
 }
 
-func mapConfig(cc *collectableConfig) Config {
+func mapConfig(cc *compositeConfig) Config {
 	return Config{
 		Env: cc.Env,
 		Database: &sqldatabase.Config{
@@ -46,8 +46,8 @@ func mapConfig(cc *collectableConfig) Config {
 		Notifier: notifier.Config{
 			Period: cc.Notifier.CheckPeriod,
 		},
-		Service: service.Config{
-			CheckTasksPeriod: cc.EventService.CheckPeriod,
+		NotifierJob: notifierjob.Config{
+			CheckTasksPeriod: cc.NotifierJob.CheckPeriod,
 		},
 		Telegram: handler.Config{
 			Token: cc.Telegram.Token,

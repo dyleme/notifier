@@ -7,15 +7,15 @@ import (
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
-type collectableConfig struct {
-	Env          string `env:"ENV" env-required:"true"`
-	Database     databaseConfig
-	JWT          jwtConfig
-	APIKey       apiKeyConfig
-	Server       serverConfig
-	Notifier     notificationConfig
-	EventService timetableServiceConfig
-	Telegram     telegramConfig
+type compositeConfig struct {
+	Env         string `env:"ENV" env-required:"true"`
+	Database    databaseConfig
+	JWT         jwtConfig
+	APIKey      apiKeyConfig
+	Server      serverConfig
+	Notifier    notificationConfig
+	NotifierJob notifierJobConfig
+	Telegram    telegramConfig
 }
 
 type serverConfig struct {
@@ -48,7 +48,7 @@ type notificationConfig struct {
 	CheckPeriod time.Duration `env:"NOTIFICATIONS_CHECK_PERIOD" env-required:"true"`
 }
 
-type timetableServiceConfig struct {
+type notifierJobConfig struct {
 	CheckPeriod time.Duration `env:"TIMETABLE_TASK_CHECK_PERIOD" env-required:"true"`
 }
 
@@ -56,16 +56,15 @@ type telegramConfig struct {
 	Token string `env:"TELEGRAM_TOKEN" env-required:"true"`
 }
 
-func Load() (Config, error) {
-	op := "Load: %w"
-	var collectConfigs collectableConfig
+func Load() Config {
+	var collectConfigs compositeConfig
 	err := cleanenv.ReadConfig(".env", &collectConfigs)
 	if err != nil {
 		err = cleanenv.ReadEnv(&collectConfigs)
 		if err != nil {
-			return Config{}, fmt.Errorf(op, err)
+			panic(fmt.Errorf("can't read env: %w", err))
 		}
 	}
 
-	return mapConfig(&collectConfigs), nil
+	return mapConfig(&collectConfigs)
 }

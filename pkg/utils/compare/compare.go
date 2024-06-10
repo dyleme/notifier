@@ -1,4 +1,4 @@
-package utils
+package compare
 
 import (
 	"time"
@@ -16,4 +16,10 @@ func TimeCmpWithoutZero(a, b time.Time) int {
 	}
 
 	return 1
+}
+
+func Zero[T comparable](t T) bool {
+	var zero T
+
+	return t == zero
 }

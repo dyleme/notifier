@@ -2,6 +2,7 @@ package notifier_test
 
 import (
 	"context"
+	"strconv"
 	"testing"
 	"time"
 
@@ -11,23 +12,22 @@ import (
 	"github.com/Dyleme/Notifier/internal/domains"
 	"github.com/Dyleme/Notifier/internal/notifier"
 	"github.com/Dyleme/Notifier/internal/notifier/mocks"
-	"github.com/Dyleme/Notifier/pkg/utils"
+	"github.com/Dyleme/Notifier/pkg/utils/sequences"
 )
 
-var eventIDSeq = utils.NewIntSequence()
+var idSeq = sequences.NewRandInt()
 
 func newNotif(t time.Time, per time.Duration) domains.SendingNotification {
 	return domains.SendingNotification{
-		EventID:     eventIDSeq.Next(),
-		EventType:   domains.BasicEventType,
-		UserID:      0,
-		Message:     "",
-		Description: "",
+		NotificationID: idSeq.Next(),
+		UserID:         idSeq.Next(),
+		Message:        strconv.Itoa(idSeq.Next()),
+		Description:    strconv.Itoa(idSeq.Next()),
 		Params: domains.NotificationParams{
 			Period: per,
-			Params: domains.Params{}, //nolint:exhaustruct // test
+			Params: domains.Params{},
 		},
-		NotificationTime: t,
+		SendTime: t,
 	}
 }
 

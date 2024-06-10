@@ -16,17 +16,18 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/Dyleme/Notifier/internal/authorization/authmiddleware"
-	authorizatoinHandler "github.com/Dyleme/Notifier/internal/authorization/handler"
+	authHandler "github.com/Dyleme/Notifier/internal/authorization/handler"
 	"github.com/Dyleme/Notifier/internal/authorization/jwt"
-	authorizationRepository "github.com/Dyleme/Notifier/internal/authorization/repository"
-	authorizationService "github.com/Dyleme/Notifier/internal/authorization/service"
+	authRepository "github.com/Dyleme/Notifier/internal/authorization/repository"
+	authService "github.com/Dyleme/Notifier/internal/authorization/service"
 	"github.com/Dyleme/Notifier/internal/config"
 	"github.com/Dyleme/Notifier/internal/notifier"
+	"github.com/Dyleme/Notifier/internal/notifierjob"
 	"github.com/Dyleme/Notifier/internal/server"
 	custMiddleware "github.com/Dyleme/Notifier/internal/server/middleware"
-	timetableHandler "github.com/Dyleme/Notifier/internal/service/handler"
-	timetableRepository "github.com/Dyleme/Notifier/internal/service/repository"
-	timetableService "github.com/Dyleme/Notifier/internal/service/service"
+	"github.com/Dyleme/Notifier/internal/service/handler"
+	"github.com/Dyleme/Notifier/internal/service/repository"
+	"github.com/Dyleme/Notifier/internal/service/service"
 	tgHandler "github.com/Dyleme/Notifier/internal/telegram/handler"
 	"github.com/Dyleme/Notifier/internal/telegram/userinfo"
 	"github.com/Dyleme/Notifier/pkg/log"
@@ -35,13 +36,8 @@ import (
 )
 
 func main() { //nolint:funlen // main can be long
-	cfg, err := config.Load()
+	cfg := config.Load()
 	logger := setupLogger(cfg.Env)
-	if err != nil {
-		logger.Error("configuration loading error", log.Err(err))
-
-		return
-	}
 	ctx := log.InCtx(context.Background(), logger)
 	ctx = cancelOnInterruption(ctx)
 
@@ -52,24 +48,25 @@ func main() { //nolint:funlen // main can be long
 		return
 	}
 
-	notif := notifier.New(ctx, nil, cfg.Notifier)
-	cache := timetableRepository.NewUniversalCache()
+	notifSvc := notifier.New(ctx, nil, cfg.Notifier)
+	cache := repository.NewUniversalCache()
 	trManager := manager.Must(trmpgx.NewDefaultFactory(db))
 	trCtxGetter := trmpgx.DefaultCtxGetter
-	repo := timetableRepository.New(db, cache, trCtxGetter)
-	service := timetableService.New(ctx, repo, trManager, notif, cfg.Service)
-	timeTableHandler := timetableHandler.New(service)
+	repo := repository.New(db, cache, trCtxGetter)
+	notifierJob := notifierjob.New(repo, notifSvc, cfg.NotifierJob, trManager)
+	svc := service.New(repo, trManager, notifSvc, notifierJob)
+	timeTableHndlr := handler.New(svc)
 
 	apiTokenMiddleware := authmiddleware.NewAPIToken(cfg.APIKey)
 	jwtGen := jwt.NewJwtGen(cfg.JWT)
 	jwtMiddleware := authmiddleware.NewJWT(jwtGen)
-	authRepo := authorizationRepository.New(db)
-	authService := authorizationService.NewAuth(authRepo, &authorizationService.HashGen{}, jwtGen, trManager)
-	authHandler := authorizatoinHandler.New(authService)
+	authRepo := authRepository.New(db)
+	authSvc := authService.NewAuth(authRepo, &authService.HashGen{}, jwtGen, trManager)
+	authHndlr := authHandler.New(authSvc)
 
 	router := server.Route(
-		timeTableHandler,
-		authHandler,
+		timeTableHndlr,
+		authHndlr,
 		jwtMiddleware.Handle,
 		apiTokenMiddleware.Handle,
 		[]func(next http.Handler) http.Handler{
@@ -81,16 +78,16 @@ func main() { //nolint:funlen // main can be long
 		},
 	)
 
-	tg, err := tgHandler.New(service, userinfo.NewUserRepoCache(authService), cfg.Telegram, timecache.New[int64, tgHandler.TextMessageHandler]())
+	tg, err := tgHandler.New(svc, userinfo.NewUserRepoCache(authSvc), cfg.Telegram, timecache.New[int64, tgHandler.TextMessageHandler]())
 	if err != nil {
 		logger.Error("tg init error", log.Err(err))
 
 		return
 	}
 
-	notif.SetNotifier(tg)
+	notifSvc.SetNotifier(tg)
 
-	go service.RunNotificationJob(ctx)
+	go notifierJob.Run(ctx)
 
 	serv := server.New(router, cfg.Server)
 

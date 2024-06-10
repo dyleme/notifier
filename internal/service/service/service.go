@@ -10,26 +10,31 @@ import (
 type Repository interface {
 	DefaultNotificationParams() NotificationParamsRepository
 	Tasks() TaskRepository
-	Events() EventRepository
+	Events() BasicEventRepository
 	TgImages() TgImagesRepository
 	PeriodicEvents() PeriodicEventsRepository
+	Notifications() NotificationsRepository
 }
 
 type Service struct {
 	repo        Repository
-	notifierJob *NotifierJob
 	notifier    Notifier
+	notifierJob NotifierJob
 	tr          *trManager.Manager
 }
 
-type Config struct {
-	CheckTasksPeriod time.Duration
+type Notifier interface {
+	Delete(ctx context.Context, notifID int) error
 }
 
-func New(_ context.Context, repo Repository, trManger *trManager.Manager, notifier Notifier, cfg Config) *Service {
+type NotifierJob interface {
+	UpdateWithTime(ctx context.Context, t time.Time)
+}
+
+func New(repo Repository, trManger *trManager.Manager, notifier Notifier, notifierJob NotifierJob) *Service {
 	s := &Service{
 		repo:        repo,
-		notifierJob: NewNotifierJob(repo, notifier, cfg, trManger),
+		notifierJob: notifierJob,
 		notifier:    notifier,
 		tr:          trManger,
 	}

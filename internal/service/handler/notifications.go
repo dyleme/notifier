@@ -93,7 +93,7 @@ func mapNotificationParams(req api.NotificationParams) domains.NotificationParam
 	return params
 }
 
-func (t EventHandler) GetEventNotificationParams(w http.ResponseWriter, r *http.Request, eventID int) {
+func (t EventHandler) GetEventNotificationParams(w http.ResponseWriter, r *http.Request, _ int) {
 	userID, err := authmiddleware.UserIDFromCtx(r.Context())
 	if err != nil {
 		responses.Error(w, http.StatusInternalServerError, err)
@@ -101,17 +101,17 @@ func (t EventHandler) GetEventNotificationParams(w http.ResponseWriter, r *http.
 		return
 	}
 
-	params, err := t.serv.GetNotificationParams(r.Context(), eventID, userID)
+	params, err := t.serv.GetDefaultNotificationParams(r.Context(), userID)
 	if err != nil {
 		responses.KnownError(w, err)
 
 		return
 	}
 
-	responses.JSON(w, http.StatusOK, mapNotificationParamsResp(*params))
+	responses.JSON(w, http.StatusOK, mapNotificationParamsResp(params))
 }
 
-func (t EventHandler) SetEventNotificationParams(w http.ResponseWriter, r *http.Request, eventID int) {
+func (t EventHandler) SetEventNotificationParams(w http.ResponseWriter, r *http.Request, _ int) {
 	userID, err := authmiddleware.UserIDFromCtx(r.Context())
 	if err != nil {
 		responses.Error(w, http.StatusInternalServerError, err)
@@ -129,7 +129,7 @@ func (t EventHandler) SetEventNotificationParams(w http.ResponseWriter, r *http.
 
 	params := mapNotificationParams(reqParamsBody)
 
-	res, err := t.serv.SetNotificationParams(r.Context(), eventID, params, userID)
+	res, err := t.serv.SetDefaultNotificationParams(r.Context(), params, userID)
 	if err != nil {
 		responses.KnownError(w, err)
 
