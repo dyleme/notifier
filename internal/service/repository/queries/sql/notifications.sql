@@ -2,14 +2,14 @@
 INSERT INTO notifications (
     user_id,
     text,
-    event_id,
-    event_type,
+    task_id,
+    task_type,
     send_time
 ) VALUES (
     @user_id,
     @text,
-    @event_id,
-    @event_type,
+    @task_id,
+    @task_type,
     @send_time
 ) RETURNING *;
 
@@ -19,7 +19,7 @@ WHERE id = @id;
 
 -- name: GetLatestNotification :one
 SELECT * FROM notifications
-WHERE event_id = @event_id
+WHERE task_id = @task_id
 ORDER BY send_time DESC
 LIMIT 1;
   

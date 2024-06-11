@@ -1,5 +1,5 @@
--- name: AddBasicEvent :one
-INSERT INTO basic_events (
+-- name: AddBasicTask :one
+INSERT INTO basic_tasks (
   user_id,
   text,
   start,
@@ -14,32 +14,32 @@ INSERT INTO basic_events (
 )
 RETURNING *;
 
--- name: GetBasicEvent :one
+-- name: GetBasicTask :one
 SELECT *
-FROM basic_events
+FROM basic_tasks
 WHERE id = @id;
 
--- name: ListBasicEvents :many
+-- name: ListBasicTasks :many
 SELECT *
-FROM basic_events
+FROM basic_tasks
 WHERE user_id = @user_id
 ORDER BY id DESC
 LIMIT @lim OFFSET @OFF;
 
--- name: CountListBasicEvents :one
+-- name: CountListBasicTasks :one
 SELECT COUNT(*)
-FROM basic_events
+FROM basic_tasks
 WHERE user_id = @user_id;
 
 
--- name: DeleteBasicEvent :many
+-- name: DeleteBasicTask :many
 DELETE
-FROM basic_events
+FROM basic_tasks
 WHERE id = @id
 RETURNING *;
 
--- name: UpdateBasicEvent :one
-UPDATE basic_events
+-- name: UpdateBasicTask :one
+UPDATE basic_tasks
 SET start       = @start,
     text        = @text,
     description = @description,

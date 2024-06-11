@@ -9,10 +9,9 @@ import (
 
 type Repository interface {
 	DefaultNotificationParams() NotificationParamsRepository
-	Tasks() TaskRepository
-	Events() BasicEventRepository
+	Tasks() BasicTaskRepository
 	TgImages() TgImagesRepository
-	PeriodicEvents() PeriodicEventsRepository
+	PeriodicTasks() PeriodicTasksRepository
 	Notifications() NotificationsRepository
 }
 

@@ -98,7 +98,7 @@ func (n *Notification) SendDone(ctx context.Context, b *bot.Bot, msg *models.Mes
 
 	err = n.th.serv.SetNotificationDoneStatus(ctx, n.id, user.ID, n.done)
 	if err != nil {
-		return fmt.Errorf("set event done status [notificationID=%v, userID=%v]: %w", n.id, user.ID, err)
+		return fmt.Errorf("set task done status [notificationID=%v, userID=%v]: %w", n.id, user.ID, err)
 	}
 
 	_, err = b.DeleteMessage(ctx, &bot.DeleteMessageParams{

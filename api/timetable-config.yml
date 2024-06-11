@@ -6,6 +6,5 @@ output: ./internal/service/handler/api/timetableapi.gen.go
 output-options:
   include-tags:
     - Tasks
-    - Events
-    - Event
+    - Task
     - NotificationParams

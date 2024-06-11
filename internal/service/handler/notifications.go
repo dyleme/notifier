@@ -12,7 +12,7 @@ import (
 	"github.com/Dyleme/Notifier/pkg/utils"
 )
 
-func (t EventHandler) GetDefaultNotificationParams(w http.ResponseWriter, r *http.Request) {
+func (t TaskHandler) GetDefaultNotificationParams(w http.ResponseWriter, r *http.Request) {
 	userID, err := authmiddleware.UserIDFromCtx(r.Context())
 	if err != nil {
 		responses.Error(w, http.StatusInternalServerError, err)
@@ -30,7 +30,7 @@ func (t EventHandler) GetDefaultNotificationParams(w http.ResponseWriter, r *htt
 	responses.JSON(w, http.StatusOK, mapNotificationParamsResp(defParams))
 }
 
-func (t EventHandler) SetDefaultNotificationParams(w http.ResponseWriter, r *http.Request) {
+func (t TaskHandler) SetDefaultNotificationParams(w http.ResponseWriter, r *http.Request) {
 	userID, err := authmiddleware.UserIDFromCtx(r.Context())
 	if err != nil {
 		responses.Error(w, http.StatusInternalServerError, err)
@@ -93,7 +93,7 @@ func mapNotificationParams(req api.NotificationParams) domains.NotificationParam
 	return params
 }
 
-func (t EventHandler) GetEventNotificationParams(w http.ResponseWriter, r *http.Request, _ int) {
+func (t TaskHandler) GetTaskNotificationParams(w http.ResponseWriter, r *http.Request, _ int) {
 	userID, err := authmiddleware.UserIDFromCtx(r.Context())
 	if err != nil {
 		responses.Error(w, http.StatusInternalServerError, err)
@@ -111,7 +111,7 @@ func (t EventHandler) GetEventNotificationParams(w http.ResponseWriter, r *http.
 	responses.JSON(w, http.StatusOK, mapNotificationParamsResp(params))
 }
 
-func (t EventHandler) SetEventNotificationParams(w http.ResponseWriter, r *http.Request, _ int) {
+func (t TaskHandler) SetTaskNotificationParams(w http.ResponseWriter, r *http.Request, _ int) {
 	userID, err := authmiddleware.UserIDFromCtx(r.Context())
 	if err != nil {
 		responses.Error(w, http.StatusInternalServerError, err)
@@ -119,7 +119,7 @@ func (t EventHandler) SetEventNotificationParams(w http.ResponseWriter, r *http.
 		return
 	}
 
-	var reqParamsBody api.SetEventNotificationParamsJSONRequestBody
+	var reqParamsBody api.SetTaskNotificationParamsJSONRequestBody
 	err = requests.Bind(r, &reqParamsBody)
 	if err != nil {
 		responses.KnownError(w, err)

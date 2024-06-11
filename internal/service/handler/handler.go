@@ -4,10 +4,10 @@ import (
 	"github.com/Dyleme/Notifier/internal/service/service"
 )
 
-type EventHandler struct {
+type TaskHandler struct {
 	serv *service.Service
 }
 
-func New(serv *service.Service) EventHandler {
-	return EventHandler{serv: serv}
+func New(serv *service.Service) TaskHandler {
+	return TaskHandler{serv: serv}
 }

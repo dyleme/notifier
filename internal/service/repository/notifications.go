@@ -29,34 +29,34 @@ func (r *Repository) Notifications() service.NotificationsRepository {
 	return r.notificationsRepository
 }
 
-const UnkownEventType = queries.EventType("unknown_type")
+const UnkownTaskType = queries.TaskType("unknown_type")
 
-func (*NotificationsRepository) repoEventType(eventType domains.EventType) (queries.EventType, error) {
-	switch eventType {
-	case domains.PeriodicEventType:
-		return queries.EventTypePeriodicEvent, nil
-	case domains.BasicEventType:
-		return queries.EventTypeBasicEvent, nil
+func (*NotificationsRepository) repoTaskType(taskType domains.TaskType) (queries.TaskType, error) {
+	switch taskType {
+	case domains.PeriodicTaskType:
+		return queries.TaskTypePeriodicTask, nil
+	case domains.BasicTaskType:
+		return queries.TaskTypeBasicTask, nil
 	default:
-		return "", serverrors.NewBusinessLogicError("unknown event type")
+		return "", serverrors.NewBusinessLogicError("unknown task type")
 	}
 }
 
-func (*NotificationsRepository) domainEventType(eventType queries.EventType) (domains.EventType, error) {
-	switch eventType {
-	case queries.EventTypePeriodicEvent:
-		return domains.PeriodicEventType, nil
-	case queries.EventTypeBasicEvent:
-		return domains.BasicEventType, nil
+func (*NotificationsRepository) domainTaskType(taskType queries.TaskType) (domains.TaskType, error) {
+	switch taskType {
+	case queries.TaskTypePeriodicTask:
+		return domains.PeriodicTaskType, nil
+	case queries.TaskTypeBasicTask:
+		return domains.BasicTaskType, nil
 	default:
-		return "", serverrors.NewBusinessLogicError("unknown event type")
+		return "", serverrors.NewBusinessLogicError("unknown task type")
 	}
 }
 
 func (n *NotificationsRepository) dto(notif queries.Notification) (domains.Notification, error) {
-	eventType, err := n.domainEventType(notif.EventType)
+	taskType, err := n.domainTaskType(notif.TaskType)
 	if err != nil {
-		return domains.Notification{}, fmt.Errorf("domain event type: %w", err)
+		return domains.Notification{}, fmt.Errorf("domain task type: %w", err)
 	}
 
 	return domains.Notification{
@@ -64,8 +64,8 @@ func (n *NotificationsRepository) dto(notif queries.Notification) (domains.Notif
 		UserID:      int(notif.UserID),
 		Text:        notif.Text,
 		Description: pgxconv.String(notif.Description),
-		EventType:   eventType,
-		EventID:     int(notif.EventID),
+		TaskType:    taskType,
+		TaskID:      int(notif.TaskID),
 		Params:      notif.NotificationParams,
 		SendTime:    pgxconv.TimeWithZone(notif.SendTime),
 		Sended:      notif.Sended,
@@ -76,16 +76,16 @@ func (n *NotificationsRepository) dto(notif queries.Notification) (domains.Notif
 func (n *NotificationsRepository) Add(ctx context.Context, notification domains.Notification) (domains.Notification, error) {
 	tx := n.getter.DefaultTrOrDB(ctx, n.db)
 
-	eventType, err := n.repoEventType(notification.EventType)
+	taskType, err := n.repoTaskType(notification.TaskType)
 	if err != nil {
-		return domains.Notification{}, fmt.Errorf("repo event type: %w", err)
+		return domains.Notification{}, fmt.Errorf("repo task type: %w", err)
 	}
 	notif, err := n.q.AddNotification(ctx, tx, queries.AddNotificationParams{
-		UserID:    int32(notification.UserID),
-		Text:      notification.Text,
-		EventID:   int32(notification.EventID),
-		EventType: eventType,
-		SendTime:  pgxconv.Timestamptz(notification.SendTime),
+		UserID:   int32(notification.UserID),
+		Text:     notification.Text,
+		TaskID:   int32(notification.TaskID),
+		TaskType: taskType,
+		SendTime: pgxconv.Timestamptz(notification.SendTime),
 	})
 	if err != nil {
 		return domains.Notification{}, fmt.Errorf("add notification: %w", serverrors.NewRepositoryError(err))
@@ -131,10 +131,10 @@ func (n *NotificationsRepository) Get(ctx context.Context, id int) (domains.Noti
 	return n.dto(notif)
 }
 
-func (n *NotificationsRepository) GetLatest(ctx context.Context, eventdID int) (domains.Notification, error) {
+func (n *NotificationsRepository) GetLatest(ctx context.Context, taskdID int) (domains.Notification, error) {
 	tx := n.getter.DefaultTrOrDB(ctx, n.db)
 
-	notif, err := n.q.GetLatestNotification(ctx, tx, int32(eventdID))
+	notif, err := n.q.GetLatestNotification(ctx, tx, int32(taskdID))
 	if err != nil {
 		return domains.Notification{}, fmt.Errorf("get latest notification: %w", serverrors.NewRepositoryError(err))
 	}

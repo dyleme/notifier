@@ -15,8 +15,8 @@ const addNotification = `-- name: AddNotification :one
 INSERT INTO notifications (
     user_id,
     text,
-    event_id,
-    event_type,
+    task_id,
+    task_type,
     send_time
 ) VALUES (
     $1,
@@ -24,23 +24,23 @@ INSERT INTO notifications (
     $3,
     $4,
     $5
-) RETURNING id, created_at, user_id, text, description, event_id, event_type, send_time, sended, done, notification_params
+) RETURNING id, created_at, user_id, text, description, task_id, task_type, send_time, sended, done, notification_params
 `
 
 type AddNotificationParams struct {
-	UserID    int32              `db:"user_id"`
-	Text      string             `db:"text"`
-	EventID   int32              `db:"event_id"`
-	EventType EventType          `db:"event_type"`
-	SendTime  pgtype.Timestamptz `db:"send_time"`
+	UserID   int32              `db:"user_id"`
+	Text     string             `db:"text"`
+	TaskID   int32              `db:"task_id"`
+	TaskType TaskType           `db:"task_type"`
+	SendTime pgtype.Timestamptz `db:"send_time"`
 }
 
 func (q *Queries) AddNotification(ctx context.Context, db DBTX, arg AddNotificationParams) (Notification, error) {
 	row := db.QueryRow(ctx, addNotification,
 		arg.UserID,
 		arg.Text,
-		arg.EventID,
-		arg.EventType,
+		arg.TaskID,
+		arg.TaskType,
 		arg.SendTime,
 	)
 	var i Notification
@@ -50,8 +50,8 @@ func (q *Queries) AddNotification(ctx context.Context, db DBTX, arg AddNotificat
 		&i.UserID,
 		&i.Text,
 		&i.Description,
-		&i.EventID,
-		&i.EventType,
+		&i.TaskID,
+		&i.TaskType,
 		&i.SendTime,
 		&i.Sended,
 		&i.Done,
@@ -63,7 +63,7 @@ func (q *Queries) AddNotification(ctx context.Context, db DBTX, arg AddNotificat
 const deleteNotification = `-- name: DeleteNotification :many
 DELETE FROM notifications
 WHERE id = $1
-RETURNING id, created_at, user_id, text, description, event_id, event_type, send_time, sended, done, notification_params
+RETURNING id, created_at, user_id, text, description, task_id, task_type, send_time, sended, done, notification_params
 `
 
 func (q *Queries) DeleteNotification(ctx context.Context, db DBTX, id int32) ([]Notification, error) {
@@ -81,8 +81,8 @@ func (q *Queries) DeleteNotification(ctx context.Context, db DBTX, id int32) ([]
 			&i.UserID,
 			&i.Text,
 			&i.Description,
-			&i.EventID,
-			&i.EventType,
+			&i.TaskID,
+			&i.TaskType,
 			&i.SendTime,
 			&i.Sended,
 			&i.Done,
@@ -99,14 +99,14 @@ func (q *Queries) DeleteNotification(ctx context.Context, db DBTX, id int32) ([]
 }
 
 const getLatestNotification = `-- name: GetLatestNotification :one
-SELECT id, created_at, user_id, text, description, event_id, event_type, send_time, sended, done, notification_params FROM notifications
-WHERE event_id = $1
+SELECT id, created_at, user_id, text, description, task_id, task_type, send_time, sended, done, notification_params FROM notifications
+WHERE task_id = $1
 ORDER BY send_time DESC
 LIMIT 1
 `
 
-func (q *Queries) GetLatestNotification(ctx context.Context, db DBTX, eventID int32) (Notification, error) {
-	row := db.QueryRow(ctx, getLatestNotification, eventID)
+func (q *Queries) GetLatestNotification(ctx context.Context, db DBTX, taskID int32) (Notification, error) {
+	row := db.QueryRow(ctx, getLatestNotification, taskID)
 	var i Notification
 	err := row.Scan(
 		&i.ID,
@@ -114,8 +114,8 @@ func (q *Queries) GetLatestNotification(ctx context.Context, db DBTX, eventID in
 		&i.UserID,
 		&i.Text,
 		&i.Description,
-		&i.EventID,
-		&i.EventType,
+		&i.TaskID,
+		&i.TaskType,
 		&i.SendTime,
 		&i.Sended,
 		&i.Done,
@@ -125,7 +125,7 @@ func (q *Queries) GetLatestNotification(ctx context.Context, db DBTX, eventID in
 }
 
 const getNearestNotification = `-- name: GetNearestNotification :one
-SELECT id, created_at, user_id, text, description, event_id, event_type, send_time, sended, done, notification_params FROM notifications
+SELECT id, created_at, user_id, text, description, task_id, task_type, send_time, sended, done, notification_params FROM notifications
 WHERE sended = FALSE
   AND send_time <= $1
 ORDER BY send_time ASC
@@ -141,8 +141,8 @@ func (q *Queries) GetNearestNotification(ctx context.Context, db DBTX, till pgty
 		&i.UserID,
 		&i.Text,
 		&i.Description,
-		&i.EventID,
-		&i.EventType,
+		&i.TaskID,
+		&i.TaskType,
 		&i.SendTime,
 		&i.Sended,
 		&i.Done,
@@ -152,7 +152,7 @@ func (q *Queries) GetNearestNotification(ctx context.Context, db DBTX, till pgty
 }
 
 const getNotification = `-- name: GetNotification :one
-SELECT id, created_at, user_id, text, description, event_id, event_type, send_time, sended, done, notification_params FROM notifications
+SELECT id, created_at, user_id, text, description, task_id, task_type, send_time, sended, done, notification_params FROM notifications
 WHERE id = $1
 `
 
@@ -165,8 +165,8 @@ func (q *Queries) GetNotification(ctx context.Context, db DBTX, id int32) (Notif
 		&i.UserID,
 		&i.Text,
 		&i.Description,
-		&i.EventID,
-		&i.EventType,
+		&i.TaskID,
+		&i.TaskType,
 		&i.SendTime,
 		&i.Sended,
 		&i.Done,
@@ -176,7 +176,7 @@ func (q *Queries) GetNotification(ctx context.Context, db DBTX, id int32) (Notif
 }
 
 const listNotSendedNotifications = `-- name: ListNotSendedNotifications :many
-SELECT id, created_at, user_id, text, description, event_id, event_type, send_time, sended, done, notification_params FROM notifications
+SELECT id, created_at, user_id, text, description, task_id, task_type, send_time, sended, done, notification_params FROM notifications
 WHERE sended = FALSE
   AND send_time <= $1
 `
@@ -196,8 +196,8 @@ func (q *Queries) ListNotSendedNotifications(ctx context.Context, db DBTX, till 
 			&i.UserID,
 			&i.Text,
 			&i.Description,
-			&i.EventID,
-			&i.EventType,
+			&i.TaskID,
+			&i.TaskType,
 			&i.SendTime,
 			&i.Sended,
 			&i.Done,
@@ -214,7 +214,7 @@ func (q *Queries) ListNotSendedNotifications(ctx context.Context, db DBTX, till 
 }
 
 const listUserNotifications = `-- name: ListUserNotifications :many
-SELECT id, created_at, user_id, text, description, event_id, event_type, send_time, sended, done, notification_params FROM notifications
+SELECT id, created_at, user_id, text, description, task_id, task_type, send_time, sended, done, notification_params FROM notifications
 WHERE user_id = $1
   AND send_time BETWEEN $2 AND $3
 ORDER BY send_time DESC
@@ -250,8 +250,8 @@ func (q *Queries) ListUserNotifications(ctx context.Context, db DBTX, arg ListUs
 			&i.UserID,
 			&i.Text,
 			&i.Description,
-			&i.EventID,
-			&i.EventType,
+			&i.TaskID,
+			&i.TaskType,
 			&i.SendTime,
 			&i.Sended,
 			&i.Done,
@@ -285,7 +285,7 @@ SET text = $1,
     sended = $3,
     done = $4
 WHERE id = $5
-RETURNING id, created_at, user_id, text, description, event_id, event_type, send_time, sended, done, notification_params
+RETURNING id, created_at, user_id, text, description, task_id, task_type, send_time, sended, done, notification_params
 `
 
 type UpdateNotificationParams struct {
@@ -311,8 +311,8 @@ func (q *Queries) UpdateNotification(ctx context.Context, db DBTX, arg UpdateNot
 		&i.UserID,
 		&i.Text,
 		&i.Description,
-		&i.EventID,
-		&i.EventType,
+		&i.TaskID,
+		&i.TaskType,
 		&i.SendTime,
 		&i.Sended,
 		&i.Done,

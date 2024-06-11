@@ -38,8 +38,8 @@ type Notification struct {
 	UserID      int
 	Text        string
 	Description string
-	EventType   EventType
-	EventID     int
+	TaskType    TaskType
+	TaskID      int
 	Params      *NotificationParams
 	SendTime    time.Time
 	Sended      bool

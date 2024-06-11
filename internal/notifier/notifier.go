@@ -58,14 +58,14 @@ func (s *Service) notify(ctx context.Context) {
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	now := time.Now()
-	for eventID, n := range s.notifications {
+	for taskID, n := range s.notifications {
 		if n.nextNotifTime.Before(now) {
 			err := s.notifier.Notify(ctx, n.notification)
 			if err != nil {
 				log.Ctx(ctx).Error("notifier error", log.Err(err))
 			}
 
-			s.notifications[eventID].nextNotifTime = now.Add(n.notification.Params.Period)
+			s.notifications[taskID].nextNotifTime = now.Add(n.notification.Params.Period)
 		}
 	}
 	log.Ctx(ctx).Debug("notifier notify", "notifications", s.notifications)

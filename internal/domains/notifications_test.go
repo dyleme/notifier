@@ -18,8 +18,8 @@ func TestNewSendingNotification(t *testing.T) {
 			UserID:      2,
 			Text:        "text",
 			Description: "description",
-			EventType:   domains.BasicEventType,
-			EventID:     3,
+			TaskType:    domains.BasicTaskType,
+			TaskID:      3,
 			Params: &domains.NotificationParams{
 				Period: time.Hour,
 				Params: domains.Params{

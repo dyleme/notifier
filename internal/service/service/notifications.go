@@ -14,7 +14,7 @@ type NotificationsRepository interface {
 	Add(ctx context.Context, notification domains.Notification) (domains.Notification, error)
 	List(ctx context.Context, userID int, timeBorderes timeborders.TimeBorders, listParams ListParams) ([]domains.Notification, error)
 	Get(ctx context.Context, id int) (domains.Notification, error)
-	GetLatest(ctx context.Context, eventdID int) (domains.Notification, error)
+	GetLatest(ctx context.Context, taskdID int) (domains.Notification, error)
 	Update(ctx context.Context, notification domains.Notification) error
 	Delete(ctx context.Context, id int) error
 	ListNotSended(ctx context.Context, till time.Time) ([]domains.Notification, error)

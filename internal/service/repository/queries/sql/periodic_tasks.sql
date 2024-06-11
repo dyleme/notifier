@@ -1,5 +1,5 @@
--- name: AddPeriodicEvent :one
-INSERT INTO periodic_events (user_id,
+-- name: AddPeriodicTask :one
+INSERT INTO periodic_tasks (user_id,
                              text,
                              start,
                              smallest_period,
@@ -16,32 +16,32 @@ VALUES (@user_id,
         @notification_params)
 RETURNING *;
 
--- name: GetPeriodicEvent :one
+-- name: GetPeriodicTask :one
 SELECT *
-FROM periodic_events
+FROM periodic_tasks
 WHERE id = @id;
 
--- name: ListPeriodicEvents :many
+-- name: ListPeriodicTasks :many
 SELECT *
-FROM periodic_events
+FROM periodic_tasks
 WHERE user_id = @user_id
 ORDER BY id DESC
 LIMIT @lim OFFSET @OFF;
 
--- name: CountListPeriodicEvents :one
+-- name: CountListPeriodicTasks :one
 SELECT COUNT(*)
-FROM periodic_events
+FROM periodic_tasks
 WHERE user_id = @user_id;
 
 
--- name: DeletePeriodicEvent :many
+-- name: DeletePeriodicTask :many
 DELETE
-FROM periodic_events
+FROM periodic_tasks
 WHERE id = @id
 RETURNING *;
 
--- name: UpdatePeriodicEvent :one
-UPDATE periodic_events
+-- name: UpdatePeriodicTask :one
+UPDATE periodic_tasks
 SET start               = @start,
     text                = @text,
     description         = @description,

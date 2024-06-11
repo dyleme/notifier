@@ -14,9 +14,8 @@ import (
 func (th *TelegramHandler) mainMenuKeyboard(b *bot.Bot) models.ReplyMarkup {
 	return inKbr.New(b, inKbr.NoDeleteAfterClick()).
 		Row().Button("Info", nil, errorHandling(th.InfoInline)).
-		Row().Button("Events", nil, errorHandling(th.EventsMenuInline)).
-		Row().Button("Periodic events", nil, errorHandling(th.PeriodicEventsMenuInline)).
 		Row().Button("Tasks", nil, errorHandling(th.TasksMenuInline)).
+		Row().Button("Periodic tasks", nil, errorHandling(th.PeriodicTasksMenuInline)).
 		Row().Button("Settings", nil, errorHandling(th.SettingsInline))
 }
 

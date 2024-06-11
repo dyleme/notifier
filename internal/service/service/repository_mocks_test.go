@@ -8,10 +8,9 @@ import (
 
 type RepositoryMock struct {
 	DefaultNotificationRepo service.NotificationParamsRepository
-	TasksRepo               service.TaskRepository
-	EventsRepo              service.BasicEventRepository
+	TasksRepo               service.BasicTaskRepository
 	TgImagesRepo            service.TgImagesRepository
-	PeriodicEventsRepo      service.PeriodicEventsRepository
+	PeriodicTasksRepo       service.PeriodicTasksRepository
 	NotificationsRepo       service.NotificationsRepository
 }
 
@@ -23,20 +22,16 @@ func (r *RepositoryMock) DefaultNotificationParams() service.NotificationParamsR
 	return r.DefaultNotificationRepo
 }
 
-func (r *RepositoryMock) Tasks() service.TaskRepository {
+func (r *RepositoryMock) Tasks() service.BasicTaskRepository {
 	return r.TasksRepo
-}
-
-func (r *RepositoryMock) Events() service.BasicEventRepository {
-	return r.EventsRepo
 }
 
 func (r *RepositoryMock) TgImages() service.TgImagesRepository {
 	return r.TgImagesRepo
 }
 
-func (r *RepositoryMock) PeriodicEvents() service.PeriodicEventsRepository {
-	return r.PeriodicEventsRepo
+func (r *RepositoryMock) PeriodicTasks() service.PeriodicTasksRepository {
+	return r.PeriodicTasksRepo
 }
 
 func (r *RepositoryMock) Notifications() service.NotificationsRepository {
