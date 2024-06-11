@@ -12,49 +12,49 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type EventType string
+type TaskType string
 
 const (
-	EventTypePeriodicEvent EventType = "periodic_event"
-	EventTypeBasicEvent    EventType = "basic_event"
+	TaskTypePeriodicTask TaskType = "periodic_task"
+	TaskTypeBasicTask    TaskType = "basic_task"
 )
 
-func (e *EventType) Scan(src interface{}) error {
+func (e *TaskType) Scan(src interface{}) error {
 	switch s := src.(type) {
 	case []byte:
-		*e = EventType(s)
+		*e = TaskType(s)
 	case string:
-		*e = EventType(s)
+		*e = TaskType(s)
 	default:
-		return fmt.Errorf("unsupported scan type for EventType: %T", src)
+		return fmt.Errorf("unsupported scan type for TaskType: %T", src)
 	}
 	return nil
 }
 
-type NullEventType struct {
-	EventType EventType
-	Valid     bool // Valid is true if EventType is not NULL
+type NullTaskType struct {
+	TaskType TaskType
+	Valid    bool // Valid is true if TaskType is not NULL
 }
 
 // Scan implements the Scanner interface.
-func (ns *NullEventType) Scan(value interface{}) error {
+func (ns *NullTaskType) Scan(value interface{}) error {
 	if value == nil {
-		ns.EventType, ns.Valid = "", false
+		ns.TaskType, ns.Valid = "", false
 		return nil
 	}
 	ns.Valid = true
-	return ns.EventType.Scan(value)
+	return ns.TaskType.Scan(value)
 }
 
 // Value implements the driver Valuer interface.
-func (ns NullEventType) Value() (driver.Value, error) {
+func (ns NullTaskType) Value() (driver.Value, error) {
 	if !ns.Valid {
 		return nil, nil
 	}
-	return string(ns.EventType), nil
+	return string(ns.TaskType), nil
 }
 
-type BasicEvent struct {
+type BasicTask struct {
 	ID                 int32                       `db:"id"`
 	CreatedAt          pgtype.Timestamp            `db:"created_at"`
 	Text               string                      `db:"text"`
@@ -70,21 +70,21 @@ type DefaultUserNotificationParam struct {
 	Params    domains.NotificationParams `db:"params"`
 }
 
-type Notification struct {
+type Event struct {
 	ID                 int32                       `db:"id"`
 	CreatedAt          pgtype.Timestamp            `db:"created_at"`
 	UserID             int32                       `db:"user_id"`
 	Text               string                      `db:"text"`
 	Description        pgtype.Text                 `db:"description"`
-	EventID            int32                       `db:"event_id"`
-	EventType          EventType                   `db:"event_type"`
+	TaskID             int32                       `db:"task_id"`
+	TaskType           TaskType                    `db:"task_type"`
 	SendTime           pgtype.Timestamptz          `db:"send_time"`
 	Sended             bool                        `db:"sended"`
 	Done               bool                        `db:"done"`
 	NotificationParams *domains.NotificationParams `db:"notification_params"`
 }
 
-type PeriodicEvent struct {
+type PeriodicTask struct {
 	ID                 int32                       `db:"id"`
 	CreatedAt          pgtype.Timestamp            `db:"created_at"`
 	Text               string                      `db:"text"`
@@ -94,15 +94,6 @@ type PeriodicEvent struct {
 	SmallestPeriod     int32                       `db:"smallest_period"`
 	BiggestPeriod      int32                       `db:"biggest_period"`
 	NotificationParams *domains.NotificationParams `db:"notification_params"`
-}
-
-type Task struct {
-	ID        int32            `db:"id"`
-	CreatedAt pgtype.Timestamp `db:"created_at"`
-	Message   string           `db:"message"`
-	UserID    int32            `db:"user_id"`
-	Periodic  bool             `db:"periodic"`
-	Archived  bool             `db:"archived"`
 }
 
 type TgImage struct {

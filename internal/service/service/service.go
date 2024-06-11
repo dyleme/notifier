@@ -8,12 +8,11 @@ import (
 )
 
 type Repository interface {
-	DefaultNotificationParams() NotificationParamsRepository
-	Tasks() TaskRepository
-	Events() BasicEventRepository
+	DefaultEventParams() NotificationParamsRepository
+	Tasks() BasicTaskRepository
 	TgImages() TgImagesRepository
-	PeriodicEvents() PeriodicEventsRepository
-	Notifications() NotificationsRepository
+	PeriodicTasks() PeriodicTasksRepository
+	Events() EventsRepository
 }
 
 type Service struct {
@@ -24,7 +23,7 @@ type Service struct {
 }
 
 type Notifier interface {
-	Delete(ctx context.Context, notifID int) error
+	Delete(ctx context.Context, eventID int) error
 }
 
 type NotifierJob interface {

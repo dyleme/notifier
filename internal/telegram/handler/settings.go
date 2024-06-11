@@ -18,7 +18,7 @@ func (th *TelegramHandler) SettingsInline(ctx context.Context, b *bot.Bot, msg *
 
 	timezoneSetting := &TimezoneSettings{th: th, zone: 0, isDST: false}
 	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick()).
-		Row().Button("Notifications", nil, errorHandling(th.NotificationMenu)).
+		Row().Button("Events", nil, errorHandling(th.EventMenu)).
 		Row().Button("Timezone", nil, errorHandling(timezoneSetting.CurrentTime))
 
 	_, err := b.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to fill
@@ -224,17 +224,17 @@ func absDur(d time.Duration) time.Duration {
 	return -d
 }
 
-func (th *TelegramHandler) NotificationMenu(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
-	op := "TelegramHandler.NotificationMenu: %w"
+func (th *TelegramHandler) EventMenu(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
+	op := "TelegramHandler.EventMenu: %w"
 
-	enableNotifications := EnableNotifications{th: th}
+	enableEvents := EnableEvents{th: th}
 	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick()).
-		Row().Button("Enable", nil, errorHandling(enableNotifications.EnableInline))
+		Row().Button("Enable", nil, errorHandling(enableEvents.EnableInline))
 
 	_, err := b.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to fill
 		ChatID:      msg.Chat.ID,
 		MessageID:   msg.ID,
-		Caption:     "Notifications",
+		Caption:     "Events",
 		ReplyMarkup: kbr,
 	})
 	if err != nil {
@@ -244,21 +244,21 @@ func (th *TelegramHandler) NotificationMenu(ctx context.Context, b *bot.Bot, msg
 	return nil
 }
 
-type EnableNotifications struct {
+type EnableEvents struct {
 	th *TelegramHandler
 }
 
-const defaultNotificationPeriod = 5 * time.Minute
+const defaultEventPeriod = 5 * time.Minute
 
-func (en *EnableNotifications) EnableInline(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
+func (en *EnableEvents) EnableInline(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
 	op := "TimezoneSettings.EnableInline: %w"
 	user, err := UserFromCtx(ctx)
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}
 
-	_, err = en.th.serv.SetDefaultNotificationParams(ctx, domains.NotificationParams{
-		Period: defaultNotificationPeriod,
+	_, err = en.th.serv.SetDefaultEventParams(ctx, domains.NotificationParams{
+		Period: defaultEventPeriod,
 		Params: domains.Params{
 			Telegram: int(msg.Chat.ID),
 			Webhook:  "",
@@ -269,7 +269,7 @@ func (en *EnableNotifications) EnableInline(ctx context.Context, b *bot.Bot, msg
 		return fmt.Errorf(op, err)
 	}
 
-	if err = en.th.MainMenuWithText(ctx, b, msg, "Notifications enabled"); err != nil {
+	if err = en.th.MainMenuWithText(ctx, b, msg, "Events enabled"); err != nil {
 		return fmt.Errorf(op, err)
 	}
 

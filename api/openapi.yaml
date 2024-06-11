@@ -28,11 +28,9 @@ tags:
   - name: Authentication
     description: Authentication
   - name: Tasks
-    description: Create and manage your tasks
-  - name: Events
-    description: Create and manafe your events
-  - name: NotificationParams
-    description: Manage Notification params
+    description: Create and manafe your tasks
+  - name: EventParams
+    description: Manage Event params
 paths:
   /auth/register:
     post:
@@ -84,147 +82,16 @@ paths:
                 $ref: '#/components/schemas/Tokens'
         '405':
           description: Invalid input
+
   /task:
-    post:
-      summary: Add a new task
-      tags:
-        - Tasks
-      securityCount:
-        - bearerAuth: []
-      description: Add a task
-      operationId: addTask
-      requestBody:
-        description: Create a new task
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateTaskReqBody'
-        required: true
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Task'
-        '405':
-          description: Invalid input
     get:
-      summary: List user tasks
+      summary: List tasks
       tags:
         - Tasks
       security:
         - bearerAuth: []
       description: List tasks
       operationId: listTasks
-      parameters:
-        - $ref: "#/components/parameters/limitParam"
-        - $ref: "#/components/parameters/offsetParam"
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Task'
-        '405':
-          description: Invalid input
-  /task/{taskID}:
-    get:
-      summary: Get task
-      tags:
-        - Tasks
-      security:
-        - bearerAuth: []
-      description: Get task
-      operationId: getTask
-      parameters:
-        - in: path
-          name: taskID
-          schema:
-            type: integer
-          required: true
-          description: Task id
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Task'
-        '405':
-          description: Invalid input
-    put:
-      summary: Add a new task
-      tags:
-        - Tasks
-      security:
-        - bearerAuth: []
-      description: UpdateTask
-      operationId: updateTask
-      parameters:
-        - in: path
-          name: taskID
-          schema:
-            type: integer
-          required: true
-          description: Task id
-      requestBody:
-        description: Task object
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateTaskReqBody'
-        required: true
-      responses:
-        '200':
-          description: Successful operation
-        '405':
-          description: Invalid input
-
-  /event/set/{taskID}:
-    post:
-      summary: Add a new event
-      tags:
-        - Events
-      security:
-        - bearerAuth: []
-      description: Add a task
-      parameters:
-         - in: path
-           name: taskID
-           schema:
-             type: integer
-           required: true
-           description: Task id
-      requestBody:
-        description: Set event task
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SetEventReqBody'
-        required: true
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Event'
-        '405':
-          description: Invalid input
-
-  /event:
-    get:
-      summary: List events
-      tags:
-        - Events
-      security:
-        - bearerAuth: []
-      description: List events
-      operationId: listEvents
       parameters:
         - in: query
           name: from
@@ -246,22 +113,22 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Event'
+                  $ref: '#/components/schemas/Task'
         '405':
           description: Invalid input
     post:
-      summary: Create new event
+      summary: Create new task
       tags:
-        - Events
+        - Tasks
       security:
         - bearerAuth: []
-      description: Create new event
-      operationId: createEvent
+      description: Create new task
+      operationId: createTask
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateEventReqBody'
+              $ref: '#/components/schemas/CreateTaskReqBody'
         required: true
       responses:
         '201':
@@ -269,158 +136,158 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Event'
+                $ref: '#/components/schemas/Task'
         '405':
           description: Invalid input
 
-  /event/{eventID}:
+  /task/{taskID}:
     get:
-      summary: Get event
+      summary: Get task
       tags:
-        - Events
+        - Tasks
       security:
         - bearerAuth: []
-      description: Get event
-      operationId: getEvent
+      description: Get task
+      operationId: getTask
       parameters:
         - in: path
-          name: eventID
+          name: taskID
           schema:
             type: integer
           required: true
-          description: event task id
+          description: task task id
       responses:
         '200':
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Event'
+                $ref: '#/components/schemas/Task'
         '405':
           description: Invalid input
 
     put:
-      summary: Update event
+      summary: Update task
       tags:
-        - Events
+        - Tasks
       security:
         - bearerAuth: []
-      description: Update event
-      operationId: updateEvent
+      description: Update task
+      operationId: updateTask
       parameters:
         - in: path
-          name: eventID
+          name: taskID
           schema:
             type: integer
           required: true
-          description: Event task id
+          description: Task task id
       requestBody:
-        description: Update Event task
+        description: Update Task task
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateEventReqBody'
+              $ref: '#/components/schemas/UpdateTaskReqBody'
       responses:
         '200':
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Event'
+                $ref: '#/components/schemas/Task'
         '405':
           description: Invalid input
 
-  /event/{eventID}/notification-params:
+  /task/{taskID}/event-params:
     get:
-      summary: Get event notification params
+      summary: Get task event params
       tags:
-        - Events
-        - NotificationParams
+        - Tasks
+        - EventParams
       security:
         - bearerAuth: []
-      description: Get event notification params
-      operationId: getEventNotificationParams
+      description: Get task event params
+      operationId: getTaskEventParams
       parameters:
         - in: path
-          name: eventID
+          name: taskID
           schema:
             type: integer
           required: true
-          description: Event id
+          description: Task id
       responses:
         '200':
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/NotificationParams'
+                $ref: '#/components/schemas/EventParams'
         '405':
           description: Invalid input
 
     put:
-      summary: Set Event notification params
+      summary: Set Task event params
       tags:
-        - Events
-        - NotificationParams
+        - Tasks
+        - EventParams
       security:
         - bearerAuth: []
-      description: Set event notification params
-      operationId: setEventNotificationParams
+      description: Set task event params
+      operationId: setTaskEventParams
       parameters:
         - in: path
-          name: eventID
+          name: taskID
           schema:
             type: integer
           required: true
-          description: Event task id
+          description: Task task id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/NotificationParams'
+              $ref: '#/components/schemas/EventParams'
       responses:
         '200':
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/NotificationParams'
+                $ref: '#/components/schemas/EventParams'
         '405':
           description: Invalid input
 
-  /notification-params:
+  /event-params:
     get:
-      summary: Set default notification params
+      summary: Set default event params
       tags:
-        - NotificationParams
+        - EventParams
       security:
         - bearerAuth: []
-      description: get default notification params
-      operationId: getDefaultNotificationParams
+      description: get default event params
+      operationId: getDefaultEventParams
       responses:
         '200':
           description: Successfull operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/NotificationParams'
+                $ref: '#/components/schemas/EventParams'
         '405':
           description: Invalid input
 
     put:
-      summary: Set default notification params
+      summary: Set default event params
       tags:
-        - NotificationParams
+        - EventParams
       security:
         - bearerAuth: []
-      description: set default notification params
-      operationId: setDefaultNotificationParams
+      description: set default event params
+      operationId: setDefaultEventParams
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/NotificationParams'
+              $ref: '#/components/schemas/EventParams'
         required: true
       responses:
         '201':
@@ -428,7 +295,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/NotificationParams'
+                $ref: '#/components/schemas/EventParams'
         '405':
           description: Invalid input
 
@@ -504,42 +371,6 @@ components:
 #      required: true
 
     CreateTaskReqBody:
-      required:
-        - message
-        - periodic
-      type: object
-      properties:
-        message:
-          type: string
-          example: Task text
-        periodic:
-          type: boolean
-
-
-    UpdateTaskReqBody:
-      required:
-        - message
-        - requiredTime
-        - periodic
-        - done
-        - archived
-      type: object
-      properties:
-        message:
-          type: string
-          example: Task text
-        requiredTime:
-          type: integer
-          description: Required time for task in minutes
-          minimum: 1
-        periodic:
-          type: boolean
-        done:
-          type: boolean
-        archived:
-          type: boolean
-
-    CreateEventReqBody:
       type: object
       properties:
         message:
@@ -557,7 +388,7 @@ components:
         - periodic
         - start
 
-    SetEventReqBody:
+    SetTaskReqBody:
       required:
         - start
         - done
@@ -571,7 +402,7 @@ components:
           format: date-time
 
 
-    UpdateEventReqBody:
+    UpdateTaskReqBody:
       required:
         - finish
         - start
@@ -588,25 +419,6 @@ components:
           type: boolean
 
     Task:
-      required:
-        - id
-        - message
-        - periodic
-        - archived
-      type: object
-      properties:
-        id:
-          type: integer
-          example: 12542
-        message:
-          type: string
-          example: Task text
-        periodic:
-          type: boolean
-        archived:
-          type: boolean
-
-    Event:
       required:
         - id
         - text
@@ -629,7 +441,7 @@ components:
         done:
           type: boolean
 
-    NotificationParams:
+    EventParams:
       type: object
       required:
         - period
@@ -644,10 +456,10 @@ components:
           type: string
           format: date-time
         info:
-          $ref: '#/components/schemas/NotificationInfo'
+          $ref: '#/components/schemas/EventInfo'
 
 
-    NotificationInfo:
+    EventInfo:
       type: object
       properties:
         cmd:

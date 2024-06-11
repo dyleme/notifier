@@ -1,3 +1,3 @@
 package domains
 
-type EventType string
+type TaskType string

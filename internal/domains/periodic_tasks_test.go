@@ -9,12 +9,12 @@ import (
 	"github.com/Dyleme/Notifier/internal/domains"
 )
 
-func TestPeriodicEvent_NewNotification(t *testing.T) {
+func TestPeriodicTask_NewEvent(t *testing.T) {
 	t.Parallel()
 	t.Run("check mapping", func(t *testing.T) {
 		t.Parallel()
 		now := time.Now()
-		periodicEvent := domains.PeriodicEvent{
+		periodicTask := domains.PeriodicTask{
 			ID:             1,
 			Text:           "text",
 			Description:    "description",
@@ -27,17 +27,17 @@ func TestPeriodicEvent_NewNotification(t *testing.T) {
 				Params: domains.Params{Telegram: 3},
 			},
 		}
-		actual, err := periodicEvent.NewNotification(now)
+		actual, err := periodicTask.NewEvent(now)
 		require.NoError(t, err)
 
-		expected := domains.Notification{
+		expected := domains.Event{
 			ID:          0,
 			UserID:      2,
 			Text:        "text",
 			Description: "description",
-			EventType:   domains.PeriodicEventType,
-			EventID:     1,
-			Params:      periodicEvent.NotificationParams,
+			TaskType:    domains.PeriodicTaskType,
+			TaskID:      1,
+			Params:      periodicTask.NotificationParams,
 			Sended:      false,
 			Done:        false,
 		}
@@ -53,7 +53,7 @@ func TestPeriodicEvent_NewNotification(t *testing.T) {
 	dayBeginning := nowTime.Truncate(timeDay)
 	testCases := []struct {
 		name       string
-		pe         domains.PeriodicEvent
+		pt         domains.PeriodicTask
 		now        time.Time
 		isError    bool
 		highBorder time.Time
@@ -61,7 +61,7 @@ func TestPeriodicEvent_NewNotification(t *testing.T) {
 	}{
 		{
 			name: "high border lower than low border",
-			pe: domains.PeriodicEvent{
+			pt: domains.PeriodicTask{
 				Start:          time.Hour,
 				SmallestPeriod: 3 * timeDay,
 				BiggestPeriod:  timeDay,
@@ -71,7 +71,7 @@ func TestPeriodicEvent_NewNotification(t *testing.T) {
 		},
 		{
 			name: "check time in period",
-			pe: domains.PeriodicEvent{
+			pt: domains.PeriodicTask{
 				Start:          2 * time.Hour,
 				SmallestPeriod: timeDay,
 				BiggestPeriod:  11 * timeDay,
@@ -82,7 +82,7 @@ func TestPeriodicEvent_NewNotification(t *testing.T) {
 		},
 		{
 			name: "smallest period equal to biggest period",
-			pe: domains.PeriodicEvent{
+			pt: domains.PeriodicTask{
 				Start:          3 * time.Hour,
 				SmallestPeriod: timeDay,
 				BiggestPeriod:  timeDay,
@@ -97,8 +97,8 @@ func TestPeriodicEvent_NewNotification(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			for range 10 {
-				notif, err := tc.pe.NewNotification(tc.now)
-				actual := notif.SendTime
+				event, err := tc.pt.NewEvent(tc.now)
+				actual := event.SendTime
 
 				require.Equal(t, tc.isError, err != nil, "check error")
 				if tc.isError != (err != nil) {

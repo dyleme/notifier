@@ -1,42 +1,42 @@
--- name: AddNotification :one
-INSERT INTO notifications (
+-- name: AddEvent :one
+INSERT INTO events (
     user_id,
     text,
-    event_id,
-    event_type,
+    task_id,
+    task_type,
     send_time
 ) VALUES (
     @user_id,
     @text,
-    @event_id,
-    @event_type,
+    @task_id,
+    @task_type,
     @send_time
 ) RETURNING *;
 
--- name: GetNotification :one
-SELECT * FROM notifications
+-- name: GetEvent :one
+SELECT * FROM events
 WHERE id = @id;
 
--- name: GetLatestNotification :one
-SELECT * FROM notifications
-WHERE event_id = @event_id
+-- name: GetLatestEvent :one
+SELECT * FROM events
+WHERE task_id = @task_id
 ORDER BY send_time DESC
 LIMIT 1;
   
--- name: ListUserNotifications :many
-SELECT * FROM notifications
+-- name: ListUserEvents :many
+SELECT * FROM events
 WHERE user_id = @user_id
   AND send_time BETWEEN @from_time AND @to_time
 ORDER BY send_time DESC
 LIMIT @lim OFFSET @off;
 
--- name: DeleteNotification :many
-DELETE FROM notifications
+-- name: DeleteEvent :many
+DELETE FROM events
 WHERE id = @id
 RETURNING *;
 
--- name: UpdateNotification :one
-UPDATE notifications
+-- name: UpdateEvent :one
+UPDATE events
 SET text = @text,
     send_time = @send_time,
     sended = @sended,
@@ -44,19 +44,19 @@ SET text = @text,
 WHERE id = @id
 RETURNING *;
 
--- name: ListNotSendedNotifications :many
-SELECT * FROM notifications
+-- name: ListNotSendedEvents :many
+SELECT * FROM events
 WHERE sended = FALSE
   AND send_time <= @till;
 
--- name: GetNearestNotification :one
-SELECT * FROM notifications
+-- name: GetNearestEvent :one
+SELECT * FROM events
 WHERE sended = FALSE
   AND send_time <= @till
 ORDER BY send_time ASC
 LIMIT 1;
 
 -- name: MarkSendedNotifiatoins :exec
-UPDATE notifications
+UPDATE events
 SET sended = TRUE
 WHERE id = ANY(sqlc.slice(ids));

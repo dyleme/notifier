@@ -21,14 +21,14 @@ sql:
           emit_db_tags: true
           emit_methods_with_db_argument: true
           overrides:
-            - column: basic_events.notification_params
+            - column: basic_tasks.notification_params
               nullable: true
               go_type:
                 import: "github.com/Dyleme/Notifier/internal/domains"
                 package: "domains"
                 type: NotificationParams
                 pointer: true
-            - column: periodic_events.notification_params
+            - column: periodic_tasks.notification_params
               nullable: true
               go_type:
                 import: "github.com/Dyleme/Notifier/internal/domains"
@@ -40,7 +40,7 @@ sql:
                 import: "github.com/Dyleme/Notifier/internal/domains"
                 package: "domains"
                 type: NotificationParams
-            - column: notifications.notification_params
+            - column: events.notification_params
               nullable: true
               go_type:
                 import: "github.com/Dyleme/Notifier/internal/domains"
