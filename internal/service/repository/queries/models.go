@@ -19,12 +19,12 @@ const (
 	TaskTypeBasicTask    TaskType = "basic_task"
 )
 
-func (t *TaskType) Scan(src interface{}) error {
+func (e *TaskType) Scan(src interface{}) error {
 	switch s := src.(type) {
 	case []byte:
-		*t = TaskType(s)
+		*e = TaskType(s)
 	case string:
-		*t = TaskType(s)
+		*e = TaskType(s)
 	default:
 		return fmt.Errorf("unsupported scan type for TaskType: %T", src)
 	}
@@ -70,7 +70,7 @@ type DefaultUserNotificationParam struct {
 	Params    domains.NotificationParams `db:"params"`
 }
 
-type Notification struct {
+type Event struct {
 	ID                 int32                       `db:"id"`
 	CreatedAt          pgtype.Timestamp            `db:"created_at"`
 	UserID             int32                       `db:"user_id"`

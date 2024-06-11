@@ -11,11 +11,11 @@ type Repository struct {
 	db    *pgxpool.Pool
 	cache Cache
 
-	periodicTaskRepository       *PeriodicTaskRepository
-	tasksRepository              *BasicTaskRepository
-	notificationParamsRepository *NotificationParamsRepository
-	tgImagesRepository           *TgImagesRepository
-	notificationsRepository      *NotificationsRepository
+	periodicTaskRepository *PeriodicTaskRepository
+	tasksRepository        *BasicTaskRepository
+	eventParamsRepository  *NotificationParamsRepository
+	tgImagesRepository     *TgImagesRepository
+	eventsRepository       *EventsRepository
 }
 
 type Cache interface {
@@ -40,7 +40,7 @@ func New(pool *pgxpool.Pool, cache Cache, getter *trmpgx.CtxGetter) *Repository 
 			db:     pool,
 			getter: getter,
 		},
-		notificationParamsRepository: &NotificationParamsRepository{
+		eventParamsRepository: &NotificationParamsRepository{
 			q:      q,
 			getter: getter,
 			db:     pool,
@@ -51,7 +51,7 @@ func New(pool *pgxpool.Pool, cache Cache, getter *trmpgx.CtxGetter) *Repository 
 			getter: getter,
 			db:     pool,
 		},
-		notificationsRepository: &NotificationsRepository{
+		eventsRepository: &EventsRepository{
 			q:      q,
 			getter: getter,
 			db:     pool,

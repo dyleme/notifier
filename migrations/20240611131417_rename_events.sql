@@ -4,6 +4,7 @@ DROP TABLE IF EXISTS tasks;
 ALTER TABLE basic_events RENAME TO basic_tasks;
 ALTER TABLE periodic_events RENAME TO periodic_tasks;
 
+
 ALTER TABLE notifications RENAME COLUMN event_id TO task_id;
 ALTER TABLE notifications RENAME COLUMN event_type TO task_type;
 
@@ -11,10 +12,14 @@ ALTER TYPE event_type RENAME TO task_type;
 
 ALTER TYPE task_type RENAME VALUE 'basic_event' TO 'basic_task';
 ALTER TYPE task_type RENAME VALUE 'periodic_event' TO 'periodic_task';
+
+ALTER TABLE notifications RENAME TO events;
+
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
+ALTER TABLE events RENAME TO notifications;
 
 ALTER TYPE task_type RENAME VALUE 'basic_task' TO 'basic_event';
 ALTER TYPE task_type RENAME VALUE 'periodic_task' TO 'periodic_event';

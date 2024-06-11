@@ -40,7 +40,7 @@ sql:
                 import: "github.com/Dyleme/Notifier/internal/domains"
                 package: "domains"
                 type: NotificationParams
-            - column: notifications.notification_params
+            - column: events.notification_params
               nullable: true
               go_type:
                 import: "github.com/Dyleme/Notifier/internal/domains"

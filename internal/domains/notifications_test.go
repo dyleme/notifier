@@ -9,11 +9,11 @@ import (
 	"github.com/Dyleme/Notifier/internal/domains"
 )
 
-func TestNewSendingNotification(t *testing.T) {
+func TestNewSendingEvent(t *testing.T) {
 	t.Parallel()
 	t.Run("check mapping", func(t *testing.T) {
 		t.Parallel()
-		notif := domains.Notification{
+		event := domains.Event{
 			ID:          1,
 			UserID:      2,
 			Text:        "text",
@@ -36,15 +36,15 @@ func TestNewSendingNotification(t *testing.T) {
 				Telegram: 5,
 			},
 		}
-		actual := domains.NewSendingNotification(notif, params)
+		actual := domains.NewSendingEvent(event, params)
 
-		expected := domains.SendingNotification{
-			NotificationID: 1,
-			UserID:         2,
-			Message:        "text",
-			Description:    "description",
-			Params:         params,
-			SendTime:       time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+		expected := domains.SendingEvent{
+			EventID:     1,
+			UserID:      2,
+			Message:     "text",
+			Description: "description",
+			Params:      params,
+			SendTime:    time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
 		}
 
 		require.Equal(t, expected, actual)

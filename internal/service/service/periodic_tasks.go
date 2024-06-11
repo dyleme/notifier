@@ -30,14 +30,14 @@ func (s *Service) AddPeriodicTask(ctx context.Context, perTask domains.PeriodicT
 			return fmt.Errorf("add periodic task: %w", err)
 		}
 
-		notification, err := createdPerTask.NewNotification(time.Now())
+		event, err := createdPerTask.NewEvent(time.Now())
 		if err != nil {
-			return fmt.Errorf("next notification: %w", serverrors.NewBusinessLogicError(err.Error()))
+			return fmt.Errorf("next event: %w", serverrors.NewBusinessLogicError(err.Error()))
 		}
 
-		_, err = s.repo.Notifications().Add(ctx, notification)
+		_, err = s.repo.Events().Add(ctx, event)
 		if err != nil {
-			return fmt.Errorf("add notification: %w", err)
+			return fmt.Errorf("add event: %w", err)
 		}
 
 		return nil
@@ -72,14 +72,14 @@ func (s *Service) GetPeriodicTask(ctx context.Context, taskID, userID int) (doma
 }
 
 type UpdatePeriodicTaskParams struct {
-	ID                 int
-	Text               string
-	Description        string
-	UserID             int
-	Start              time.Duration // Notification time from beginning of day
-	SmallestPeriod     time.Duration
-	BiggestPeriod      time.Duration
-	NotificationParams *domains.NotificationParams
+	ID             int
+	Text           string
+	Description    string
+	UserID         int
+	Start          time.Duration // Event time from beginning of day
+	SmallestPeriod time.Duration
+	BiggestPeriod  time.Duration
+	EventParams    *domains.NotificationParams
 }
 
 func (s *Service) UpdatePeriodicTask(ctx context.Context, perTask domains.PeriodicTask, userID int) error {
@@ -99,21 +99,21 @@ func (s *Service) UpdatePeriodicTask(ctx context.Context, perTask domains.Period
 			return fmt.Errorf("update: %w", err)
 		}
 
-		notif, err := s.repo.Notifications().GetLatest(ctx, pt.ID)
+		event, err := s.repo.Events().GetLatest(ctx, pt.ID)
 		if err != nil {
-			return fmt.Errorf("delete notification: %w", err)
+			return fmt.Errorf("delete event: %w", err)
 		}
 
-		nextNotif, err := updatedTask.NewNotification(time.Now())
+		nextNotif, err := updatedTask.NewEvent(time.Now())
 		if err != nil {
-			return fmt.Errorf("next notification: %w", serverrors.NewBusinessLogicError(err.Error()))
+			return fmt.Errorf("next event: %w", serverrors.NewBusinessLogicError(err.Error()))
 		}
 
-		nextNotif.ID = notif.ID
+		nextNotif.ID = event.ID
 
-		err = s.repo.Notifications().Update(ctx, nextNotif)
+		err = s.repo.Events().Update(ctx, nextNotif)
 		if err != nil {
-			return fmt.Errorf("add notification: %w", err)
+			return fmt.Errorf("add event: %w", err)
 		}
 
 		return nil
@@ -131,21 +131,21 @@ func (s *Service) DeletePeriodicTask(ctx context.Context, taskID, userID int) er
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		task, err := s.repo.PeriodicTasks().Get(ctx, taskID)
 		if err != nil {
-			return fmt.Errorf("get current notifications: %w", err)
+			return fmt.Errorf("get current events: %w", err)
 		}
 
 		if task.BelongsTo(userID) {
 			return serverrors.NewNotFoundError(err, "periodic task")
 		}
 
-		notif, err := s.repo.Notifications().GetLatest(ctx, taskID)
+		event, err := s.repo.Events().GetLatest(ctx, taskID)
 		if err != nil {
-			return fmt.Errorf("get latest notification: %w", err)
+			return fmt.Errorf("get latest event: %w", err)
 		}
 
-		err = s.repo.Notifications().Delete(ctx, notif.ID)
+		err = s.repo.Events().Delete(ctx, event.ID)
 		if err != nil {
-			return fmt.Errorf("delete notification: %w", err)
+			return fmt.Errorf("delete event: %w", err)
 		}
 
 		err = s.repo.PeriodicTasks().Delete(ctx, taskID)

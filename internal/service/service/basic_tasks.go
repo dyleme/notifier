@@ -9,7 +9,7 @@ import (
 	"github.com/Dyleme/Notifier/pkg/serverrors"
 )
 
-//go:generate mockgen -destination=mocks/tasks_mocks.go -package=mocks . BasicTaskRepository
+//go:generate mockgen -destination=mocks/basic_tasks_mocks.go -package=mocks . BasicTaskRepository
 type BasicTaskRepository interface {
 	Add(ctx context.Context, task domains.BasicTask) (domains.BasicTask, error)
 	List(ctx context.Context, userID int, params ListParams) ([]domains.BasicTask, error)
@@ -30,10 +30,10 @@ func (s *Service) CreateTask(ctx context.Context, task domains.BasicTask) (domai
 			return fmt.Errorf("add task: %w", err)
 		}
 
-		notif := createdTask.NewNotification()
-		_, err = s.repo.Notifications().Add(ctx, notif)
+		event := createdTask.NewEvent()
+		_, err = s.repo.Events().Add(ctx, event)
 		if err != nil {
-			return fmt.Errorf("add notification: %w", err)
+			return fmt.Errorf("add event: %w", err)
 		}
 
 		return nil
@@ -101,18 +101,18 @@ func (s *Service) UpdateBasicTask(ctx context.Context, params domains.BasicTask,
 			return fmt.Errorf("update task: %w", err)
 		}
 
-		notif, err := s.repo.Notifications().GetLatest(ctx, t.ID)
+		event, err := s.repo.Events().GetLatest(ctx, t.ID)
 		if err != nil {
-			return fmt.Errorf("get latest notification: %w", err)
+			return fmt.Errorf("get latest event: %w", err)
 		}
 
-		notif.Text = params.Text
-		notif.Description = params.Description
-		notif.SendTime = params.Start
+		event.Text = params.Text
+		event.Description = params.Description
+		event.SendTime = params.Start
 
-		err = s.repo.Notifications().Update(ctx, notif)
+		err = s.repo.Events().Update(ctx, event)
 		if err != nil {
-			return fmt.Errorf("update notification: %w", err)
+			return fmt.Errorf("update event: %w", err)
 		}
 
 		return nil
@@ -129,7 +129,7 @@ func (s *Service) UpdateBasicTask(ctx context.Context, params domains.BasicTask,
 	return task, nil
 }
 
-func (s *Service) createNewNotificationForPeriodicTask(ctx context.Context, taskID, userID int) error {
+func (s *Service) createNewEventForPeriodicTask(ctx context.Context, taskID, userID int) error {
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		bt, err := s.repo.PeriodicTasks().Get(ctx, taskID)
 		if err != nil {
@@ -139,14 +139,14 @@ func (s *Service) createNewNotificationForPeriodicTask(ctx context.Context, task
 			return serverrors.NewBusinessLogicError("task does not belong to user")
 		}
 
-		nextNotif, err := bt.NewNotification(time.Now())
+		nextNotif, err := bt.NewEvent(time.Now())
 		if err != nil {
-			return fmt.Errorf("new notification: %w", serverrors.NewBusinessLogicError(err.Error()))
+			return fmt.Errorf("new event: %w", serverrors.NewBusinessLogicError(err.Error()))
 		}
 
-		_, err = s.repo.Notifications().Add(ctx, nextNotif)
+		_, err = s.repo.Events().Add(ctx, nextNotif)
 		if err != nil {
-			return fmt.Errorf("periodic tasks add notification: %w", err)
+			return fmt.Errorf("periodic tasks add event: %w", err)
 		}
 
 		s.notifierJob.UpdateWithTime(ctx, nextNotif.SendTime)
@@ -160,35 +160,35 @@ func (s *Service) createNewNotificationForPeriodicTask(ctx context.Context, task
 	return nil
 }
 
-func (s *Service) SetNotificationDoneStatus(ctx context.Context, notifID, userID int, done bool) error {
+func (s *Service) SetEventDoneStatus(ctx context.Context, eventID, userID int, done bool) error {
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
-		notif, err := s.repo.Notifications().Get(ctx, notifID)
+		event, err := s.repo.Events().Get(ctx, eventID)
 		if err != nil {
-			return fmt.Errorf("get notification: %w", err)
+			return fmt.Errorf("get event: %w", err)
 		}
-		notif.Done = done
-		err = s.repo.Notifications().Update(ctx, notif)
+		event.Done = done
+		err = s.repo.Events().Update(ctx, event)
 		if err != nil {
-			return fmt.Errorf("update notification: %w", err)
+			return fmt.Errorf("update event: %w", err)
 		}
-		err = s.notifier.Delete(ctx, notif.ID)
+		err = s.notifier.Delete(ctx, event.ID)
 		if err != nil {
-			return fmt.Errorf("delete notifier notification: %w", err)
+			return fmt.Errorf("delete notifier event: %w", err)
 		}
-		switch notif.TaskType {
+		switch event.TaskType {
 		case domains.BasicTaskType:
 		case domains.PeriodicTaskType:
-			err := s.createNewNotificationForPeriodicTask(ctx, notif.TaskID, userID)
+			err := s.createNewEventForPeriodicTask(ctx, event.TaskID, userID)
 			if err != nil {
 				return fmt.Errorf("setTaskDoneStatusPeriodicTask: %w", err)
 			}
 		default:
-			return fmt.Errorf("unknown taskType[%v]", notif.TaskType)
+			return fmt.Errorf("unknown taskType[%v]", event.TaskType)
 		}
 
-		err = s.notifier.Delete(ctx, notifID)
+		err = s.notifier.Delete(ctx, eventID)
 		if err != nil {
-			return fmt.Errorf("delete[notifID=%v]: %w", notifID, err)
+			return fmt.Errorf("delete[eventID=%v]: %w", eventID, err)
 		}
 
 		return nil
@@ -211,14 +211,14 @@ func (s *Service) DeleteBasicTask(ctx context.Context, userID, taskID int) error
 			return serverrors.NewNotFoundError(err, "basic task")
 		}
 
-		notif, err := s.repo.Notifications().GetLatest(ctx, taskID)
+		event, err := s.repo.Events().GetLatest(ctx, taskID)
 		if err != nil {
-			return fmt.Errorf("get latest notification: %w", err)
+			return fmt.Errorf("get latest event: %w", err)
 		}
 
-		err = s.repo.Notifications().Delete(ctx, notif.ID)
+		err = s.repo.Events().Delete(ctx, event.ID)
 		if err != nil {
-			return fmt.Errorf("delete notification: %w", err)
+			return fmt.Errorf("delete event: %w", err)
 		}
 
 		err = s.repo.Tasks().Delete(ctx, taskID)

@@ -29,8 +29,8 @@ tags:
     description: Authentication
   - name: Tasks
     description: Create and manafe your tasks
-  - name: NotificationParams
-    description: Manage Notification params
+  - name: EventParams
+    description: Manage Event params
 paths:
   /auth/register:
     post:
@@ -197,16 +197,16 @@ paths:
         '405':
           description: Invalid input
 
-  /task/{taskID}/notification-params:
+  /task/{taskID}/event-params:
     get:
-      summary: Get task notification params
+      summary: Get task event params
       tags:
         - Tasks
-        - NotificationParams
+        - EventParams
       security:
         - bearerAuth: []
-      description: Get task notification params
-      operationId: getTaskNotificationParams
+      description: Get task event params
+      operationId: getTaskEventParams
       parameters:
         - in: path
           name: taskID
@@ -220,19 +220,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/NotificationParams'
+                $ref: '#/components/schemas/EventParams'
         '405':
           description: Invalid input
 
     put:
-      summary: Set Task notification params
+      summary: Set Task event params
       tags:
         - Tasks
-        - NotificationParams
+        - EventParams
       security:
         - bearerAuth: []
-      description: Set task notification params
-      operationId: setTaskNotificationParams
+      description: Set task event params
+      operationId: setTaskEventParams
       parameters:
         - in: path
           name: taskID
@@ -245,49 +245,49 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/NotificationParams'
+              $ref: '#/components/schemas/EventParams'
       responses:
         '200':
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/NotificationParams'
+                $ref: '#/components/schemas/EventParams'
         '405':
           description: Invalid input
 
-  /notification-params:
+  /event-params:
     get:
-      summary: Set default notification params
+      summary: Set default event params
       tags:
-        - NotificationParams
+        - EventParams
       security:
         - bearerAuth: []
-      description: get default notification params
-      operationId: getDefaultNotificationParams
+      description: get default event params
+      operationId: getDefaultEventParams
       responses:
         '200':
           description: Successfull operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/NotificationParams'
+                $ref: '#/components/schemas/EventParams'
         '405':
           description: Invalid input
 
     put:
-      summary: Set default notification params
+      summary: Set default event params
       tags:
-        - NotificationParams
+        - EventParams
       security:
         - bearerAuth: []
-      description: set default notification params
-      operationId: setDefaultNotificationParams
+      description: set default event params
+      operationId: setDefaultEventParams
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/NotificationParams'
+              $ref: '#/components/schemas/EventParams'
         required: true
       responses:
         '201':
@@ -295,7 +295,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/NotificationParams'
+                $ref: '#/components/schemas/EventParams'
         '405':
           description: Invalid input
 
@@ -441,7 +441,7 @@ components:
         done:
           type: boolean
 
-    NotificationParams:
+    EventParams:
       type: object
       required:
         - period
@@ -456,10 +456,10 @@ components:
           type: string
           format: date-time
         info:
-          $ref: '#/components/schemas/NotificationInfo'
+          $ref: '#/components/schemas/EventInfo'
 
 
-    NotificationInfo:
+    EventInfo:
       type: object
       properties:
         cmd:

@@ -11,14 +11,14 @@ import (
 	domains "github.com/Dyleme/Notifier/internal/domains"
 )
 
-const getDefaultUserNotificationsParams = `-- name: GetDefaultUserNotificationsParams :one
+const getDefaultUserNotificationParams = `-- name: GetDefaultUserNotificationParams :one
 SELECT user_id, created_at, params
 FROM default_user_notification_params
 WHERE user_id = $1
 `
 
-func (q *Queries) GetDefaultUserNotificationsParams(ctx context.Context, db DBTX, userID int32) (DefaultUserNotificationParam, error) {
-	row := db.QueryRow(ctx, getDefaultUserNotificationsParams, userID)
+func (q *Queries) GetDefaultUserNotificationParams(ctx context.Context, db DBTX, userID int32) (DefaultUserNotificationParam, error) {
+	row := db.QueryRow(ctx, getDefaultUserNotificationParams, userID)
 	var i DefaultUserNotificationParam
 	err := row.Scan(&i.UserID, &i.CreatedAt, &i.Params)
 	return i, err

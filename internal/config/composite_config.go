@@ -13,7 +13,7 @@ type compositeConfig struct {
 	JWT         jwtConfig
 	APIKey      apiKeyConfig
 	Server      serverConfig
-	Notifier    notificationConfig
+	Notifier    eventConfig
 	NotifierJob notifierJobConfig
 	Telegram    telegramConfig
 }
@@ -44,7 +44,7 @@ type apiKeyConfig struct {
 	Key string `env:"API_KEY" env-required:"true"`
 }
 
-type notificationConfig struct {
+type eventConfig struct {
 	CheckPeriod time.Duration `env:"NOTIFICATIONS_CHECK_PERIOD" env-required:"true"`
 }
 

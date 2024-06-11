@@ -9,7 +9,7 @@ import (
 	"github.com/Dyleme/Notifier/internal/domains"
 )
 
-func TestBasicTask_NewNotification(t *testing.T) {
+func TestBasicTask_NewEvent(t *testing.T) {
 	t.Parallel()
 	t.Run("check mapping", func(t *testing.T) {
 		t.Parallel()
@@ -26,9 +26,9 @@ func TestBasicTask_NewNotification(t *testing.T) {
 				},
 			},
 		}
-		actual := basicTask.NewNotification()
+		actual := basicTask.NewEvent()
 
-		expected := domains.Notification{
+		expected := domains.Event{
 			ID:          0,
 			UserID:      2,
 			Text:        "text",

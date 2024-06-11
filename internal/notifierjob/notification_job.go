@@ -17,15 +17,15 @@ import (
 	"github.com/Dyleme/Notifier/pkg/utils"
 )
 
-//go:generate mockgen -destination=mocks/notification_job_mocks.go -package=mocks . Notifier
+//go:generate mockgen -destination=mocks/event_job_mocks.go -package=mocks . Notifier
 type Notifier interface {
-	Add(ctx context.Context, notif domains.SendingNotification) error
-	Delete(ctx context.Context, notifID int) error
+	Add(ctx context.Context, event domains.SendingEvent) error
+	Delete(ctx context.Context, eventID int) error
 }
 
 type Repository interface {
-	DefaultNotificationParams() service.NotificationParamsRepository
-	Notifications() service.NotificationsRepository
+	DefaultEventParams() service.NotificationParamsRepository
+	Events() service.EventsRepository
 }
 
 type NotifierJob struct {
@@ -55,12 +55,12 @@ func New(repo Repository, notifier Notifier, config Config, tr *trManager.Manage
 }
 
 func (nj *NotifierJob) Run(ctx context.Context) {
-	nj.setNextNotificationTime(ctx)
+	nj.setNextEventTime(ctx)
 	for {
 		select {
 		case <-nj.timer.C:
 			nj.notify(ctx)
-			nj.setNextNotificationTime(ctx)
+			nj.setNextEventTime(ctx)
 		case <-ctx.Done():
 			nj.timer.Stop()
 
@@ -75,32 +75,32 @@ func (nj *NotifierJob) UpdateWithTime(ctx context.Context, t time.Time) {
 	nj.sendTimeMx.RUnlock()
 
 	if newTimeIsBeforeCurrent {
-		nj.setNextNotificationTime(ctx)
+		nj.setNextEventTime(ctx)
 	}
 }
 
-func (nj *NotifierJob) setNextNotificationTime(ctx context.Context) {
+func (nj *NotifierJob) setNextEventTime(ctx context.Context) {
 	nj.sendTimeMx.Lock()
 	defer nj.sendTimeMx.Unlock()
 
 	t := nj.nearestCheckTime(ctx)
-	log.Ctx(ctx).Debug("next notification time", slog.Time("time", t))
+	log.Ctx(ctx).Debug("next event time", slog.Time("time", t))
 	nj.nextSendTime = t
 	nj.timer.Reset(time.Until(nj.nextSendTime))
 }
 
 func (nj *NotifierJob) nearestCheckTime(ctx context.Context) time.Time {
 	var nearestTime time.Time
-	notif, err := nj.repo.Notifications().GetNearest(ctx, time.Now())
+	event, err := nj.repo.Events().GetNearest(ctx, time.Now())
 	if err != nil {
 		var notFoundErr serverrors.NotFoundError
 		if !errors.As(err, &notFoundErr) {
-			log.Ctx(ctx).Error("get nearest notification", log.Err(err))
+			log.Ctx(ctx).Error("get nearest event", log.Err(err))
 		}
-		log.Ctx(ctx).Debug("no nearest notifications found")
+		log.Ctx(ctx).Debug("no nearest events found")
 		nearestTime = time.Now().Truncate(time.Minute).Add(nj.checkPeriod)
 	} else {
-		nearestTime = notif.SendTime
+		nearestTime = event.SendTime
 	}
 
 	return nearestTime
@@ -108,31 +108,31 @@ func (nj *NotifierJob) nearestCheckTime(ctx context.Context) time.Time {
 
 func (nj *NotifierJob) notify(ctx context.Context) {
 	err := nj.tr.Do(ctx, func(ctx context.Context) error {
-		notifs, err := nj.repo.Notifications().ListNotSended(ctx, time.Now())
+		notifs, err := nj.repo.Events().ListNotSended(ctx, time.Now())
 		if err != nil {
-			return fmt.Errorf("list not sended notifications: %w", err)
+			return fmt.Errorf("list not sended events: %w", err)
 		}
-		log.Ctx(ctx).Debug("found not sended notifications", slog.Any("notifications", utils.DtoSlice(notifs, func(n domains.Notification) int { return n.ID })))
+		log.Ctx(ctx).Debug("found not sended events", slog.Any("events", utils.DtoSlice(notifs, func(n domains.Event) int { return n.ID })))
 
 		ids := make([]int, 0, len(notifs))
 		for _, n := range notifs {
 			ids = append(ids, n.ID)
 
-			notificationParams, err := nj.getNotificationParams(ctx, n)
+			eventParams, err := nj.getEventParams(ctx, n)
 			if err != nil {
-				return fmt.Errorf("get notification params: %w", err)
+				return fmt.Errorf("get event params: %w", err)
 			}
 
-			sendingNotification := domains.NewSendingNotification(n, notificationParams)
-			err = nj.notifier.Add(ctx, sendingNotification)
+			sendingEvent := domains.NewSendingEvent(n, eventParams)
+			err = nj.notifier.Add(ctx, sendingEvent)
 			if err != nil {
 				return fmt.Errorf("notifier add: %w", err)
 			}
 		}
 
-		err = nj.repo.Notifications().MarkSended(ctx, ids)
+		err = nj.repo.Events().MarkSended(ctx, ids)
 		if err != nil {
-			return fmt.Errorf("mark sended notifications: %w", err)
+			return fmt.Errorf("mark sended events: %w", err)
 		}
 
 		return nil
@@ -142,14 +142,14 @@ func (nj *NotifierJob) notify(ctx context.Context) {
 	}
 }
 
-func (nj *NotifierJob) getNotificationParams(ctx context.Context, notif domains.Notification) (domains.NotificationParams, error) {
-	if notif.Params != nil {
-		return *notif.Params, nil
+func (nj *NotifierJob) getEventParams(ctx context.Context, event domains.Event) (domains.NotificationParams, error) {
+	if event.Params != nil {
+		return *event.Params, nil
 	}
 
-	params, err := nj.repo.DefaultNotificationParams().Get(ctx, notif.UserID)
+	params, err := nj.repo.DefaultEventParams().Get(ctx, event.UserID)
 	if err != nil {
-		return domains.NotificationParams{}, fmt.Errorf("get default notification params: %w", err)
+		return domains.NotificationParams{}, fmt.Errorf("get default event params: %w", err)
 	}
 
 	return params, nil

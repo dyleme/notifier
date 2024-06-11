@@ -13,7 +13,7 @@ import (
 	"github.com/Dyleme/Notifier/internal/telegram/userinfo"
 )
 
-type Notification struct {
+type Event struct {
 	th        *TelegramHandler
 	done      bool
 	id        int
@@ -21,17 +21,17 @@ type Notification struct {
 	notifTime time.Time
 }
 
-func (th *TelegramHandler) Notify(ctx context.Context, notif domains.SendingNotification) error {
-	user, err := th.userRepo.GetUserInfo(ctx, notif.Params.Params.Telegram)
+func (th *TelegramHandler) Notify(ctx context.Context, event domains.SendingEvent) error {
+	user, err := th.userRepo.GetUserInfo(ctx, event.Params.Params.Telegram)
 	if err != nil {
-		return fmt.Errorf("get user info[tgID=%v]: %w", notif.Params.Params.Telegram, err)
+		return fmt.Errorf("get user info[tgID=%v]: %w", event.Params.Params.Telegram, err)
 	}
-	n := Notification{
+	n := Event{
 		th:        th,
 		done:      false,
-		id:        notif.NotificationID,
-		message:   notif.Message,
-		notifTime: notif.SendTime,
+		id:        event.EventID,
+		message:   event.Message,
+		notifTime: event.SendTime,
 	}
 	err = n.sendMessage(ctx, int64(user.TGID), user)
 	if err != nil {
@@ -41,7 +41,7 @@ func (th *TelegramHandler) Notify(ctx context.Context, notif domains.SendingNoti
 	return nil
 }
 
-func (n *Notification) sendMessage(ctx context.Context, chatID int64, user userinfo.User) error {
+func (n *Event) sendMessage(ctx context.Context, chatID int64, user userinfo.User) error {
 	kb := inKbr.New(n.th.bot, inKbr.NoDeleteAfterClick()).Button("Done", nil, errorHandling(n.setDone))
 	text := n.message + " " + n.notifTime.In(user.Location()).Format(dayTimeFormat)
 	_, err := n.th.bot.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
@@ -56,7 +56,7 @@ func (n *Notification) sendMessage(ctx context.Context, chatID int64, user useri
 	return nil
 }
 
-func (n *Notification) setUndone(ctx context.Context, _ *bot.Bot, msg *models.Message, _ []byte) error {
+func (n *Event) setUndone(ctx context.Context, _ *bot.Bot, msg *models.Message, _ []byte) error {
 	n.done = false
 	user, err := UserFromCtx(ctx)
 	if err != nil {
@@ -71,7 +71,7 @@ func (n *Notification) setUndone(ctx context.Context, _ *bot.Bot, msg *models.Me
 	return nil
 }
 
-func (n *Notification) setDone(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
+func (n *Event) setDone(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
 	n.done = true
 
 	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick()).
@@ -90,15 +90,15 @@ func (n *Notification) setDone(ctx context.Context, b *bot.Bot, msg *models.Mess
 	return nil
 }
 
-func (n *Notification) SendDone(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
+func (n *Event) SendDone(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
 	user, err := UserFromCtx(ctx)
 	if err != nil {
 		return fmt.Errorf("user from ctx: %w", err)
 	}
 
-	err = n.th.serv.SetNotificationDoneStatus(ctx, n.id, user.ID, n.done)
+	err = n.th.serv.SetEventDoneStatus(ctx, n.id, user.ID, n.done)
 	if err != nil {
-		return fmt.Errorf("set task done status [notificationID=%v, userID=%v]: %w", n.id, user.ID, err)
+		return fmt.Errorf("set task done status [eventID=%v, userID=%v]: %w", n.id, user.ID, err)
 	}
 
 	_, err = b.DeleteMessage(ctx, &bot.DeleteMessageParams{

@@ -17,12 +17,12 @@ import (
 
 var idSeq = sequences.NewRandInt()
 
-func newNotif(t time.Time, per time.Duration) domains.SendingNotification {
-	return domains.SendingNotification{
-		NotificationID: idSeq.Next(),
-		UserID:         idSeq.Next(),
-		Message:        strconv.Itoa(idSeq.Next()),
-		Description:    strconv.Itoa(idSeq.Next()),
+func newNotif(t time.Time, per time.Duration) domains.SendingEvent {
+	return domains.SendingEvent{
+		EventID:     idSeq.Next(),
+		UserID:      idSeq.Next(),
+		Message:     strconv.Itoa(idSeq.Next()),
+		Description: strconv.Itoa(idSeq.Next()),
 		Params: domains.NotificationParams{
 			Period: per,
 			Params: domains.Params{},
@@ -34,7 +34,7 @@ func newNotif(t time.Time, per time.Duration) domains.SendingNotification {
 func TestService_RunJob(t *testing.T) {
 	t.Parallel()
 
-	t.Run("without notifications", func(t *testing.T) {
+	t.Run("without events", func(t *testing.T) {
 		t.Parallel()
 
 		ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond) //nolint:govet // test
@@ -44,7 +44,7 @@ func TestService_RunJob(t *testing.T) {
 		<-ctx.Done()
 	})
 
-	t.Run("one notification after period time", func(t *testing.T) {
+	t.Run("one event after period time", func(t *testing.T) {
 		t.Parallel()
 
 		ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond) //nolint:govet // test
@@ -56,7 +56,7 @@ func TestService_RunJob(t *testing.T) {
 		<-ctx.Done()
 	})
 
-	t.Run("one notification before period time", func(t *testing.T) {
+	t.Run("one event before period time", func(t *testing.T) {
 		t.Parallel()
 
 		ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond) //nolint:govet // test
@@ -70,7 +70,7 @@ func TestService_RunJob(t *testing.T) {
 		<-ctx.Done()
 	})
 
-	t.Run("retry notification", func(t *testing.T) {
+	t.Run("retry event", func(t *testing.T) {
 		t.Parallel()
 
 		ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond) //nolint:govet // testing
@@ -86,7 +86,7 @@ func TestService_RunJob(t *testing.T) {
 		<-ctx.Done()
 	})
 
-	t.Run("two notifications at the same time", func(t *testing.T) {
+	t.Run("two events at the same time", func(t *testing.T) {
 		t.Parallel()
 
 		ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond) //nolint:govet // testing

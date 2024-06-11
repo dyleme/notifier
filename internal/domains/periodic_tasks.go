@@ -15,7 +15,7 @@ type PeriodicTask struct {
 	Text               string
 	Description        string
 	UserID             int
-	Start              time.Duration // Notification time from beginning of day
+	Start              time.Duration // Event time from beginning of day
 	SmallestPeriod     time.Duration
 	BiggestPeriod      time.Duration
 	NotificationParams *NotificationParams
@@ -30,11 +30,11 @@ func (i InvalidPeriodTimeError) Error() string {
 	return fmt.Sprintf("invalid period error biggest is before smallest %v < %v", i.biggest, i.smallest)
 }
 
-func (pt PeriodicTask) NewNotification(t time.Time) (Notification, error) {
+func (pt PeriodicTask) NewEvent(t time.Time) (Event, error) {
 	minDays := int(pt.SmallestPeriod / timeDay)
 	maxDays := int(pt.BiggestPeriod / timeDay)
 	if maxDays < minDays {
-		return Notification{}, InvalidPeriodTimeError{smallest: pt.SmallestPeriod, biggest: pt.BiggestPeriod} //nolint:exhaustruct //returning error
+		return Event{}, InvalidPeriodTimeError{smallest: pt.SmallestPeriod, biggest: pt.BiggestPeriod} //nolint:exhaustruct //returning error
 	}
 	days := int(pt.SmallestPeriod / timeDay)
 	if maxDays < minDays {
@@ -43,7 +43,7 @@ func (pt PeriodicTask) NewNotification(t time.Time) (Notification, error) {
 	dayBeginning := t.Add(time.Duration(days) * timeDay).Truncate(timeDay)
 	sendTime := dayBeginning.Add(pt.Start)
 
-	return Notification{
+	return Event{
 		ID:          0,
 		UserID:      pt.UserID,
 		Text:        pt.Text,
@@ -57,7 +57,7 @@ func (pt PeriodicTask) NewNotification(t time.Time) (Notification, error) {
 	}, nil
 }
 
-func (pt PeriodicTask) NeedRegenerateNotification(updated PeriodicTask) bool {
+func (pt PeriodicTask) NeedRegenerateEvent(updated PeriodicTask) bool {
 	if updated.Start != pt.Start {
 		return true
 	}
@@ -73,7 +73,7 @@ func (pt PeriodicTask) BelongsTo(userID int) bool {
 	return pt.UserID == userID
 }
 
-type PeriodicTaskNotification struct {
+type PeriodicTaskEvent struct {
 	ID             int
 	PeriodicTaskID int
 	SendTime       time.Time

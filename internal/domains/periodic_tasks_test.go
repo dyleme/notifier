@@ -9,7 +9,7 @@ import (
 	"github.com/Dyleme/Notifier/internal/domains"
 )
 
-func TestPeriodicTask_NewNotification(t *testing.T) {
+func TestPeriodicTask_NewEvent(t *testing.T) {
 	t.Parallel()
 	t.Run("check mapping", func(t *testing.T) {
 		t.Parallel()
@@ -27,10 +27,10 @@ func TestPeriodicTask_NewNotification(t *testing.T) {
 				Params: domains.Params{Telegram: 3},
 			},
 		}
-		actual, err := periodicTask.NewNotification(now)
+		actual, err := periodicTask.NewEvent(now)
 		require.NoError(t, err)
 
-		expected := domains.Notification{
+		expected := domains.Event{
 			ID:          0,
 			UserID:      2,
 			Text:        "text",
@@ -97,8 +97,8 @@ func TestPeriodicTask_NewNotification(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			for range 10 {
-				notif, err := tc.pt.NewNotification(tc.now)
-				actual := notif.SendTime
+				event, err := tc.pt.NewEvent(tc.now)
+				actual := event.SendTime
 
 				require.Equal(t, tc.isError, err != nil, "check error")
 				if tc.isError != (err != nil) {

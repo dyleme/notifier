@@ -60,7 +60,7 @@ type UserRepo interface {
 }
 
 type NotifcationService interface {
-	CreateDefaultNotificationParams()
+	CreateDefaultEventParams()
 }
 
 // JwtGenerator is an interface that provides method to create jwt tokens.

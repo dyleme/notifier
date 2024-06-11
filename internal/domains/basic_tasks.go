@@ -15,8 +15,8 @@ type BasicTask struct {
 	NotificationParams *NotificationParams
 }
 
-func (bt BasicTask) NewNotification() Notification {
-	return Notification{
+func (bt BasicTask) NewEvent() Event {
+	return Event{
 		ID:          0,
 		UserID:      bt.UserID,
 		Text:        bt.Text,

@@ -24,17 +24,17 @@ type CreateTaskReqBody struct {
 	Start       time.Time `json:"start"`
 }
 
-// NotificationInfo defines model for NotificationInfo.
-type NotificationInfo struct {
+// EventInfo defines model for EventInfo.
+type EventInfo struct {
 	Cmd      *bool   `json:"cmd,omitempty"`
 	Telegram *int    `json:"telegram,omitempty"`
 	Webhook  *string `json:"webhook,omitempty"`
 }
 
-// NotificationParams defines model for NotificationParams.
-type NotificationParams struct {
-	DelayedTill *time.Time       `json:"delayedTill,omitempty"`
-	Info        NotificationInfo `json:"info"`
+// EventParams defines model for EventParams.
+type EventParams struct {
+	DelayedTill *time.Time `json:"delayedTill,omitempty"`
+	Info        EventInfo  `json:"info"`
 
 	// Period Required time for task in minutes
 	Period int `json:"period"`
@@ -74,8 +74,8 @@ type ListTasksParams struct {
 	Offset *OffsetParam `form:"offset,omitempty" json:"offset,omitempty"`
 }
 
-// SetDefaultNotificationParamsJSONRequestBody defines body for SetDefaultNotificationParams for application/json ContentType.
-type SetDefaultNotificationParamsJSONRequestBody = NotificationParams
+// SetDefaultEventParamsJSONRequestBody defines body for SetDefaultEventParams for application/json ContentType.
+type SetDefaultEventParamsJSONRequestBody = EventParams
 
 // CreateTaskJSONRequestBody defines body for CreateTask for application/json ContentType.
 type CreateTaskJSONRequestBody = CreateTaskReqBody
@@ -83,17 +83,17 @@ type CreateTaskJSONRequestBody = CreateTaskReqBody
 // UpdateTaskJSONRequestBody defines body for UpdateTask for application/json ContentType.
 type UpdateTaskJSONRequestBody = UpdateTaskReqBody
 
-// SetTaskNotificationParamsJSONRequestBody defines body for SetTaskNotificationParams for application/json ContentType.
-type SetTaskNotificationParamsJSONRequestBody = NotificationParams
+// SetTaskEventParamsJSONRequestBody defines body for SetTaskEventParams for application/json ContentType.
+type SetTaskEventParamsJSONRequestBody = EventParams
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
-	// Set default notification params
-	// (GET /notification-params)
-	GetDefaultNotificationParams(w http.ResponseWriter, r *http.Request)
-	// Set default notification params
-	// (PUT /notification-params)
-	SetDefaultNotificationParams(w http.ResponseWriter, r *http.Request)
+	// Set default event params
+	// (GET /event-params)
+	GetDefaultEventParams(w http.ResponseWriter, r *http.Request)
+	// Set default event params
+	// (PUT /event-params)
+	SetDefaultEventParams(w http.ResponseWriter, r *http.Request)
 	// List tasks
 	// (GET /task)
 	ListTasks(w http.ResponseWriter, r *http.Request, params ListTasksParams)
@@ -106,12 +106,12 @@ type ServerInterface interface {
 	// Update task
 	// (PUT /task/{taskID})
 	UpdateTask(w http.ResponseWriter, r *http.Request, taskID int)
-	// Get task notification params
-	// (GET /task/{taskID}/notification-params)
-	GetTaskNotificationParams(w http.ResponseWriter, r *http.Request, taskID int)
-	// Set Task notification params
-	// (PUT /task/{taskID}/notification-params)
-	SetTaskNotificationParams(w http.ResponseWriter, r *http.Request, taskID int)
+	// Get task event params
+	// (GET /task/{taskID}/event-params)
+	GetTaskEventParams(w http.ResponseWriter, r *http.Request, taskID int)
+	// Set Task event params
+	// (PUT /task/{taskID}/event-params)
+	SetTaskEventParams(w http.ResponseWriter, r *http.Request, taskID int)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -123,14 +123,14 @@ type ServerInterfaceWrapper struct {
 
 type MiddlewareFunc func(http.Handler) http.Handler
 
-// GetDefaultNotificationParams operation middleware
-func (siw *ServerInterfaceWrapper) GetDefaultNotificationParams(w http.ResponseWriter, r *http.Request) {
+// GetDefaultEventParams operation middleware
+func (siw *ServerInterfaceWrapper) GetDefaultEventParams(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetDefaultNotificationParams(w, r)
+		siw.Handler.GetDefaultEventParams(w, r)
 	})
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -140,14 +140,14 @@ func (siw *ServerInterfaceWrapper) GetDefaultNotificationParams(w http.ResponseW
 	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
-// SetDefaultNotificationParams operation middleware
-func (siw *ServerInterfaceWrapper) SetDefaultNotificationParams(w http.ResponseWriter, r *http.Request) {
+// SetDefaultEventParams operation middleware
+func (siw *ServerInterfaceWrapper) SetDefaultEventParams(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SetDefaultNotificationParams(w, r)
+		siw.Handler.SetDefaultEventParams(w, r)
 	})
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -284,8 +284,8 @@ func (siw *ServerInterfaceWrapper) UpdateTask(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
-// GetTaskNotificationParams operation middleware
-func (siw *ServerInterfaceWrapper) GetTaskNotificationParams(w http.ResponseWriter, r *http.Request) {
+// GetTaskEventParams operation middleware
+func (siw *ServerInterfaceWrapper) GetTaskEventParams(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var err error
@@ -302,7 +302,7 @@ func (siw *ServerInterfaceWrapper) GetTaskNotificationParams(w http.ResponseWrit
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetTaskNotificationParams(w, r, taskID)
+		siw.Handler.GetTaskEventParams(w, r, taskID)
 	})
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -312,8 +312,8 @@ func (siw *ServerInterfaceWrapper) GetTaskNotificationParams(w http.ResponseWrit
 	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
-// SetTaskNotificationParams operation middleware
-func (siw *ServerInterfaceWrapper) SetTaskNotificationParams(w http.ResponseWriter, r *http.Request) {
+// SetTaskEventParams operation middleware
+func (siw *ServerInterfaceWrapper) SetTaskEventParams(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var err error
@@ -330,7 +330,7 @@ func (siw *ServerInterfaceWrapper) SetTaskNotificationParams(w http.ResponseWrit
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SetTaskNotificationParams(w, r, taskID)
+		siw.Handler.SetTaskEventParams(w, r, taskID)
 	})
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -454,10 +454,10 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/notification-params", wrapper.GetDefaultNotificationParams)
+		r.Get(options.BaseURL+"/event-params", wrapper.GetDefaultEventParams)
 	})
 	r.Group(func(r chi.Router) {
-		r.Put(options.BaseURL+"/notification-params", wrapper.SetDefaultNotificationParams)
+		r.Put(options.BaseURL+"/event-params", wrapper.SetDefaultEventParams)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/task", wrapper.ListTasks)
@@ -472,10 +472,10 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Put(options.BaseURL+"/task/{taskID}", wrapper.UpdateTask)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/task/{taskID}/notification-params", wrapper.GetTaskNotificationParams)
+		r.Get(options.BaseURL+"/task/{taskID}/event-params", wrapper.GetTaskEventParams)
 	})
 	r.Group(func(r chi.Router) {
-		r.Put(options.BaseURL+"/task/{taskID}/notification-params", wrapper.SetTaskNotificationParams)
+		r.Put(options.BaseURL+"/task/{taskID}/event-params", wrapper.SetTaskEventParams)
 	})
 
 	return r
