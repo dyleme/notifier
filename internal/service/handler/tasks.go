@@ -30,7 +30,7 @@ func (t TaskHandler) ListTasks(w http.ResponseWriter, r *http.Request, params ap
 	responses.JSON(w, http.StatusOK, tasks)
 }
 
-func (t TaskHandler) PostTaskSetTaskID(w http.ResponseWriter, r *http.Request, taskID int) {
+func (t TaskHandler) PostTaskSetTaskID(w http.ResponseWriter, _ *http.Request, taskID int) {
 	responses.JSON(w, http.StatusOK, taskID)
 }
 
