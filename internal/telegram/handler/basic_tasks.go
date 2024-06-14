@@ -490,9 +490,6 @@ func (bt *BasicTask) DeleteInline(ctx context.Context, b *bot.Bot, msg *models.M
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}
-	if err != nil {
-		return fmt.Errorf(op, err)
-	}
 
 	return nil
 }
