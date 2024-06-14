@@ -16,6 +16,7 @@ func (th *TelegramHandler) mainMenuKeyboard(b *bot.Bot) models.ReplyMarkup {
 		Row().Button("Info", nil, errorHandling(th.InfoInline)).
 		Row().Button("Tasks", nil, errorHandling(th.TasksMenuInline)).
 		Row().Button("Periodic tasks", nil, errorHandling(th.PeriodicTasksMenuInline)).
+		Row().Button("Events", nil, errorHandling(th.EventsMenuInline)).
 		Row().Button("Settings", nil, errorHandling(th.SettingsInline))
 }
 

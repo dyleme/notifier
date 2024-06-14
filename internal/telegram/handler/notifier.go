@@ -13,7 +13,7 @@ import (
 	"github.com/Dyleme/Notifier/internal/telegram/userinfo"
 )
 
-type Event struct {
+type Notification struct {
 	th        *TelegramHandler
 	done      bool
 	id        int
@@ -26,7 +26,7 @@ func (th *TelegramHandler) Notify(ctx context.Context, event domains.SendingEven
 	if err != nil {
 		return fmt.Errorf("get user info[tgID=%v]: %w", event.Params.Params.Telegram, err)
 	}
-	n := Event{
+	n := Notification{
 		th:        th,
 		done:      false,
 		id:        event.EventID,
@@ -41,7 +41,7 @@ func (th *TelegramHandler) Notify(ctx context.Context, event domains.SendingEven
 	return nil
 }
 
-func (n *Event) sendMessage(ctx context.Context, chatID int64, user userinfo.User) error {
+func (n *Notification) sendMessage(ctx context.Context, chatID int64, user userinfo.User) error {
 	kb := inKbr.New(n.th.bot, inKbr.NoDeleteAfterClick()).Button("Done", nil, errorHandling(n.setDone))
 	text := n.message + " " + n.notifTime.In(user.Location()).Format(dayTimeFormat)
 	_, err := n.th.bot.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
@@ -56,7 +56,7 @@ func (n *Event) sendMessage(ctx context.Context, chatID int64, user userinfo.Use
 	return nil
 }
 
-func (n *Event) setUndone(ctx context.Context, _ *bot.Bot, msg *models.Message, _ []byte) error {
+func (n *Notification) setUndone(ctx context.Context, _ *bot.Bot, msg *models.Message, _ []byte) error {
 	n.done = false
 	user, err := UserFromCtx(ctx)
 	if err != nil {
@@ -71,7 +71,7 @@ func (n *Event) setUndone(ctx context.Context, _ *bot.Bot, msg *models.Message, 
 	return nil
 }
 
-func (n *Event) setDone(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
+func (n *Notification) setDone(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
 	n.done = true
 
 	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick()).
@@ -90,7 +90,7 @@ func (n *Event) setDone(ctx context.Context, b *bot.Bot, msg *models.Message, _ 
 	return nil
 }
 
-func (n *Event) SendDone(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
+func (n *Notification) SendDone(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
 	user, err := UserFromCtx(ctx)
 	if err != nil {
 		return fmt.Errorf("user from ctx: %w", err)

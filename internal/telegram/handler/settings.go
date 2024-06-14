@@ -116,8 +116,12 @@ func (ts *TimezoneSettings) SetTimeMsg(ctx context.Context, b *bot.Bot, msg *mod
 
 func (ts *TimezoneSettings) HandleMsgSetTime(ctx context.Context, b *bot.Bot, msg *models.Message, relatedMsgID int) error {
 	op := "TimezoneSettings.HandleMsgSetTime: %w"
+	user, err := UserFromCtx(ctx)
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
 
-	userTime, err := parseTime(msg.Text)
+	userTime, err := parseTime(msg.Text, user.Location())
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}

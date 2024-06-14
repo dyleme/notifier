@@ -163,7 +163,7 @@ func (bt *BasicTask) String() string {
 }
 
 func (bt *BasicTask) EditMenuMsg(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) error {
-	op := "SingleTask.EditMenuMsg: %w"
+	op := "BasicTask.EditMenuMsg: %w"
 	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick()).
 		Row().
 		Button("Set text", nil, onSelectErrorHandling(bt.SetTextMsg)).
@@ -338,8 +338,12 @@ func (bt *BasicTask) SetTimeMsg(ctx context.Context, b *bot.Bot, relatedMsgID in
 
 func (bt *BasicTask) HandleMsgSetTime(ctx context.Context, b *bot.Bot, msg *models.Message, relatedMsgID int) error {
 	op := "SingleTask.HandleMsgSetTime: %w"
+	user, err := UserFromCtx(ctx)
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
 
-	t, err := parseTime(msg.Text)
+	t, err := parseTime(msg.Text, user.Location())
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}
@@ -361,10 +365,6 @@ func (bt *BasicTask) HandleMsgSetTime(ctx context.Context, b *bot.Bot, msg *mode
 	}
 
 	return nil
-}
-
-func computeTime(day, hourMinutes time.Time, loc *time.Location) time.Time {
-	return time.Date(day.Year(), day.Month(), day.Day(), hourMinutes.Hour(), hourMinutes.Minute(), 0, 0, loc)
 }
 
 func (bt *BasicTask) SetDescription(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) error {
@@ -417,9 +417,9 @@ func (bt *BasicTask) CreateInline(ctx context.Context, b *bot.Bot, msg *models.M
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}
+	t := bt.date.Add(bt.time.Sub(bt.time.Truncate(timeDay)))
 
-	utcTime := computeTime(bt.date, bt.time, user.Location())
-	if utcTime.Before(time.Now()) {
+	if t.Before(time.Now()) {
 		return fmt.Errorf(op, ErrTimeInPast)
 	}
 
@@ -427,7 +427,7 @@ func (bt *BasicTask) CreateInline(ctx context.Context, b *bot.Bot, msg *models.M
 		UserID:             user.ID,
 		Text:               bt.text,
 		Description:        bt.description,
-		Start:              utcTime,
+		Start:              t,
 		NotificationParams: nil,
 	}
 
@@ -451,12 +451,14 @@ func (bt *BasicTask) UpdateInline(ctx context.Context, b *bot.Bot, msg *models.M
 		return fmt.Errorf(op, err)
 	}
 
+	t := bt.date.Add(bt.time.Sub(bt.time.Truncate(timeDay)))
+
 	_, err = bt.th.serv.UpdateBasicTask(ctx, domains.BasicTask{
 		ID:                 bt.id,
 		Text:               bt.text,
 		UserID:             user.ID,
 		Description:        bt.description,
-		Start:              computeTime(bt.date, bt.time, user.Location()),
+		Start:              t,
 		NotificationParams: nil,
 	}, user.ID)
 	if err != nil {
@@ -464,9 +466,6 @@ func (bt *BasicTask) UpdateInline(ctx context.Context, b *bot.Bot, msg *models.M
 	}
 
 	err = bt.th.MainMenuWithText(ctx, b, msg, "Service successfully updated:\n"+bt.String())
-	if err != nil {
-		return fmt.Errorf(op, err)
-	}
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}
@@ -487,9 +486,6 @@ func (bt *BasicTask) DeleteInline(ctx context.Context, b *bot.Bot, msg *models.M
 	}
 
 	err = bt.th.MainMenuWithText(ctx, b, msg, "Service successfully deleted:\n"+bt.String())
-	if err != nil {
-		return fmt.Errorf(op, err)
-	}
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}

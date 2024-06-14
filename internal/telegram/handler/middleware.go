@@ -67,7 +67,7 @@ func UserFromCtx(ctx context.Context) (userinfo.User, error) {
 	return userID, nil
 }
 
-func loggingMiddleware(next bot.HandlerFunc) bot.HandlerFunc { //nolint:unused // no need for now
+func loggingMiddleware(next bot.HandlerFunc) bot.HandlerFunc {
 	return func(ctx context.Context, bot *bot.Bot, update *models.Update) {
 		log.Ctx(ctx).Debug("got update", "update", update)
 

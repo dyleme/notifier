@@ -352,8 +352,12 @@ func (pt *PeriodicTask) SetTimeMsg(ctx context.Context, b *bot.Bot, relatedMsgID
 
 func (pt *PeriodicTask) HandleMsgSetTime(ctx context.Context, b *bot.Bot, msg *models.Message, relatedMsgID int) error {
 	op := "SingleTask.HandleMsgSetTime: %w"
+	user, err := UserFromCtx(ctx)
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
 
-	t, err := parseTime(msg.Text)
+	t, err := parseTime(msg.Text, user.Location())
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}
@@ -482,9 +486,6 @@ func (pt *PeriodicTask) UpdateInline(ctx context.Context, b *bot.Bot, msg *model
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}
-	if err != nil {
-		return fmt.Errorf(op, err)
-	}
 
 	return nil
 }
@@ -502,9 +503,6 @@ func (pt *PeriodicTask) DeleteInline(ctx context.Context, b *bot.Bot, msg *model
 	}
 
 	err = pt.th.MainMenuWithText(ctx, b, msg, "Service successfully deleted:\n"+pt.String())
-	if err != nil {
-		return fmt.Errorf(op, err)
-	}
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}

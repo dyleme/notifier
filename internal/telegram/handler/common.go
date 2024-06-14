@@ -35,9 +35,9 @@ const timeDay = 24 * time.Hour
 
 var timeFormats = []string{timeDoublePointsFormat, timeSpaceFormat}
 
-func parseTime(dayString string) (time.Time, error) {
+func parseTime(dayString string, loc *time.Location) (time.Time, error) {
 	for _, format := range timeFormats {
-		t, err := time.Parse(format, dayString)
+		t, err := time.ParseInLocation(format, dayString, loc)
 		if err == nil { // err eq nil
 			return t, nil
 		}
