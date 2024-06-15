@@ -96,7 +96,7 @@ func handleError(ctx context.Context, b *bot.Bot, chatID int64, err error) {
 
 	_, err = b.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
 		ChatID: chatID,
-		Text:   "Server error occurred",
+		Text:   "Server error occurred\n" + err.Error(),
 	})
 	if err != nil {
 		log.Ctx(ctx).Error("cannot send error message", log.Err(err))
