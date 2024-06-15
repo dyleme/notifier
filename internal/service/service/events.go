@@ -52,8 +52,8 @@ func (s *Service) GetEvent(ctx context.Context, eventID, userID int) (domains.Ev
 			return fmt.Errorf("events: get: %w", err)
 		}
 
-		if !event.BelongsTo(userID) {
-			return fmt.Errorf("event: %w", serverrors.NewBusinessLogicError("event doesn't belong to user"))
+		if err := event.BelongsTo(userID); err != nil {
+			return fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
 		}
 
 		return nil
@@ -77,8 +77,9 @@ func (s *Service) ChangeEventTime(ctx context.Context, eventID int, newTime time
 		if err != nil {
 			return fmt.Errorf("events get: %w", err)
 		}
-		if !ev.BelongsTo(userID) {
-			return fmt.Errorf("event: %w", serverrors.NewBusinessLogicError("event doesn't belong to user"))
+
+		if err := ev.BelongsTo(userID); err != nil {
+			return fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
 		}
 
 		ev.SendTime = newTime
@@ -108,8 +109,9 @@ func (s *Service) DeleteEvent(ctx context.Context, eventID, userID int) error {
 		if err != nil {
 			return fmt.Errorf("events get: %w", err)
 		}
-		if !ev.BelongsTo(userID) {
-			return fmt.Errorf("event: %w", serverrors.NewBusinessLogicError("event doesn't belong to user"))
+
+		if err := ev.BelongsTo(userID); err != nil {
+			return fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
 		}
 
 		err = s.repo.Events().Delete(ctx, eventID)

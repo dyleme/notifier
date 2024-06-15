@@ -30,6 +30,10 @@ func (bt BasicTask) NewEvent() Event {
 	}
 }
 
-func (bt BasicTask) BelongsTo(userID int) bool {
-	return bt.UserID == userID
+func (bt BasicTask) BelongsTo(userID int) error {
+	if bt.UserID == userID {
+		return nil
+	}
+
+	return NewNotBelongToUserError("basic task", bt.ID, bt.UserID, userID)
 }

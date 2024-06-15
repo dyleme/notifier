@@ -69,8 +69,12 @@ func (pt PeriodicTask) NeedRegenerateEvent(updated PeriodicTask) bool {
 	return false
 }
 
-func (pt PeriodicTask) BelongsTo(userID int) bool {
-	return pt.UserID == userID
+func (pt PeriodicTask) BelongsTo(userID int) error {
+	if pt.UserID == userID {
+		return nil
+	}
+
+	return NewNotBelongToUserError("periodic task", pt.ID, pt.UserID, userID)
 }
 
 type PeriodicTaskEvent struct {
