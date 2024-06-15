@@ -60,8 +60,8 @@ func (s *Service) GetTask(ctx context.Context, userID, taskID int) (domains.Basi
 		return domains.BasicTask{}, err
 	}
 
-	if !tt.BelongsTo(userID) {
-		return domains.BasicTask{}, fmt.Errorf("belongs to: %w", serverrors.NewNotFoundError(err, "task"))
+	if err := tt.BelongsTo(userID); err != nil {
+		return domains.BasicTask{}, fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
 	}
 
 	return tt, nil
@@ -88,8 +88,8 @@ func (s *Service) UpdateBasicTask(ctx context.Context, params domains.BasicTask,
 			return fmt.Errorf("get task: %w", err)
 		}
 
-		if !t.BelongsTo(userID) {
-			return serverrors.NewNotFoundError(err, "task")
+		if err := t.BelongsTo(userID); err != nil {
+			return fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
 		}
 
 		t.Text = params.Text
@@ -135,8 +135,9 @@ func (s *Service) createNewEventForPeriodicTask(ctx context.Context, taskID, use
 		if err != nil {
 			return fmt.Errorf("periodic tasks get[taskID=%v,userID=%v]: %w", taskID, userID, err)
 		}
-		if !bt.BelongsTo(userID) {
-			return serverrors.NewBusinessLogicError("task does not belong to user")
+
+		if err := bt.BelongsTo(userID); err != nil {
+			return fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
 		}
 
 		nextNotif, err := bt.NewEvent(time.Now())
@@ -207,8 +208,8 @@ func (s *Service) DeleteBasicTask(ctx context.Context, userID, taskID int) error
 			return fmt.Errorf("get task: %w", err)
 		}
 
-		if !task.BelongsTo(userID) {
-			return serverrors.NewNotFoundError(err, "basic task")
+		if err := task.BelongsTo(userID); err != nil {
+			return fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
 		}
 
 		event, err := s.repo.Events().GetLatest(ctx, taskID)

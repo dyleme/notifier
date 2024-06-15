@@ -46,6 +46,10 @@ type Event struct {
 	Done        bool
 }
 
-func (n Event) BelongsTo(userID int) bool {
-	return n.UserID == userID
+func (n Event) BelongsTo(userID int) error {
+	if n.UserID == userID {
+		return nil
+	}
+
+	return NewNotBelongToUserError("basic task", n.ID, n.UserID, userID)
 }

@@ -19,8 +19,8 @@ type PeriodicTasksRepository interface {
 }
 
 func (s *Service) AddPeriodicTask(ctx context.Context, perTask domains.PeriodicTask, userID int) (domains.PeriodicTask, error) {
-	if !perTask.BelongsTo(userID) {
-		return domains.PeriodicTask{}, fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError("you are not allowed to add task to another user"))
+	if err := perTask.BelongsTo(userID); err != nil {
+		return domains.PeriodicTask{}, fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
 	}
 
 	var createdPerTask domains.PeriodicTask
@@ -58,8 +58,8 @@ func (s *Service) GetPeriodicTask(ctx context.Context, taskID, userID int) (doma
 			return fmt.Errorf("get[taskID=%v]: %w", taskID, err)
 		}
 
-		if !pt.BelongsTo(userID) {
-			return serverrors.NewNotFoundError(err, "periodic task")
+		if err := pt.BelongsTo(userID); err != nil {
+			return fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
 		}
 
 		return nil
@@ -90,8 +90,9 @@ func (s *Service) UpdatePeriodicTask(ctx context.Context, perTask domains.Period
 		if err != nil {
 			return fmt.Errorf("get[taskID=%v]: %w", perTask.ID, err)
 		}
-		if !pt.BelongsTo(userID) {
-			return serverrors.NewNotFoundError(err, "periodic task")
+
+		if err := pt.BelongsTo(userID); err != nil {
+			return fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
 		}
 
 		updatedTask, err = s.repo.PeriodicTasks().Update(ctx, perTask)
@@ -131,11 +132,11 @@ func (s *Service) DeletePeriodicTask(ctx context.Context, taskID, userID int) er
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		task, err := s.repo.PeriodicTasks().Get(ctx, taskID)
 		if err != nil {
-			return fmt.Errorf("get current events: %w", err)
+			return fmt.Errorf("get current event: %w", err)
 		}
 
-		if task.BelongsTo(userID) {
-			return serverrors.NewNotFoundError(err, "periodic task")
+		if err := task.BelongsTo(userID); err != nil {
+			return fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
 		}
 
 		event, err := s.repo.Events().GetLatest(ctx, taskID)
