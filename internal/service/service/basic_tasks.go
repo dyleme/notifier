@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/Dyleme/Notifier/internal/domains"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
@@ -21,6 +20,7 @@ type BasicTaskRepository interface {
 func (s *Service) CreateTask(ctx context.Context, task domains.BasicTask) (domains.BasicTask, error) {
 	op := "Service.CreateTask: %w"
 	var createdTask domains.BasicTask
+	var createdEvent domains.Event
 
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		var err error
@@ -30,8 +30,17 @@ func (s *Service) CreateTask(ctx context.Context, task domains.BasicTask) (domai
 			return fmt.Errorf("add task: %w", err)
 		}
 
-		event := createdTask.NewEvent()
-		_, err = s.repo.Events().Add(ctx, event)
+		defaultParasms, err := s.repo.DefaultEventParams().Get(ctx, task.UserID)
+		if err != nil {
+			return fmt.Errorf("get default event params: %w", err)
+		}
+
+		event, err := domains.CreateEvent(createdTask, defaultParasms)
+		if err != nil {
+			return fmt.Errorf("create event: %w", err)
+		}
+
+		createdEvent, err = s.repo.Events().Add(ctx, event)
 		if err != nil {
 			return fmt.Errorf("add event: %w", err)
 		}
@@ -45,7 +54,7 @@ func (s *Service) CreateTask(ctx context.Context, task domains.BasicTask) (domai
 		return domains.BasicTask{}, err
 	}
 
-	s.notifierJob.UpdateWithTime(ctx, createdTask.Start)
+	s.notifierJob.UpdateWithTime(ctx, createdEvent.SendTime)
 
 	return createdTask, nil
 }
@@ -101,16 +110,17 @@ func (s *Service) UpdateBasicTask(ctx context.Context, params domains.BasicTask,
 			return fmt.Errorf("update task: %w", err)
 		}
 
-		event, err := s.repo.Events().GetLatest(ctx, t.ID)
+		event, err := s.repo.Events().GetLatest(ctx, t.ID, domains.BasicTaskType)
 		if err != nil {
 			return fmt.Errorf("get latest event: %w", err)
 		}
 
-		event.Text = params.Text
-		event.Description = params.Description
-		event.SendTime = params.Start
+		updatedEvent, err := task.UpdatedEvent(event)
+		if err != nil {
+			return fmt.Errorf("update event: %w", err)
+		}
 
-		err = s.repo.Events().Update(ctx, event)
+		err = s.repo.Events().Update(ctx, updatedEvent)
 		if err != nil {
 			return fmt.Errorf("update event: %w", err)
 		}
@@ -130,6 +140,7 @@ func (s *Service) UpdateBasicTask(ctx context.Context, params domains.BasicTask,
 }
 
 func (s *Service) createNewEventForPeriodicTask(ctx context.Context, taskID, userID int) error {
+	var newEvent domains.Event
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		bt, err := s.repo.PeriodicTasks().Get(ctx, taskID)
 		if err != nil {
@@ -140,23 +151,23 @@ func (s *Service) createNewEventForPeriodicTask(ctx context.Context, taskID, use
 			return fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
 		}
 
-		nextNotif, err := bt.NewEvent(time.Now())
+		event, err := bt.NewEvent()
 		if err != nil {
-			return fmt.Errorf("new event: %w", serverrors.NewBusinessLogicError(err.Error()))
+			return fmt.Errorf("new event: %w", err)
 		}
 
-		_, err = s.repo.Events().Add(ctx, nextNotif)
+		newEvent, err = s.repo.Events().Add(ctx, event)
 		if err != nil {
-			return fmt.Errorf("periodic tasks add event: %w", err)
+			return fmt.Errorf("add event: %w", err)
 		}
-
-		s.notifierJob.UpdateWithTime(ctx, nextNotif.SendTime)
 
 		return nil
 	})
 	if err != nil {
 		return fmt.Errorf("tr: %w", err)
 	}
+
+	s.notifierJob.UpdateWithTime(ctx, newEvent.SendTime)
 
 	return nil
 }
@@ -167,15 +178,18 @@ func (s *Service) SetEventDoneStatus(ctx context.Context, eventID, userID int, d
 		if err != nil {
 			return fmt.Errorf("get event: %w", err)
 		}
+
+		if err := event.BelongsTo(userID); err != nil {
+			return fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
+		}
+
 		event.Done = done
+
 		err = s.repo.Events().Update(ctx, event)
 		if err != nil {
 			return fmt.Errorf("update event: %w", err)
 		}
-		err = s.notifier.Delete(ctx, event.ID)
-		if err != nil {
-			return fmt.Errorf("delete notifier event: %w", err)
-		}
+
 		switch event.TaskType {
 		case domains.BasicTaskType:
 		case domains.PeriodicTaskType:
@@ -212,7 +226,7 @@ func (s *Service) DeleteBasicTask(ctx context.Context, userID, taskID int) error
 			return fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
 		}
 
-		event, err := s.repo.Events().GetLatest(ctx, taskID)
+		event, err := s.repo.Events().GetLatest(ctx, taskID, domains.BasicTaskType)
 		if err != nil {
 			return fmt.Errorf("get latest event: %w", err)
 		}

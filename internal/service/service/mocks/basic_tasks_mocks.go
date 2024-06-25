@@ -5,6 +5,7 @@
 //
 //	mockgen -destination=mocks/basic_tasks_mocks.go -package=mocks . BasicTaskRepository
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

@@ -14,6 +14,8 @@ linters-settings:
     settings:
       hugeParam:
         sizeThreshold: 512
+      rangeValCopy:
+        sizeThreshold: 512
   nolintlint:
     require-explanation: true
     require-specific: true

@@ -5,6 +5,7 @@
 //
 //	mockgen -destination=mocks/tg_images_mocks.go -package=mocks . TgImagesRepository
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

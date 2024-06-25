@@ -22,34 +22,34 @@ type SendingEvent struct {
 	SendTime    time.Time
 }
 
-func NewSendingEvent(n Event, eventParams NotificationParams) SendingEvent {
+func NewSendingEvent(ev Event) SendingEvent {
 	return SendingEvent{
-		EventID:     n.ID,
-		UserID:      n.UserID,
-		Message:     n.Text,
-		Description: n.Description,
-		Params:      eventParams,
-		SendTime:    n.SendTime,
+		EventID:     ev.ID,
+		UserID:      ev.UserID,
+		Message:     ev.Text,
+		Description: ev.Description,
+		Params:      ev.NotificationParams,
+		SendTime:    ev.SendTime,
 	}
 }
 
 type Event struct {
-	ID          int
-	UserID      int
-	Text        string
-	Description string
-	TaskType    TaskType
-	TaskID      int
-	Params      *NotificationParams
-	SendTime    time.Time
-	Sended      bool
-	Done        bool
+	ID                 int
+	UserID             int
+	Text               string
+	Description        string
+	TaskType           TaskType
+	TaskID             int
+	NotificationParams NotificationParams
+	SendTime           time.Time
+	Sended             bool
+	Done               bool
 }
 
-func (n Event) BelongsTo(userID int) error {
-	if n.UserID == userID {
+func (ev Event) BelongsTo(userID int) error {
+	if ev.UserID == userID {
 		return nil
 	}
 
-	return NewNotBelongToUserError("basic task", n.ID, n.UserID, userID)
+	return NewNotBelongToUserError("event", ev.ID, ev.UserID, userID)
 }

@@ -5,6 +5,7 @@
 //
 //	mockgen -destination=mocks/notification_params_mocks.go -package=mocks . NotificationParamsRepository
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
