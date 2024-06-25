@@ -26,19 +26,19 @@ func TestBasicTask_NewEvent(t *testing.T) {
 				},
 			},
 		}
-		actual := basicTask.NewEvent()
+		actual, _ := basicTask.NewEvent()
 
 		expected := domains.Event{
-			ID:          0,
-			UserID:      2,
-			Text:        "text",
-			Description: "description",
-			TaskType:    domains.BasicTaskType,
-			TaskID:      1,
-			Params:      basicTask.NotificationParams,
-			SendTime:    time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
-			Sended:      false,
-			Done:        false,
+			ID:                 0,
+			UserID:             2,
+			Text:               "text",
+			Description:        "description",
+			TaskType:           domains.BasicTaskType,
+			TaskID:             1,
+			NotificationParams: *basicTask.NotificationParams,
+			SendTime:           time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+			Sended:             false,
+			Done:               false,
 		}
 
 		require.Equal(t, expected, actual)

@@ -5,6 +5,7 @@
 //
 //	mockgen -destination=mocks/events_mocks.go -package=mocks . EventsRepository
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
@@ -87,18 +88,18 @@ func (mr *MockEventsRepositoryMockRecorder) Get(arg0, arg1 any) *gomock.Call {
 }
 
 // GetLatest mocks base method.
-func (m *MockEventsRepository) GetLatest(arg0 context.Context, arg1 int) (domains.Event, error) {
+func (m *MockEventsRepository) GetLatest(arg0 context.Context, arg1 int, arg2 domains.TaskType) (domains.Event, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetLatest", arg0, arg1)
+	ret := m.ctrl.Call(m, "GetLatest", arg0, arg1, arg2)
 	ret0, _ := ret[0].(domains.Event)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetLatest indicates an expected call of GetLatest.
-func (mr *MockEventsRepositoryMockRecorder) GetLatest(arg0, arg1 any) *gomock.Call {
+func (mr *MockEventsRepositoryMockRecorder) GetLatest(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatest", reflect.TypeOf((*MockEventsRepository)(nil).GetLatest), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatest", reflect.TypeOf((*MockEventsRepository)(nil).GetLatest), arg0, arg1, arg2)
 }
 
 // GetNearest mocks base method.

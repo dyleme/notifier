@@ -5,6 +5,7 @@
 //
 //	mockgen -destination=mocks/event_job_mocks.go -package=mocks . Notifier
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

@@ -60,16 +60,16 @@ func (n *EventsRepository) dto(event queries.Event) (domains.Event, error) {
 	}
 
 	return domains.Event{
-		ID:          int(event.ID),
-		UserID:      int(event.UserID),
-		Text:        event.Text,
-		Description: pgxconv.String(event.Description),
-		TaskType:    taskType,
-		TaskID:      int(event.TaskID),
-		Params:      event.NotificationParams,
-		SendTime:    pgxconv.TimeWithZone(event.SendTime),
-		Sended:      event.Sended,
-		Done:        event.Done,
+		ID:                 int(event.ID),
+		UserID:             int(event.UserID),
+		Text:               event.Text,
+		Description:        pgxconv.String(event.Description),
+		TaskType:           taskType,
+		TaskID:             int(event.TaskID),
+		NotificationParams: event.NotificationParams,
+		SendTime:           pgxconv.TimeWithZone(event.SendTime),
+		Sended:             event.Sended,
+		Done:               event.Done,
 	}, nil
 }
 
@@ -131,10 +131,17 @@ func (n *EventsRepository) Get(ctx context.Context, id int) (domains.Event, erro
 	return n.dto(event)
 }
 
-func (n *EventsRepository) GetLatest(ctx context.Context, taskdID int) (domains.Event, error) {
+func (n *EventsRepository) GetLatest(ctx context.Context, taskdID int, taskType domains.TaskType) (domains.Event, error) {
 	tx := n.getter.DefaultTrOrDB(ctx, n.db)
+	dbTaskType, err := n.repoTaskType(taskType)
+	if err != nil {
+		return domains.Event{}, fmt.Errorf("repo task type: %w", err)
+	}
 
-	event, err := n.q.GetLatestEvent(ctx, tx, int32(taskdID))
+	event, err := n.q.GetLatestEvent(ctx, tx, queries.GetLatestEventParams{
+		TaskID:   int32(taskdID),
+		TaskType: dbTaskType,
+	})
 	if err != nil {
 		return domains.Event{}, fmt.Errorf("get latest event: %w", serverrors.NewRepositoryError(err))
 	}
@@ -177,7 +184,7 @@ func (n *EventsRepository) Delete(ctx context.Context, id int) error {
 func (n *EventsRepository) ListNotSended(ctx context.Context, till time.Time) ([]domains.Event, error) {
 	tx := n.getter.DefaultTrOrDB(ctx, n.db)
 
-	ns, err := n.q.ListNotSendedEvents(ctx, tx, pgxconv.Timestamptz(till))
+	events, err := n.q.ListNotSendedEvents(ctx, tx, pgxconv.Timestamptz(till))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
@@ -186,12 +193,12 @@ func (n *EventsRepository) ListNotSended(ctx context.Context, till time.Time) ([
 		return nil, fmt.Errorf("list not sended notifiations: %w", serverrors.NewRepositoryError(err))
 	}
 
-	domainNotifs, err := utils.DtoErrorSlice(ns, n.dto)
+	domainEvents, err := utils.DtoErrorSlice(events, n.dto)
 	if err != nil {
 		return nil, fmt.Errorf("list not sended notifiations: %w", serverrors.NewRepositoryError(err))
 	}
 
-	return domainNotifs, nil
+	return domainEvents, nil
 }
 
 func (n *EventsRepository) GetNearest(ctx context.Context, till time.Time) (domains.Event, error) {

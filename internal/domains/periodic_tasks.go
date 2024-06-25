@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math/rand"
 	"time"
+
+	"github.com/Dyleme/Notifier/pkg/utils"
 )
 
 const timeDay = 24 * time.Hour
@@ -30,7 +32,7 @@ func (i InvalidPeriodTimeError) Error() string {
 	return fmt.Sprintf("invalid period error biggest is before smallest %v < %v", i.biggest, i.smallest)
 }
 
-func (pt PeriodicTask) NewEvent(t time.Time) (Event, error) {
+func (pt PeriodicTask) NewEvent() (Event, error) {
 	minDays := int(pt.SmallestPeriod / timeDay)
 	maxDays := int(pt.BiggestPeriod / timeDay)
 	if maxDays < minDays {
@@ -40,20 +42,20 @@ func (pt PeriodicTask) NewEvent(t time.Time) (Event, error) {
 	if maxDays < minDays {
 		days = minDays + rand.Intn(maxDays-minDays) //nolint:gosec // no need to use crypto rand
 	}
-	dayBeginning := t.Add(time.Duration(days) * timeDay).Truncate(timeDay)
+	dayBeginning := time.Now().Add(time.Duration(days) * timeDay).Truncate(timeDay)
 	sendTime := dayBeginning.Add(pt.Start)
 
 	return Event{
-		ID:          0,
-		UserID:      pt.UserID,
-		Text:        pt.Text,
-		Description: pt.Description,
-		TaskType:    PeriodicTaskType,
-		TaskID:      pt.ID,
-		Params:      pt.NotificationParams,
-		SendTime:    sendTime,
-		Sended:      false,
-		Done:        false,
+		ID:                 0,
+		UserID:             pt.UserID,
+		Text:               pt.Text,
+		Description:        pt.Description,
+		TaskType:           PeriodicTaskType,
+		TaskID:             pt.ID,
+		NotificationParams: utils.ZeroIfNil(pt.NotificationParams),
+		SendTime:           sendTime,
+		Sended:             false,
+		Done:               false,
 	}, nil
 }
 

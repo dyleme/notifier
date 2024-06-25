@@ -13,7 +13,6 @@ func TestPeriodicTask_NewEvent(t *testing.T) {
 	t.Parallel()
 	t.Run("check mapping", func(t *testing.T) {
 		t.Parallel()
-		now := time.Now()
 		periodicTask := domains.PeriodicTask{
 			ID:             1,
 			Text:           "text",
@@ -27,19 +26,19 @@ func TestPeriodicTask_NewEvent(t *testing.T) {
 				Params: domains.Params{Telegram: 3},
 			},
 		}
-		actual, err := periodicTask.NewEvent(now)
+		actual, err := periodicTask.NewEvent()
 		require.NoError(t, err)
 
 		expected := domains.Event{
-			ID:          0,
-			UserID:      2,
-			Text:        "text",
-			Description: "description",
-			TaskType:    domains.PeriodicTaskType,
-			TaskID:      1,
-			Params:      periodicTask.NotificationParams,
-			Sended:      false,
-			Done:        false,
+			ID:                 0,
+			UserID:             2,
+			Text:               "text",
+			Description:        "description",
+			TaskType:           domains.PeriodicTaskType,
+			TaskID:             1,
+			NotificationParams: *periodicTask.NotificationParams,
+			Sended:             false,
+			Done:               false,
 		}
 
 		// do not check send time
@@ -97,7 +96,7 @@ func TestPeriodicTask_NewEvent(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			for range 10 {
-				event, err := tc.pt.NewEvent(tc.now)
+				event, err := tc.pt.NewEvent()
 				actual := event.SendTime
 
 				require.Equal(t, tc.isError, err != nil, "check error")

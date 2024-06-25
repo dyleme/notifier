@@ -116,17 +116,7 @@ func (nj *NotifierJob) notify(ctx context.Context) {
 
 		ids := make([]int, 0, len(events))
 		for _, ev := range events {
-			eventParams, err := nj.getEventParams(ctx, ev)
-			if err != nil {
-				var notFoundErr serverrors.NotFoundError
-				if errors.As(err, &notFoundErr) {
-					continue
-				}
-
-				return fmt.Errorf("get event params[eventID=%v]: %w", ev.ID, err)
-			}
-
-			sendingEvent := domains.NewSendingEvent(ev, eventParams)
+			sendingEvent := domains.NewSendingEvent(ev)
 			err = nj.notifier.Add(ctx, sendingEvent)
 			if err != nil {
 				return fmt.Errorf("notifier add: %w", err)
@@ -145,17 +135,4 @@ func (nj *NotifierJob) notify(ctx context.Context) {
 	if err != nil {
 		log.Ctx(ctx).Error("notify error", log.Err(err), slog.Time("run_time", nj.nextSendTime))
 	}
-}
-
-func (nj *NotifierJob) getEventParams(ctx context.Context, event domains.Event) (domains.NotificationParams, error) {
-	if event.Params != nil {
-		return *event.Params, nil
-	}
-
-	params, err := nj.repo.DefaultEventParams().Get(ctx, event.UserID)
-	if err != nil {
-		return domains.NotificationParams{}, fmt.Errorf("get default event params[userID=%v]: %w", event.UserID, err)
-	}
-
-	return params, nil
 }

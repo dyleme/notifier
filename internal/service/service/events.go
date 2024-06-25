@@ -15,7 +15,7 @@ type EventsRepository interface {
 	Add(ctx context.Context, event domains.Event) (domains.Event, error)
 	List(ctx context.Context, userID int, timeBorderes timeborders.TimeBorders, listParams ListParams) ([]domains.Event, error)
 	Get(ctx context.Context, id int) (domains.Event, error)
-	GetLatest(ctx context.Context, taskdID int) (domains.Event, error)
+	GetLatest(ctx context.Context, taskdID int, taskType domains.TaskType) (domains.Event, error)
 	Update(ctx context.Context, event domains.Event) error
 	Delete(ctx context.Context, id int) error
 	ListNotSended(ctx context.Context, till time.Time) ([]domains.Event, error)

@@ -5,6 +5,7 @@
 //
 //	mockgen -destination=mocks/periodic_tasks_mocks.go -package=mocks . PeriodicTasksRepository
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

@@ -125,12 +125,18 @@ func (q *Queries) GetEvent(ctx context.Context, db DBTX, id int32) (Event, error
 const getLatestEvent = `-- name: GetLatestEvent :one
 SELECT id, created_at, user_id, text, description, task_id, task_type, send_time, sended, done, notification_params FROM events
 WHERE task_id = $1
+  AND task_type = $2
 ORDER BY send_time DESC
 LIMIT 1
 `
 
-func (q *Queries) GetLatestEvent(ctx context.Context, db DBTX, taskID int32) (Event, error) {
-	row := db.QueryRow(ctx, getLatestEvent, taskID)
+type GetLatestEventParams struct {
+	TaskID   int32    `db:"task_id"`
+	TaskType TaskType `db:"task_type"`
+}
+
+func (q *Queries) GetLatestEvent(ctx context.Context, db DBTX, arg GetLatestEventParams) (Event, error) {
+	row := db.QueryRow(ctx, getLatestEvent, arg.TaskID, arg.TaskType)
 	var i Event
 	err := row.Scan(
 		&i.ID,

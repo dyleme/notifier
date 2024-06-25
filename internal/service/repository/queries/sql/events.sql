@@ -20,6 +20,7 @@ WHERE id = @id;
 -- name: GetLatestEvent :one
 SELECT * FROM events
 WHERE task_id = @task_id
+  AND task_type = @task_type
 ORDER BY send_time DESC
 LIMIT 1;
   
