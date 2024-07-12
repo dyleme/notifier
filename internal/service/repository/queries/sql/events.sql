@@ -4,13 +4,15 @@ INSERT INTO events (
     text,
     task_id,
     task_type,
-    send_time
+    send_time, 
+    notification_params
 ) VALUES (
     @user_id,
     @text,
     @task_id,
     @task_type,
-    @send_time
+    @send_time,
+    @notification_params
 ) RETURNING *;
 
 -- name: GetEvent :one

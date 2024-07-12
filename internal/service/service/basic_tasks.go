@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/Dyleme/Notifier/internal/domains"
+	"github.com/Dyleme/Notifier/pkg/log"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
 )
 
@@ -25,6 +26,7 @@ func (s *Service) CreateTask(ctx context.Context, task domains.BasicTask) (domai
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		var err error
 
+		log.Ctx(ctx).Debug("add task", "event", task)
 		createdTask, err = s.repo.Tasks().Add(ctx, task)
 		if err != nil {
 			return fmt.Errorf("add task: %w", err)
@@ -40,6 +42,7 @@ func (s *Service) CreateTask(ctx context.Context, task domains.BasicTask) (domai
 			return fmt.Errorf("create event: %w", err)
 		}
 
+		log.Ctx(ctx).Debug("add event", "event", event)
 		createdEvent, err = s.repo.Events().Add(ctx, event)
 		if err != nil {
 			return fmt.Errorf("add event: %w", err)

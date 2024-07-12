@@ -81,11 +81,12 @@ func (n *EventsRepository) Add(ctx context.Context, event domains.Event) (domain
 		return domains.Event{}, fmt.Errorf("repo task type: %w", err)
 	}
 	ev, err := n.q.AddEvent(ctx, tx, queries.AddEventParams{
-		UserID:   int32(event.UserID),
-		Text:     event.Text,
-		TaskID:   int32(event.TaskID),
-		TaskType: taskType,
-		SendTime: pgxconv.Timestamptz(event.SendTime),
+		UserID:             int32(event.UserID),
+		Text:               event.Text,
+		TaskID:             int32(event.TaskID),
+		TaskType:           taskType,
+		SendTime:           pgxconv.Timestamptz(event.SendTime),
+		NotificationParams: event.NotificationParams,
 	})
 	if err != nil {
 		return domains.Event{}, fmt.Errorf("add event: %w", serverrors.NewRepositoryError(err))

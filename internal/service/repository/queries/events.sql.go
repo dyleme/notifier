@@ -8,6 +8,7 @@ package queries
 import (
 	"context"
 
+	domains "github.com/Dyleme/Notifier/internal/domains"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -17,22 +18,25 @@ INSERT INTO events (
     text,
     task_id,
     task_type,
-    send_time
+    send_time, 
+    notification_params
 ) VALUES (
     $1,
     $2,
     $3,
     $4,
-    $5
+    $5,
+    $6
 ) RETURNING id, created_at, user_id, text, description, task_id, task_type, send_time, sended, done, notification_params
 `
 
 type AddEventParams struct {
-	UserID   int32              `db:"user_id"`
-	Text     string             `db:"text"`
-	TaskID   int32              `db:"task_id"`
-	TaskType TaskType           `db:"task_type"`
-	SendTime pgtype.Timestamptz `db:"send_time"`
+	UserID             int32                      `db:"user_id"`
+	Text               string                     `db:"text"`
+	TaskID             int32                      `db:"task_id"`
+	TaskType           TaskType                   `db:"task_type"`
+	SendTime           pgtype.Timestamptz         `db:"send_time"`
+	NotificationParams domains.NotificationParams `db:"notification_params"`
 }
 
 func (q *Queries) AddEvent(ctx context.Context, db DBTX, arg AddEventParams) (Event, error) {
@@ -42,6 +46,7 @@ func (q *Queries) AddEvent(ctx context.Context, db DBTX, arg AddEventParams) (Ev
 		arg.TaskID,
 		arg.TaskType,
 		arg.SendTime,
+		arg.NotificationParams,
 	)
 	var i Event
 	err := row.Scan(
