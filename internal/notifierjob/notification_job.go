@@ -93,6 +93,7 @@ func (nj *NotifierJob) setNextEventTime(ctx context.Context) {
 }
 
 func (nj *NotifierJob) nearestCheckTime(ctx context.Context) time.Time {
+	nextPeriodicInvocationTime := time.Now().Truncate(time.Minute).Add(nj.checkPeriod)
 	event, err := nj.repo.Events().GetNearest(ctx)
 	if err != nil {
 		var notFoundErr serverrors.NotFoundError
@@ -100,9 +101,11 @@ func (nj *NotifierJob) nearestCheckTime(ctx context.Context) time.Time {
 			log.Ctx(ctx).Error("get nearest event", log.Err(err))
 		}
 		log.Ctx(ctx).Debug("no nearest events found")
+
+		return nextPeriodicInvocationTime
 	}
 
-	return utils.MinTime(time.Now().Truncate(time.Minute).Add(nj.checkPeriod), event.NextSendTime)
+	return utils.MinTime(nextPeriodicInvocationTime, event.NextSendTime)
 }
 
 func (nj *NotifierJob) notify(ctx context.Context) {
