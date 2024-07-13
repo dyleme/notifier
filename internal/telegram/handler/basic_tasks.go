@@ -52,7 +52,7 @@ func (l *ListTasks) listInline(ctx context.Context, b *bot.Bot, mes *models.Mess
 		return fmt.Errorf(op, err)
 	}
 
-	tasks, err := l.th.serv.ListTasks(ctx, user.ID, defaultListParams)
+	tasks, err := l.th.serv.ListBasicTasks(ctx, user.ID, defaultListParams)
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}
@@ -237,7 +237,7 @@ func (bt *BasicTask) HandleMsgSetText(ctx context.Context, b *bot.Bot, msg *mode
 }
 
 func (bt *BasicTask) SetDateMsg(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) error {
-	op := "SingleTask.SetDateMsg: %w"
+	op := "BasicTask.SetDateMsg: %w"
 	user, err := UserFromCtx(ctx)
 	if err != nil {
 		return fmt.Errorf(op, err)
@@ -270,7 +270,7 @@ func (bt *BasicTask) SetDateMsg(ctx context.Context, b *bot.Bot, relatedMsgID in
 }
 
 func (bt *BasicTask) HandleBtnSetDate(ctx context.Context, b *bot.Bot, msg *models.Message, bts []byte) error {
-	op := "SingleTask.HandleBtnSetDate: %w"
+	op := "BasicTask.HandleBtnSetDate: %w"
 
 	if err := bt.handleSetDate(ctx, b, msg.Chat.ID, msg.ID, string(bts)); err != nil {
 		return fmt.Errorf(op, err)
@@ -431,7 +431,7 @@ func (bt *BasicTask) CreateInline(ctx context.Context, b *bot.Bot, msg *models.M
 		NotificationParams: nil,
 	}
 
-	_, err = bt.th.serv.CreateTask(ctx, task)
+	_, err = bt.th.serv.CreateBasicTask(ctx, task)
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}
@@ -505,7 +505,7 @@ func (bt *BasicTask) HandleBtnTaskChosen(ctx context.Context, b *bot.Bot, msg *m
 		return fmt.Errorf(op, err)
 	}
 
-	task, err := bt.th.serv.GetTask(ctx, user.ID, taskID)
+	task, err := bt.th.serv.GetBasicTask(ctx, user.ID, taskID)
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}

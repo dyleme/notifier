@@ -4,7 +4,7 @@ import (
 	trmpgx "github.com/avito-tech/go-transaction-manager/pgxv5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/Dyleme/Notifier/internal/service/repository/queries"
+	"github.com/Dyleme/Notifier/internal/service/repository/queries/goqueries"
 )
 
 type Repository struct {
@@ -25,7 +25,7 @@ type Cache interface {
 }
 
 func New(pool *pgxpool.Pool, cache Cache, getter *trmpgx.CtxGetter) *Repository {
-	q := queries.New()
+	q := goqueries.New()
 
 	return &Repository{
 		db:    pool,

@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Dyleme/Notifier/internal/domains"
-	"github.com/Dyleme/Notifier/internal/service/repository/queries"
+	"github.com/Dyleme/Notifier/internal/service/repository/queries/goqueries"
 	"github.com/Dyleme/Notifier/internal/service/service"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
 	"github.com/Dyleme/Notifier/pkg/sql/pgxconv"
@@ -18,7 +18,7 @@ import (
 )
 
 type BasicTaskRepository struct {
-	q      *queries.Queries
+	q      *goqueries.Queries
 	db     *pgxpool.Pool
 	getter *trmpgx.CtxGetter
 }
@@ -27,7 +27,7 @@ func (r *Repository) Tasks() service.BasicTaskRepository {
 	return r.tasksRepository
 }
 
-func dtoTask(bt queries.BasicTask) (domains.BasicTask, error) {
+func dtoTask(bt goqueries.BasicTask) (domains.BasicTask, error) {
 	return domains.BasicTask{
 		ID:                 int(bt.ID),
 		UserID:             int(bt.UserID),
@@ -42,7 +42,7 @@ func (er *BasicTaskRepository) Add(ctx context.Context, bt domains.BasicTask) (d
 	op := "add timetable task: %w"
 
 	tx := er.getter.DefaultTrOrDB(ctx, er.db)
-	addedTask, err := er.q.AddBasicTask(ctx, tx, queries.AddBasicTaskParams{
+	addedTask, err := er.q.AddBasicTask(ctx, tx, goqueries.AddBasicTaskParams{
 		UserID:             int32(bt.UserID),
 		Text:               bt.Text,
 		Start:              pgxconv.Timestamptz(bt.Start),
@@ -59,7 +59,7 @@ func (er *BasicTaskRepository) Add(ctx context.Context, bt domains.BasicTask) (d
 func (er *BasicTaskRepository) List(ctx context.Context, userID int, listParams service.ListParams) ([]domains.BasicTask, error) {
 	op := fmt.Sprintf("list timetable tasks userID{%v} %%w", userID)
 	tx := er.getter.DefaultTrOrDB(ctx, er.db)
-	tt, err := er.q.ListBasicTasks(ctx, tx, queries.ListBasicTasksParams{
+	tt, err := er.q.ListBasicTasks(ctx, tx, goqueries.ListBasicTasksParams{
 		UserID: int32(userID),
 		Off:    int32(listParams.Offset),
 		Lim:    int32(listParams.Limit),
@@ -110,7 +110,7 @@ func (er *BasicTaskRepository) Get(ctx context.Context, taskID int) (domains.Bas
 func (er *BasicTaskRepository) Update(ctx context.Context, task domains.BasicTask) (domains.BasicTask, error) {
 	op := "update timetable task: %w"
 	tx := er.getter.DefaultTrOrDB(ctx, er.db)
-	updatedTT, err := er.q.UpdateBasicTask(ctx, tx, queries.UpdateBasicTaskParams{
+	updatedTT, err := er.q.UpdateBasicTask(ctx, tx, goqueries.UpdateBasicTaskParams{
 		Start:              pgxconv.Timestamptz(task.Start),
 		Text:               task.Text,
 		Description:        pgxconv.Text(task.Description),

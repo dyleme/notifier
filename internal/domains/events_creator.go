@@ -7,11 +7,11 @@ import (
 )
 
 type EventCreator interface {
-	NewEvent() (Event, error)
+	newEvent() (Event, error)
 }
 
 func CreateEvent(eventCreator EventCreator, defaultParams NotificationParams) (Event, error) {
-	event, err := eventCreator.NewEvent()
+	event, err := eventCreator.newEvent()
 	if err != nil {
 		return Event{}, fmt.Errorf("failed to create event: %w", err)
 	}

@@ -13,13 +13,13 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Dyleme/Notifier/internal/domains"
-	"github.com/Dyleme/Notifier/internal/service/repository/queries"
+	"github.com/Dyleme/Notifier/internal/service/repository/queries/goqueries"
 	"github.com/Dyleme/Notifier/internal/service/service"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
 )
 
 type TgImagesRepository struct {
-	q      *queries.Queries
+	q      *goqueries.Queries
 	cache  Cache
 	getter *trmpgx.CtxGetter
 	db     *pgxpool.Pool
@@ -37,7 +37,7 @@ func (t TgImagesRepository) Add(ctx context.Context, filename, tgFileID string) 
 	op := "TgImagesRepository.Add: %w"
 
 	tx := t.getter.DefaultTrOrDB(ctx, t.db)
-	tgImage, err := t.q.AddTgImage(ctx, tx, queries.AddTgImageParams{
+	tgImage, err := t.q.AddTgImage(ctx, tx, goqueries.AddTgImageParams{
 		Filename: filename,
 		TgFileID: tgFileID,
 	})
@@ -76,7 +76,7 @@ func uniqueError(err error, columnNames []string) (string, bool) {
 func (t TgImagesRepository) Get(ctx context.Context, filename string) (domains.TgImage, error) {
 	op := "TgImagesRepository.Get: %w"
 
-	var tgImage queries.TgImage
+	var tgImage goqueries.TgImage
 	if err := t.cache.Get(newTgImageKey(filename), &tgImage); err == nil { // err == nil
 		return dtoTgImage(tgImage), nil
 	}
@@ -98,7 +98,7 @@ func (t TgImagesRepository) Get(ctx context.Context, filename string) (domains.T
 	}, nil
 }
 
-func dtoTgImage(tgImage queries.TgImage) domains.TgImage {
+func dtoTgImage(tgImage goqueries.TgImage) domains.TgImage {
 	return domains.TgImage{
 		ID:       int(tgImage.ID),
 		Filename: tgImage.Filename,

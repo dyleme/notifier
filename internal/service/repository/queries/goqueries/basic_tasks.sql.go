@@ -3,7 +3,7 @@
 //   sqlc v1.26.0
 // source: basic_tasks.sql
 
-package queries
+package goqueries
 
 import (
 	"context"

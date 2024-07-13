@@ -18,7 +18,7 @@ type BasicTask struct {
 	NotificationParams *NotificationParams
 }
 
-func (bt BasicTask) NewEvent() (Event, error) {
+func (bt BasicTask) newEvent() (Event, error) { //nolint:unparam //need for interface impolementation
 	return Event{
 		ID:                 0,
 		UserID:             bt.UserID,
@@ -27,14 +27,15 @@ func (bt BasicTask) NewEvent() (Event, error) {
 		TaskType:           BasicTaskType,
 		TaskID:             bt.ID,
 		NotificationParams: utils.ZeroIfNil(bt.NotificationParams),
-		SendTime:           bt.Start,
-		Sended:             false,
+		LastSendedTime:     time.Time{},
+		NextSendTime:       bt.Start,
+		FirstSendTime:      bt.Start,
 		Done:               false,
 	}, nil
 }
 
 func (bt BasicTask) UpdatedEvent(ev Event) (Event, error) {
-	updatedEvent, err := bt.NewEvent()
+	updatedEvent, err := bt.newEvent()
 	if err != nil {
 		return Event{}, fmt.Errorf("new event: %w", err)
 	}

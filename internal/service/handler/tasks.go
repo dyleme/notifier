@@ -20,7 +20,7 @@ func (t TaskHandler) ListTasks(w http.ResponseWriter, r *http.Request, params ap
 
 	listParams := parseListParams(params.Offset, params.Limit)
 
-	tasks, err := t.serv.ListTasks(r.Context(), userID, listParams)
+	tasks, err := t.serv.ListBasicTasks(r.Context(), userID, listParams)
 	if err != nil {
 		responses.KnownError(w, err)
 
@@ -52,7 +52,7 @@ func (t TaskHandler) GetTask(w http.ResponseWriter, r *http.Request, taskID int)
 		return
 	}
 
-	task, err := t.serv.GetTask(r.Context(), userID, taskID)
+	task, err := t.serv.GetBasicTask(r.Context(), userID, taskID)
 	if err != nil {
 		responses.KnownError(w, err)
 
@@ -136,7 +136,7 @@ func (t TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	task := mapCreateTask(createBody, userID)
-	createdTask, err := t.serv.CreateTask(r.Context(), task)
+	createdTask, err := t.serv.CreateBasicTask(r.Context(), task)
 	if err != nil {
 		responses.Error(w, http.StatusInternalServerError, err)
 

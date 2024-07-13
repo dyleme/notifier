@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"github.com/Dyleme/Notifier/internal/authorization/repository/queries"
+	"github.com/Dyleme/Notifier/internal/authorization/repository/queries/goqueries"
 	"github.com/Dyleme/Notifier/internal/authorization/service"
 	"github.com/Dyleme/Notifier/internal/domains"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
@@ -19,7 +19,7 @@ import (
 
 func (r *Repository) Create(ctx context.Context, input service.CreateUserInput) (domains.User, error) {
 	op := "Repository.Create: %w"
-	user, err := r.q.AddUser(ctx, queries.AddUserParams{
+	user, err := r.q.AddUser(ctx, goqueries.AddUserParams{
 		Email:        pgxconv.Text(input.Email),
 		PasswordHash: pgxconv.Text(input.Password),
 		TgID:         pgxconv.Int4(input.TGID),
@@ -59,7 +59,7 @@ func uniqueError(err error) (string, bool) {
 
 func (r *Repository) Get(ctx context.Context, email string, tgID *int) (domains.User, error) {
 	op := "Repository.Get: %w"
-	out, err := r.q.FindUser(ctx, queries.FindUserParams{
+	out, err := r.q.FindUser(ctx, goqueries.FindUserParams{
 		Email: pgxconv.Text(email),
 		TgID:  pgxconv.Int4(tgID),
 	})
@@ -84,7 +84,7 @@ func (r *Repository) Get(ctx context.Context, email string, tgID *int) (domains.
 func (r *Repository) UpdateTime(ctx context.Context, id int, tzOffset domains.TimeZoneOffset, isDST bool) error {
 	op := "Repository.UpdateWithTime: %w"
 
-	err := r.q.UpdateTime(ctx, queries.UpdateTimeParams{
+	err := r.q.UpdateTime(ctx, goqueries.UpdateTimeParams{
 		TimezoneOffset: int32(tzOffset),
 		IsDst:          isDST,
 		ID:             int32(id),

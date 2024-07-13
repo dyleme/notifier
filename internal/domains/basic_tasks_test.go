@@ -1,43 +1,42 @@
-package domains_test
+package domains
 
 import (
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
-
-	"github.com/Dyleme/Notifier/internal/domains"
 )
 
-func TestBasicTask_NewEvent(t *testing.T) {
+func TestBasicTask_newEvent(t *testing.T) {
 	t.Parallel()
 	t.Run("check mapping", func(t *testing.T) {
 		t.Parallel()
-		basicTask := domains.BasicTask{
+		basicTask := BasicTask{
 			ID:          1,
 			UserID:      2,
 			Text:        "text",
 			Description: "description",
 			Start:       time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
-			NotificationParams: &domains.NotificationParams{
+			NotificationParams: &NotificationParams{
 				Period: time.Hour,
-				Params: domains.Params{
+				Params: Params{
 					Telegram: 3,
 				},
 			},
 		}
-		actual, _ := basicTask.NewEvent()
+		actual, _ := basicTask.newEvent()
 
-		expected := domains.Event{
+		expected := Event{
 			ID:                 0,
 			UserID:             2,
 			Text:               "text",
 			Description:        "description",
-			TaskType:           domains.BasicTaskType,
+			TaskType:           BasicTaskType,
 			TaskID:             1,
 			NotificationParams: *basicTask.NotificationParams,
-			SendTime:           time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
-			Sended:             false,
+			LastSendedTime:     time.Time{},
+			NextSendTime:       time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+			FirstSendTime:      time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
 			Done:               false,
 		}
 

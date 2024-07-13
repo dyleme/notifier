@@ -1,6 +1,8 @@
 package domains
 
-import "time"
+import (
+	"time"
+)
 
 type NotificationParams struct {
 	Period time.Duration `json:"period"`
@@ -29,7 +31,7 @@ func NewSendingEvent(ev Event) SendingEvent {
 		Message:     ev.Text,
 		Description: ev.Description,
 		Params:      ev.NotificationParams,
-		SendTime:    ev.SendTime,
+		SendTime:    ev.NextSendTime,
 	}
 }
 
@@ -40,10 +42,11 @@ type Event struct {
 	Description        string
 	TaskType           TaskType
 	TaskID             int
-	NotificationParams NotificationParams
-	SendTime           time.Time
-	Sended             bool
+	LastSendedTime     time.Time
+	NextSendTime       time.Time
+	FirstSendTime      time.Time
 	Done               bool
+	NotificationParams NotificationParams
 }
 
 func (ev Event) BelongsTo(userID int) error {
@@ -52,4 +55,20 @@ func (ev Event) BelongsTo(userID int) error {
 	}
 
 	return NewNotBelongToUserError("event", ev.ID, ev.UserID, userID)
+}
+
+func (ev Event) Rescheule() Event {
+	return ev.RescheuleToTime(time.Now().Add(ev.NotificationParams.Period))
+}
+
+func (ev Event) RescheuleToTime(t time.Time) Event {
+	ev.NextSendTime = t
+
+	return ev
+}
+
+func (ev Event) MarkDone() Event {
+	ev.Done = true
+
+	return ev
 }

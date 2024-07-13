@@ -27,8 +27,9 @@ func TestNewSendingEvent(t *testing.T) {
 			TaskType:           domains.BasicTaskType,
 			TaskID:             3,
 			NotificationParams: params,
-			SendTime:           time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
-			Sended:             true,
+			LastSendedTime:     time.Time{},
+			NextSendTime:       time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+			FirstSendTime:      time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
 			Done:               false,
 		}
 		actual := domains.NewSendingEvent(event)
