@@ -3,7 +3,7 @@
 //   sqlc v1.26.0
 // source: default_user_notifications.sql
 
-package queries
+package goqueries
 
 import (
 	"context"

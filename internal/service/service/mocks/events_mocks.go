@@ -58,6 +58,20 @@ func (mr *MockEventsRepositoryMockRecorder) Add(arg0, arg1 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Add", reflect.TypeOf((*MockEventsRepository)(nil).Add), arg0, arg1)
 }
 
+// BatchUpdate mocks base method.
+func (m *MockEventsRepository) BatchUpdate(arg0 context.Context, arg1 []domains.Event) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchUpdate", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// BatchUpdate indicates an expected call of BatchUpdate.
+func (mr *MockEventsRepositoryMockRecorder) BatchUpdate(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchUpdate", reflect.TypeOf((*MockEventsRepository)(nil).BatchUpdate), arg0, arg1)
+}
+
 // Delete mocks base method.
 func (m *MockEventsRepository) Delete(arg0 context.Context, arg1 int) error {
 	m.ctrl.T.Helper()
@@ -103,18 +117,18 @@ func (mr *MockEventsRepositoryMockRecorder) GetLatest(arg0, arg1, arg2 any) *gom
 }
 
 // GetNearest mocks base method.
-func (m *MockEventsRepository) GetNearest(arg0 context.Context, arg1 time.Time) (domains.Event, error) {
+func (m *MockEventsRepository) GetNearest(arg0 context.Context) (domains.Event, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetNearest", arg0, arg1)
+	ret := m.ctrl.Call(m, "GetNearest", arg0)
 	ret0, _ := ret[0].(domains.Event)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetNearest indicates an expected call of GetNearest.
-func (mr *MockEventsRepositoryMockRecorder) GetNearest(arg0, arg1 any) *gomock.Call {
+func (mr *MockEventsRepositoryMockRecorder) GetNearest(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNearest", reflect.TypeOf((*MockEventsRepository)(nil).GetNearest), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNearest", reflect.TypeOf((*MockEventsRepository)(nil).GetNearest), arg0)
 }
 
 // List mocks base method.
@@ -145,20 +159,6 @@ func (m *MockEventsRepository) ListNotSended(arg0 context.Context, arg1 time.Tim
 func (mr *MockEventsRepositoryMockRecorder) ListNotSended(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNotSended", reflect.TypeOf((*MockEventsRepository)(nil).ListNotSended), arg0, arg1)
-}
-
-// MarkSended mocks base method.
-func (m *MockEventsRepository) MarkSended(arg0 context.Context, arg1 []int) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MarkSended", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// MarkSended indicates an expected call of MarkSended.
-func (mr *MockEventsRepositoryMockRecorder) MarkSended(arg0, arg1 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkSended", reflect.TypeOf((*MockEventsRepository)(nil).MarkSended), arg0, arg1)
 }
 
 // Update mocks base method.

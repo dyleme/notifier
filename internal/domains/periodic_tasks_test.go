@@ -1,19 +1,17 @@
-package domains_test
+package domains
 
 import (
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
-
-	"github.com/Dyleme/Notifier/internal/domains"
 )
 
-func TestPeriodicTask_NewEvent(t *testing.T) {
+func TestPeriodicTask_newEvent(t *testing.T) {
 	t.Parallel()
 	t.Run("check mapping", func(t *testing.T) {
 		t.Parallel()
-		periodicTask := domains.PeriodicTask{
+		periodicTask := PeriodicTask{
 			ID:             1,
 			Text:           "text",
 			Description:    "description",
@@ -21,29 +19,33 @@ func TestPeriodicTask_NewEvent(t *testing.T) {
 			Start:          3 * time.Hour,
 			SmallestPeriod: 24 * time.Hour,
 			BiggestPeriod:  3 * 24 * time.Hour,
-			NotificationParams: &domains.NotificationParams{
+			NotificationParams: &NotificationParams{
 				Period: time.Hour,
-				Params: domains.Params{Telegram: 3},
+				Params: Params{Telegram: 3},
 			},
 		}
-		actual, err := periodicTask.NewEvent()
+		actual, err := periodicTask.newEvent()
 		require.NoError(t, err)
 
-		expected := domains.Event{
+		expected := Event{
 			ID:                 0,
 			UserID:             2,
 			Text:               "text",
 			Description:        "description",
-			TaskType:           domains.PeriodicTaskType,
+			TaskType:           PeriodicTaskType,
 			TaskID:             1,
 			NotificationParams: *periodicTask.NotificationParams,
-			Sended:             false,
+			LastSendedTime:     time.Time{},
+			NextSendTime:       time.Time{},
+			FirstSendTime:      time.Time{},
 			Done:               false,
 		}
 
 		// do not check send time
-		actual.SendTime = time.Time{}
-		expected.SendTime = time.Time{}
+		actual.NextSendTime = time.Time{}
+		actual.FirstSendTime = time.Time{}
+		expected.NextSendTime = time.Time{}
+		expected.FirstSendTime = time.Time{}
 		require.Equal(t, expected, actual)
 	})
 
@@ -52,7 +54,7 @@ func TestPeriodicTask_NewEvent(t *testing.T) {
 	dayBeginning := nowTime.Truncate(timeDay)
 	testCases := []struct {
 		name       string
-		pt         domains.PeriodicTask
+		pt         PeriodicTask
 		now        time.Time
 		isError    bool
 		highBorder time.Time
@@ -60,7 +62,7 @@ func TestPeriodicTask_NewEvent(t *testing.T) {
 	}{
 		{
 			name: "high border lower than low border",
-			pt: domains.PeriodicTask{
+			pt: PeriodicTask{
 				Start:          time.Hour,
 				SmallestPeriod: 3 * timeDay,
 				BiggestPeriod:  timeDay,
@@ -70,7 +72,7 @@ func TestPeriodicTask_NewEvent(t *testing.T) {
 		},
 		{
 			name: "check time in period",
-			pt: domains.PeriodicTask{
+			pt: PeriodicTask{
 				Start:          2 * time.Hour,
 				SmallestPeriod: timeDay,
 				BiggestPeriod:  11 * timeDay,
@@ -81,7 +83,7 @@ func TestPeriodicTask_NewEvent(t *testing.T) {
 		},
 		{
 			name: "smallest period equal to biggest period",
-			pt: domains.PeriodicTask{
+			pt: PeriodicTask{
 				Start:          3 * time.Hour,
 				SmallestPeriod: timeDay,
 				BiggestPeriod:  timeDay,
@@ -96,9 +98,11 @@ func TestPeriodicTask_NewEvent(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			for range 10 {
-				event, err := tc.pt.NewEvent()
-				actual := event.SendTime
+				actualEvent, err := tc.pt.newEvent()
+				actual := actualEvent.NextSendTime
 
+				require.Equalf(t, actualEvent.NextSendTime, actualEvent.FirstSendTime,
+					"next send time[%v] not equal first send time[%v]", actualEvent.NextSendTime, actualEvent.FirstSendTime)
 				require.Equal(t, tc.isError, err != nil, "check error")
 				if tc.isError != (err != nil) {
 					t.Errorf("[waiting err = %v, actualError=%v]", tc.isError, err)

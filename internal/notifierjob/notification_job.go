@@ -19,8 +19,7 @@ import (
 
 //go:generate mockgen -destination=mocks/event_job_mocks.go -package=mocks . Notifier
 type Notifier interface {
-	Add(ctx context.Context, event domains.SendingEvent) error
-	Delete(ctx context.Context, eventID int) error
+	Notify(ctx context.Context, notif domains.SendingEvent) error
 }
 
 type Repository interface {
@@ -42,16 +41,20 @@ type Config struct {
 	CheckTasksPeriod time.Duration
 }
 
-func New(repo Repository, notifier Notifier, config Config, tr *trManager.Manager) *NotifierJob {
+func New(repo Repository, config Config, tr *trManager.Manager) *NotifierJob {
 	return &NotifierJob{
 		repo:         repo,
-		notifier:     notifier,
+		notifier:     nil,
 		checkPeriod:  config.CheckTasksPeriod,
-		timer:        time.NewTimer(config.CheckTasksPeriod),
 		nextSendTime: time.Now().Add(config.CheckTasksPeriod),
 		sendTimeMx:   &sync.RWMutex{},
+		timer:        time.NewTimer(config.CheckTasksPeriod),
 		tr:           tr,
 	}
+}
+
+func (nj *NotifierJob) SetNotifier(notifier Notifier) {
+	nj.notifier = notifier
 }
 
 func (nj *NotifierJob) Run(ctx context.Context) {
@@ -90,20 +93,16 @@ func (nj *NotifierJob) setNextEventTime(ctx context.Context) {
 }
 
 func (nj *NotifierJob) nearestCheckTime(ctx context.Context) time.Time {
-	var nearestTime time.Time
-	event, err := nj.repo.Events().GetNearest(ctx, time.Now())
+	event, err := nj.repo.Events().GetNearest(ctx)
 	if err != nil {
 		var notFoundErr serverrors.NotFoundError
 		if !errors.As(err, &notFoundErr) {
 			log.Ctx(ctx).Error("get nearest event", log.Err(err))
 		}
 		log.Ctx(ctx).Debug("no nearest events found")
-		nearestTime = time.Now().Truncate(time.Minute).Add(nj.checkPeriod)
-	} else {
-		nearestTime = event.SendTime
 	}
 
-	return nearestTime
+	return utils.MinTime(time.Now().Truncate(time.Minute).Add(nj.checkPeriod), event.NextSendTime)
 }
 
 func (nj *NotifierJob) notify(ctx context.Context) {
@@ -112,22 +111,21 @@ func (nj *NotifierJob) notify(ctx context.Context) {
 		if err != nil {
 			return fmt.Errorf("list not sended events: %w", err)
 		}
-		log.Ctx(ctx).Debug("found not sended events", slog.Any("events", utils.DtoSlice(events, func(n domains.Event) int { return n.ID })))
+		log.Ctx(ctx).Info("found not sended events", slog.Any("events", utils.DtoSlice(events, func(n domains.Event) int { return n.ID })))
 
-		ids := make([]int, 0, len(events))
 		for _, ev := range events {
 			sendingEvent := domains.NewSendingEvent(ev)
-			err = nj.notifier.Add(ctx, sendingEvent)
+			err := nj.notifier.Notify(ctx, sendingEvent)
 			if err != nil {
-				return fmt.Errorf("notifier add: %w", err)
+				log.Ctx(ctx).Error("notifier error", log.Err(err))
 			}
 
-			ids = append(ids, ev.ID)
-		}
+			ev = ev.Rescheule()
 
-		err = nj.repo.Events().MarkSended(ctx, ids)
-		if err != nil {
-			return fmt.Errorf("mark sended events[ids=%v]: %w", ids, err)
+			err = nj.repo.Events().Update(ctx, ev)
+			if err != nil {
+				log.Ctx(ctx).Error("update event", log.Err(err), slog.Any("event", ev))
+			}
 		}
 
 		return nil

@@ -2,7 +2,7 @@
 // versions:
 //   sqlc v1.26.0
 
-package queries
+package goqueries
 
 import (
 	"database/sql/driver"
@@ -78,10 +78,11 @@ type Event struct {
 	Description        pgtype.Text                `db:"description"`
 	TaskID             int32                      `db:"task_id"`
 	TaskType           TaskType                   `db:"task_type"`
-	SendTime           pgtype.Timestamptz         `db:"send_time"`
-	Sended             bool                       `db:"sended"`
+	NextSendTime       pgtype.Timestamptz         `db:"next_send_time"`
 	Done               bool                       `db:"done"`
 	NotificationParams domains.NotificationParams `db:"notification_params"`
+	FirstSendTime      pgtype.Timestamptz         `db:"first_send_time"`
+	LastSendedTime     pgtype.Timestamptz         `db:"last_sended_time"`
 }
 
 type PeriodicTask struct {

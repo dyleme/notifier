@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Dyleme/Notifier/internal/domains"
-	"github.com/Dyleme/Notifier/internal/service/repository/queries"
+	"github.com/Dyleme/Notifier/internal/service/repository/queries/goqueries"
 	"github.com/Dyleme/Notifier/internal/service/service"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
 	"github.com/Dyleme/Notifier/pkg/sql/pgxconv"
@@ -19,7 +19,7 @@ import (
 )
 
 type PeriodicTaskRepository struct {
-	q      *queries.Queries
+	q      *goqueries.Queries
 	db     *pgxpool.Pool
 	getter *trmpgx.CtxGetter
 }
@@ -28,7 +28,7 @@ func (r *Repository) PeriodicTasks() service.PeriodicTasksRepository {
 	return r.periodicTaskRepository
 }
 
-func (p *PeriodicTaskRepository) dto(pt queries.PeriodicTask) domains.PeriodicTask {
+func (p *PeriodicTaskRepository) dto(pt goqueries.PeriodicTask) domains.PeriodicTask {
 	return domains.PeriodicTask{
 		ID:                 int(pt.ID),
 		Text:               pt.Text,
@@ -43,7 +43,7 @@ func (p *PeriodicTaskRepository) dto(pt queries.PeriodicTask) domains.PeriodicTa
 
 func (p *PeriodicTaskRepository) Add(ctx context.Context, task domains.PeriodicTask) (domains.PeriodicTask, error) {
 	tx := p.getter.DefaultTrOrDB(ctx, p.db)
-	pt, err := p.q.AddPeriodicTask(ctx, tx, queries.AddPeriodicTaskParams{
+	pt, err := p.q.AddPeriodicTask(ctx, tx, goqueries.AddPeriodicTaskParams{
 		UserID:             int32(task.UserID),
 		Text:               task.Text,
 		Start:              pgxconv.Timestamptz(time.Time{}.Add(task.Start)),
@@ -75,7 +75,7 @@ func (p *PeriodicTaskRepository) Update(ctx context.Context, task domains.Period
 	op := "PeriodicTaskRepository.Update: %w"
 
 	tx := p.getter.DefaultTrOrDB(ctx, p.db)
-	pt, err := p.q.UpdatePeriodicTask(ctx, tx, queries.UpdatePeriodicTaskParams{
+	pt, err := p.q.UpdatePeriodicTask(ctx, tx, goqueries.UpdatePeriodicTaskParams{
 		ID:                 int32(task.ID),
 		UserID:             int32(task.UserID),
 		Start:              pgxconv.Timestamptz(time.Time{}.Add(task.Start)),
@@ -110,7 +110,7 @@ func (p *PeriodicTaskRepository) Delete(ctx context.Context, taskID int) error {
 func (p *PeriodicTaskRepository) List(ctx context.Context, userID int, listParams service.ListParams) ([]domains.PeriodicTask, error) {
 	tx := p.getter.DefaultTrOrDB(ctx, p.db)
 
-	tasks, err := p.q.ListPeriodicTasks(ctx, tx, queries.ListPeriodicTasksParams{
+	tasks, err := p.q.ListPeriodicTasks(ctx, tx, goqueries.ListPeriodicTasksParams{
 		UserID: int32(userID),
 		Off:    int32(listParams.Offset),
 		Lim:    int32(listParams.Limit),

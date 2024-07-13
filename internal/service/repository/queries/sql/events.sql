@@ -4,15 +4,19 @@ INSERT INTO events (
     text,
     task_id,
     task_type,
-    send_time, 
-    notification_params
+    next_send_time, 
+    notification_params,
+    first_send_time,
+    last_sended_time
 ) VALUES (
     @user_id,
     @text,
     @task_id,
     @task_type,
-    @send_time,
-    @notification_params
+    @next_send_time,
+    @notification_params,
+    @next_send_time,
+    TIMESTAMP '1970-01-01 00:00:00'
 ) RETURNING *;
 
 -- name: GetEvent :one
@@ -23,14 +27,14 @@ WHERE id = @id;
 SELECT * FROM events
 WHERE task_id = @task_id
   AND task_type = @task_type
-ORDER BY send_time DESC
+ORDER BY next_send_time DESC
 LIMIT 1;
   
 -- name: ListUserEvents :many
 SELECT * FROM events
 WHERE user_id = @user_id
-  AND send_time BETWEEN @from_time AND @to_time
-ORDER BY send_time DESC
+  AND next_send_time BETWEEN @from_time AND @to_time
+ORDER BY next_send_time DESC
 LIMIT @lim OFFSET @off;
 
 -- name: DeleteEvent :many
@@ -41,25 +45,30 @@ RETURNING *;
 -- name: UpdateEvent :one
 UPDATE events
 SET text = @text,
-    send_time = @send_time,
-    sended = @sended,
+    next_send_time = @next_send_time,
+    first_send_time = @first_send_time,
     done = @done
 WHERE id = @id
 RETURNING *;
 
 -- name: ListNotSendedEvents :many
 SELECT * FROM events
-WHERE sended = FALSE
-  AND send_time <= @till;
+WHERE next_send_time <= @till
+  AND done = false;
 
 -- name: GetNearestEvent :one
 SELECT * FROM events
-WHERE sended = FALSE
-  AND send_time <= @till
-ORDER BY send_time ASC
+WHERE done = false
+ORDER BY next_send_time ASC
 LIMIT 1;
 
--- name: MarkSendedNotifiatoins :exec
+-- name: BatchUpdateEvents :exec
 UPDATE events
-SET sended = TRUE
-WHERE id = ANY(sqlc.slice(ids));
+SET text = tmp.text,
+    next_send_time = tmp.event.NextSendTime,
+    first_send_time = tmp.event.FirstSendTime,
+    last_sended_time = tmp.event.LastSendedTime
+FROM (
+  VALUES(@updated_events) 
+) AS tmp(event)
+WHERE events.id = tmp.event.ID;

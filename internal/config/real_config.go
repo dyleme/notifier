@@ -2,7 +2,6 @@ package config
 
 import (
 	"github.com/Dyleme/Notifier/internal/authorization/jwt"
-	"github.com/Dyleme/Notifier/internal/notifier"
 	"github.com/Dyleme/Notifier/internal/notifierjob"
 	"github.com/Dyleme/Notifier/internal/server"
 	"github.com/Dyleme/Notifier/internal/telegram/handler"
@@ -15,7 +14,6 @@ type Config struct {
 	JWT         *jwt.Config
 	APIKey      string
 	Server      *server.Config
-	Notifier    notifier.Config
 	NotifierJob notifierjob.Config
 	Telegram    handler.Config
 }
@@ -42,9 +40,6 @@ func mapConfig(cc *compositeConfig) Config {
 			ReadTimeout:             cc.Server.ReadTimeout,
 			WriteTimeout:            cc.Server.WriteTimeout,
 			TimeForGracefulShutdown: cc.Server.TimeForGracefulShutdown,
-		},
-		Notifier: notifier.Config{
-			Period: cc.Notifier.CheckPeriod,
 		},
 		NotifierJob: notifierjob.Config{
 			CheckTasksPeriod: cc.NotifierJob.CheckPeriod,

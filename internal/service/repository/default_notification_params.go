@@ -10,13 +10,13 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Dyleme/Notifier/internal/domains"
-	"github.com/Dyleme/Notifier/internal/service/repository/queries"
+	"github.com/Dyleme/Notifier/internal/service/repository/queries/goqueries"
 	"github.com/Dyleme/Notifier/internal/service/service"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
 )
 
 type NotificationParamsRepository struct {
-	q      *queries.Queries
+	q      *goqueries.Queries
 	getter *trmpgx.CtxGetter
 	db     *pgxpool.Pool
 }
@@ -43,7 +43,7 @@ func (nr *NotificationParamsRepository) Get(ctx context.Context, userID int) (do
 func (nr *NotificationParamsRepository) Set(ctx context.Context, userID int, params domains.NotificationParams) (domains.NotificationParams, error) {
 	op := "eventParamsRepository.Set: %w"
 	tx := nr.getter.DefaultTrOrDB(ctx, nr.db)
-	updatedParams, err := nr.q.SetDefaultUserNotificationParams(ctx, tx, queries.SetDefaultUserNotificationParamsParams{
+	updatedParams, err := nr.q.SetDefaultUserNotificationParams(ctx, tx, goqueries.SetDefaultUserNotificationParamsParams{
 		UserID: int32(userID),
 		Params: params,
 	})

@@ -3,14 +3,14 @@ package repository
 import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/Dyleme/Notifier/internal/authorization/repository/queries"
+	"github.com/Dyleme/Notifier/internal/authorization/repository/queries/goqueries"
 )
 
 type Repository struct {
 	db *pgxpool.Pool
-	q  *queries.Queries
+	q  *goqueries.Queries
 }
 
 func New(db *pgxpool.Pool) *Repository {
-	return &Repository{db: db, q: queries.New(db)}
+	return &Repository{db: db, q: goqueries.New(db)}
 }

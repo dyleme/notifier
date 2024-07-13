@@ -32,7 +32,7 @@ func (i InvalidPeriodTimeError) Error() string {
 	return fmt.Sprintf("invalid period error biggest is before smallest %v < %v", i.biggest, i.smallest)
 }
 
-func (pt PeriodicTask) NewEvent() (Event, error) {
+func (pt PeriodicTask) newEvent() (Event, error) {
 	minDays := int(pt.SmallestPeriod / timeDay)
 	maxDays := int(pt.BiggestPeriod / timeDay)
 	if maxDays < minDays {
@@ -53,22 +53,11 @@ func (pt PeriodicTask) NewEvent() (Event, error) {
 		TaskType:           PeriodicTaskType,
 		TaskID:             pt.ID,
 		NotificationParams: utils.ZeroIfNil(pt.NotificationParams),
-		SendTime:           sendTime,
-		Sended:             false,
+		LastSendedTime:     time.Time{},
+		NextSendTime:       sendTime,
+		FirstSendTime:      sendTime,
 		Done:               false,
 	}, nil
-}
-
-func (pt PeriodicTask) NeedRegenerateEvent(updated PeriodicTask) bool {
-	if updated.Start != pt.Start {
-		return true
-	}
-
-	if updated.BiggestPeriod != pt.BiggestPeriod || updated.SmallestPeriod != pt.SmallestPeriod {
-		return true
-	}
-
-	return false
 }
 
 func (pt PeriodicTask) BelongsTo(userID int) error {
@@ -79,10 +68,8 @@ func (pt PeriodicTask) BelongsTo(userID int) error {
 	return NewNotBelongToUserError("periodic task", pt.ID, pt.UserID, userID)
 }
 
-type PeriodicTaskEvent struct {
-	ID             int
-	PeriodicTaskID int
-	SendTime       time.Time
-	Sended         bool
-	Done           bool
+func (pt PeriodicTask) TimeParamsHasChanged(updT PeriodicTask) bool {
+	return pt.SmallestPeriod != updT.SmallestPeriod ||
+		pt.BiggestPeriod != updT.BiggestPeriod ||
+		pt.Start != updT.Start
 }

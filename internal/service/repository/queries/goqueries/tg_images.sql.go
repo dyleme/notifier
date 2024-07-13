@@ -3,7 +3,7 @@
 //   sqlc v1.26.0
 // source: tg_images.sql
 
-package queries
+package goqueries
 
 import (
 	"context"

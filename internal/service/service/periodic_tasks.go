@@ -30,14 +30,9 @@ func (s *Service) AddPeriodicTask(ctx context.Context, perTask domains.PeriodicT
 			return fmt.Errorf("add periodic task: %w", err)
 		}
 
-		event, err := createdPerTask.NewEvent()
+		err = s.CreateAndAddEvent(ctx, createdPerTask, userID)
 		if err != nil {
-			return fmt.Errorf("next event: %w", serverrors.NewBusinessLogicError(err.Error()))
-		}
-
-		_, err = s.repo.Events().Add(ctx, event)
-		if err != nil {
-			return fmt.Errorf("add event: %w", err)
+			return fmt.Errorf("create and add event: %w", err)
 		}
 
 		return nil
@@ -85,13 +80,13 @@ type UpdatePeriodicTaskParams struct {
 func (s *Service) UpdatePeriodicTask(ctx context.Context, perTask domains.PeriodicTask, userID int) error {
 	var updatedTask domains.PeriodicTask
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
-		var pt domains.PeriodicTask
-		pt, err := s.repo.PeriodicTasks().Get(ctx, perTask.ID)
+		var oldTask domains.PeriodicTask
+		oldTask, err := s.repo.PeriodicTasks().Get(ctx, perTask.ID)
 		if err != nil {
 			return fmt.Errorf("get[taskID=%v]: %w", perTask.ID, err)
 		}
 
-		if err := pt.BelongsTo(userID); err != nil {
+		if err := oldTask.BelongsTo(userID); err != nil {
 			return fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
 		}
 
@@ -100,21 +95,26 @@ func (s *Service) UpdatePeriodicTask(ctx context.Context, perTask domains.Period
 			return fmt.Errorf("update: %w", err)
 		}
 
-		event, err := s.repo.Events().GetLatest(ctx, pt.ID, domains.PeriodicTaskType)
+		event, err := s.repo.Events().GetLatest(ctx, oldTask.ID, domains.PeriodicTaskType)
 		if err != nil {
 			return fmt.Errorf("delete event: %w", err)
 		}
 
-		nextNotif, err := updatedTask.NewEvent()
-		if err != nil {
-			return fmt.Errorf("next event: %w", serverrors.NewBusinessLogicError(err.Error()))
+		if !updatedTask.TimeParamsHasChanged(oldTask) {
+			event.Description = updatedTask.Description
+			event.Text = updatedTask.Text
+
+			err = s.repo.Events().Update(ctx, event)
+			if err != nil {
+				return fmt.Errorf("update event: %w", err)
+			}
+
+			return nil
 		}
 
-		nextNotif.ID = event.ID
-
-		err = s.repo.Events().Update(ctx, nextNotif)
+		err = s.repo.Events().Delete(ctx, event.ID)
 		if err != nil {
-			return fmt.Errorf("add event: %w", err)
+			return fmt.Errorf("delete event: %w", err)
 		}
 
 		return nil
@@ -173,4 +173,29 @@ func (s *Service) ListPeriodicTasks(ctx context.Context, userID int, listParams 
 	}
 
 	return tasks, nil
+}
+
+func (s *Service) createNewEventForPeriodicTask(ctx context.Context, taskID, userID int) error {
+	err := s.tr.Do(ctx, func(ctx context.Context) error {
+		task, err := s.repo.PeriodicTasks().Get(ctx, taskID)
+		if err != nil {
+			return fmt.Errorf("periodic tasks get[taskID=%v,userID=%v]: %w", taskID, userID, err)
+		}
+
+		if err := task.BelongsTo(userID); err != nil {
+			return fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
+		}
+
+		err = s.CreateAndAddEvent(ctx, task, userID)
+		if err != nil {
+			return fmt.Errorf("create and add event: %w", err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("tr: %w", err)
+	}
+
+	return nil
 }
