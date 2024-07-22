@@ -446,7 +446,7 @@ func (pt *PeriodicTask) CreateInline(ctx context.Context, b *bot.Bot, msg *model
 		NotificationParams: nil,
 	}
 
-	_, err = pt.th.serv.AddPeriodicTask(ctx, task, user.ID)
+	_, err = pt.th.serv.CreatePeriodicTask(ctx, task, user.ID)
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}

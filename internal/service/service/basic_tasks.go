@@ -32,7 +32,7 @@ func (s *Service) CreateBasicTask(ctx context.Context, task domains.BasicTask) (
 			return fmt.Errorf("add task: %w", err)
 		}
 
-		err = s.CreateAndAddEvent(ctx, createdTask, task.UserID)
+		err = s.createAndAddEvent(ctx, createdTask, task.UserID)
 		if err != nil {
 			return fmt.Errorf("create and add event: %w", err)
 		}

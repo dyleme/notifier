@@ -14,6 +14,11 @@ type errorResponse struct {
 	ErrorMessage string `json:"error_message"`
 }
 
+type BadBodyResponse struct {
+	Field string `json:"field"`
+	Error string `json:"error"`
+}
+
 var errServer = errors.New("server error")
 
 func KnownError(w http.ResponseWriter, err error) {
@@ -24,21 +29,32 @@ func KnownError(w http.ResponseWriter, err error) {
 
 	if _, ok := unwrappedErr.(serverrors.InternalError); ok { //nolint:errorlint //error is already unwrapped
 		Error(w, http.StatusInternalServerError, errServer)
-	} else {
-		switch unwrappedErr.(type) { //nolint:errorlint //error is already unwrapped
-		case serverrors.NotFoundError:
-			Error(w, http.StatusNotFound, unwrappedErr)
-		case serverrors.NoDeletionsError:
-			Error(w, http.StatusUnprocessableEntity, unwrappedErr)
-		case serverrors.UniqueError:
-			Error(w, http.StatusConflict, unwrappedErr)
-		case serverrors.InvalidAuthError:
-			Error(w, http.StatusUnauthorized, unwrappedErr)
-		case serverrors.BusinessLogicError:
-			Error(w, http.StatusUnprocessableEntity, unwrappedErr)
-		default:
-			Error(w, http.StatusInternalServerError, unwrappedErr)
-		}
+
+		return
+	}
+
+	if mappingError, ok := unwrappedErr.(serverrors.MappingError); ok { //nolint:errorlint //error is already unwrapped
+		MapError(w, BadBodyResponse{
+			Field: mappingError.Field,
+			Error: mappingError.Error(),
+		})
+
+		return
+	}
+
+	switch unwrappedErr.(type) { //nolint:errorlint //error is already unwrapped
+	case serverrors.NotFoundError:
+		Error(w, http.StatusNotFound, unwrappedErr)
+	case serverrors.NoDeletionsError:
+		Error(w, http.StatusUnprocessableEntity, unwrappedErr)
+	case serverrors.UniqueError:
+		Error(w, http.StatusConflict, unwrappedErr)
+	case serverrors.InvalidAuthError:
+		Error(w, http.StatusUnauthorized, unwrappedErr)
+	case serverrors.BusinessLogicError:
+		Error(w, http.StatusUnprocessableEntity, unwrappedErr)
+	default:
+		Error(w, http.StatusInternalServerError, unwrappedErr)
 	}
 }
 
@@ -47,6 +63,22 @@ func Error(w http.ResponseWriter, statusCode int, err error) {
 	(w).Header().Set("X-Content-Type-Options", "nosniff")
 
 	js, err := json.Marshal(errorResponse{err.Error()})
+	if err != nil {
+		log.Default().Error(err.Error())
+		statusCode = http.StatusInternalServerError
+	}
+
+	w.WriteHeader(statusCode)
+
+	fmt.Fprint(w, string(js))
+}
+
+func MapError(w http.ResponseWriter, badBodyResp BadBodyResponse) {
+	(w).Header().Set("Content-Type", "application/json; charset=utf-8")
+	(w).Header().Set("X-Content-Type-Options", "nosniff")
+
+	statusCode := http.StatusBadRequest
+	js, err := json.Marshal(badBodyResp)
 	if err != nil {
 		log.Default().Error(err.Error())
 		statusCode = http.StatusInternalServerError
