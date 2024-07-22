@@ -160,8 +160,8 @@ func mapAPIPeriodicTask(pt domains.PeriodicTask) api.PeriodicTask {
 		Id:                 pt.ID,
 		Description:        &pt.Description,
 		NotificationParams: mapPtrAPINotificationParams(pt.NotificationParams),
-		BiggestPeriod:      int(pt.BiggestPeriod / (24 * time.Hour)),
-		SmallestPeriod:     int(pt.SmallestPeriod / (24 * time.Hour)),
+		BiggestPeriod:      int(pt.BiggestPeriod / timeDay),
+		SmallestPeriod:     int(pt.SmallestPeriod / timeDay),
 		Start:              pt.Start.String(),
 		Text:               pt.Text,
 	}

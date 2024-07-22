@@ -11,6 +11,8 @@ import (
 	"github.com/Dyleme/Notifier/pkg/utils/timeborders"
 )
 
+const timeDay = 24 * time.Hour
+
 func parseListParams(offsetParam *api.OffsetParam, limitParam *api.LimitParam) service.ListParams {
 	offset := 0
 	limit := 10
@@ -64,7 +66,7 @@ func mapPtrAPINotificationParams(params *domains.NotificationParams) *api.Notifi
 
 func mapPtrDomainNotificationParams(np *api.NotificationParams) (*domains.NotificationParams, error) {
 	if np == nil {
-		return nil, nil
+		return nil, nil //nolint:nilnil // nil is a valid value
 	}
 	notifParams, err := mapDomainNotificationParams(*np)
 	if err != nil {
@@ -77,8 +79,9 @@ func mapPtrDomainNotificationParams(np *api.NotificationParams) (*domains.Notifi
 func mapDomainNotificationParams(np api.NotificationParams) (domains.NotificationParams, error) {
 	period, err := time.ParseDuration(np.Period)
 	if err != nil {
-		return domains.NotificationParams{}, serverrors.NewMappingError(err, "notificationParams.period")
+		return domains.NotificationParams{}, serverrors.NewMappingError(err, "notificationParams.period") //nolint:wrapcheck // standart package error
 	}
+
 	return domains.NotificationParams{
 		Period: period,
 		Params: domains.Params{
