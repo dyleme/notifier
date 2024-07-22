@@ -261,7 +261,7 @@ func (en *EnableEvents) EnableInline(ctx context.Context, b *bot.Bot, msg *model
 		return fmt.Errorf(op, err)
 	}
 
-	_, err = en.th.serv.SetDefaultEventParams(ctx, domains.NotificationParams{
+	_, err = en.th.serv.SetDefaultNotificationParams(ctx, domains.NotificationParams{
 		Period: defaultEventPeriod,
 		Params: domains.Params{
 			Telegram: int(msg.Chat.ID),

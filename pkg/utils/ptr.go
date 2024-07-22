@@ -14,6 +14,15 @@ func ZeroIfNil[T comparable](t *T) T {
 	return *t
 }
 
+func NilIfZero[T comparable](t T) *T {
+	var zero T
+	if t == zero {
+		return nil
+	}
+
+	return &t
+}
+
 func IsZero[T comparable](t T) bool {
 	var zero T
 

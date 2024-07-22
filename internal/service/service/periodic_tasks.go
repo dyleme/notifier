@@ -18,7 +18,7 @@ type PeriodicTasksRepository interface {
 	List(ctx context.Context, userID int, listParams ListParams) ([]domains.PeriodicTask, error)
 }
 
-func (s *Service) AddPeriodicTask(ctx context.Context, perTask domains.PeriodicTask, userID int) (domains.PeriodicTask, error) {
+func (s *Service) CreatePeriodicTask(ctx context.Context, perTask domains.PeriodicTask, userID int) (domains.PeriodicTask, error) {
 	if err := perTask.BelongsTo(userID); err != nil {
 		return domains.PeriodicTask{}, fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
 	}
@@ -30,7 +30,7 @@ func (s *Service) AddPeriodicTask(ctx context.Context, perTask domains.PeriodicT
 			return fmt.Errorf("add periodic task: %w", err)
 		}
 
-		err = s.CreateAndAddEvent(ctx, createdPerTask, userID)
+		err = s.createAndAddEvent(ctx, createdPerTask, userID)
 		if err != nil {
 			return fmt.Errorf("create and add event: %w", err)
 		}
@@ -186,7 +186,7 @@ func (s *Service) createNewEventForPeriodicTask(ctx context.Context, taskID, use
 			return fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
 		}
 
-		err = s.CreateAndAddEvent(ctx, task, userID)
+		err = s.createAndAddEvent(ctx, task, userID)
 		if err != nil {
 			return fmt.Errorf("create and add event: %w", err)
 		}

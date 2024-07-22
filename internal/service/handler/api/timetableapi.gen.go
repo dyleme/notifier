@@ -17,44 +17,65 @@ const (
 	BearerAuthScopes = "bearerAuth.Scopes"
 )
 
-// CreateTaskReqBody defines model for CreateTaskReqBody.
-type CreateTaskReqBody struct {
-	Description *string   `json:"description,omitempty"`
-	Message     string    `json:"message"`
-	Start       time.Time `json:"start"`
+// Defines values for TaskType.
+const (
+	Basic    TaskType = "basic"
+	Periodic TaskType = "periodic"
+)
+
+// BasicTask defines model for BasicTask.
+type BasicTask struct {
+	Description        *string             `json:"description,omitempty"`
+	Id                 int                 `json:"id"`
+	NotificationParams *NotificationParams `json:"notificationParams,omitempty"`
+	SendTime           time.Time           `json:"sendTime"`
+	Text               string              `json:"text"`
 }
 
-// EventInfo defines model for EventInfo.
-type EventInfo struct {
-	Cmd      *bool   `json:"cmd,omitempty"`
+// Event defines model for Event.
+type Event struct {
+	Description        *string            `json:"description,omitempty"`
+	Done               bool               `json:"done"`
+	FirstSendTime      time.Time          `json:"firstSendTime"`
+	Id                 int                `json:"id"`
+	NextSendTime       time.Time          `json:"nextSendTime"`
+	NotificationParams NotificationParams `json:"notificationParams"`
+	TaskID             int                `json:"taskID"`
+	TaskType           TaskType           `json:"taskType"`
+	Text               string             `json:"text"`
+}
+
+// NotificationChannel defines model for NotificationChannel.
+type NotificationChannel struct {
+	Cmd      *string `json:"cmd,omitempty"`
 	Telegram *int    `json:"telegram,omitempty"`
 	Webhook  *string `json:"webhook,omitempty"`
 }
 
-// EventParams defines model for EventParams.
-type EventParams struct {
-	DelayedTill *time.Time `json:"delayedTill,omitempty"`
-	Info        EventInfo  `json:"info"`
-
-	// Period Required time for task in minutes
-	Period int `json:"period"`
+// NotificationParams defines model for NotificationParams.
+type NotificationParams struct {
+	NotificationChannel NotificationChannel `json:"notificationChannel"`
+	Period              string              `json:"period"`
 }
 
-// Task defines model for Task.
-type Task struct {
-	Description *string   `json:"description,omitempty"`
-	Done        bool      `json:"done"`
-	Id          int       `json:"id"`
-	Start       time.Time `json:"start"`
-	Text        string    `json:"text"`
+// PeriodicTask defines model for PeriodicTask.
+type PeriodicTask struct {
+	// BiggestPeriod maximum amount of days between events
+	BiggestPeriod      int                 `json:"biggestPeriod"`
+	Description        *string             `json:"description,omitempty"`
+	Id                 int                 `json:"id"`
+	NotificationParams *NotificationParams `json:"notificationParams,omitempty"`
+
+	// SmallestPeriod minimum amount of days between events
+	SmallestPeriod int `json:"smallestPeriod"`
+
+	// Start Start time from the beginning of the day
+	Start string `json:"start"`
+	Text  string `json:"text"`
 }
 
-// UpdateTaskReqBody defines model for UpdateTaskReqBody.
-type UpdateTaskReqBody struct {
-	Description *string   `json:"description,omitempty"`
-	Done        bool      `json:"done"`
-	Start       time.Time `json:"start"`
-}
+// TaskType defines model for TaskType.
+type TaskType string
 
 // LimitParam defines model for limitParam.
 type LimitParam = int32
@@ -62,8 +83,35 @@ type LimitParam = int32
 // OffsetParam defines model for offsetParam.
 type OffsetParam = int32
 
-// ListTasksParams defines parameters for ListTasks.
-type ListTasksParams struct {
+// ListBasicTasksParams defines parameters for ListBasicTasks.
+type ListBasicTasksParams struct {
+	// Limit Limits the number of returned results
+	Limit *LimitParam `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Offset from which start returned results
+	Offset *OffsetParam `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
+// CreateBasicTaskJSONBody defines parameters for CreateBasicTask.
+type CreateBasicTaskJSONBody struct {
+	Description        string              `json:"description"`
+	Done               *bool               `json:"done,omitempty"`
+	NotificationParams *NotificationParams `json:"notificationParams,omitempty"`
+	SendTime           time.Time           `json:"sendTime"`
+	Text               string              `json:"text"`
+}
+
+// UpdateBasicTaskJSONBody defines parameters for UpdateBasicTask.
+type UpdateBasicTaskJSONBody struct {
+	Description        string              `json:"description"`
+	Done               *bool               `json:"done,omitempty"`
+	NotificationParams *NotificationParams `json:"notificationParams,omitempty"`
+	SendTime           time.Time           `json:"sendTime"`
+	Text               string              `json:"text"`
+}
+
+// ListEventsParams defines parameters for ListEvents.
+type ListEventsParams struct {
 	From *time.Time `form:"from,omitempty" json:"from,omitempty"`
 	To   *time.Time `form:"to,omitempty" json:"to,omitempty"`
 
@@ -74,95 +122,208 @@ type ListTasksParams struct {
 	Offset *OffsetParam `form:"offset,omitempty" json:"offset,omitempty"`
 }
 
-// SetDefaultEventParamsJSONRequestBody defines body for SetDefaultEventParams for application/json ContentType.
-type SetDefaultEventParamsJSONRequestBody = EventParams
+// SetEventDoneStatusJSONBody defines parameters for SetEventDoneStatus.
+type SetEventDoneStatusJSONBody struct {
+	Done bool `json:"done"`
+}
 
-// CreateTaskJSONRequestBody defines body for CreateTask for application/json ContentType.
-type CreateTaskJSONRequestBody = CreateTaskReqBody
+// RescheduleEventJSONBody defines parameters for RescheduleEvent.
+type RescheduleEventJSONBody struct {
+	Done         bool      `json:"done"`
+	NextSendTime time.Time `json:"nextSendTime"`
+}
 
-// UpdateTaskJSONRequestBody defines body for UpdateTask for application/json ContentType.
-type UpdateTaskJSONRequestBody = UpdateTaskReqBody
+// ListPeriodicTasksParams defines parameters for ListPeriodicTasks.
+type ListPeriodicTasksParams struct {
+	// Limit Limits the number of returned results
+	Limit *LimitParam `form:"limit,omitempty" json:"limit,omitempty"`
 
-// SetTaskEventParamsJSONRequestBody defines body for SetTaskEventParams for application/json ContentType.
-type SetTaskEventParamsJSONRequestBody = EventParams
+	// Offset Offset from which start returned results
+	Offset *OffsetParam `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
+// CreatePeriodicTaskJSONBody defines parameters for CreatePeriodicTask.
+type CreatePeriodicTaskJSONBody struct {
+	// BiggestPeriod maximum amount of days between events
+	BiggestPeriod      int                 `json:"biggestPeriod"`
+	Description        *string             `json:"description,omitempty"`
+	NotificationParams *NotificationParams `json:"notificationParams,omitempty"`
+
+	// SmallestPeriod minimum amount of days between events
+	SmallestPeriod int `json:"smallestPeriod"`
+
+	// Start Start time from the beginning of the day
+	Start string `json:"start"`
+	Text  string `json:"text"`
+}
+
+// UpdatePeriodicTaskJSONBody defines parameters for UpdatePeriodicTask.
+type UpdatePeriodicTaskJSONBody struct {
+	// BiggestPeriod maximum amount of days between events
+	BiggestPeriod      int                 `json:"biggestPeriod"`
+	Description        *string             `json:"description,omitempty"`
+	NotificationParams *NotificationParams `json:"notificationParams,omitempty"`
+
+	// SmallestPeriod minimum amount of days between events
+	SmallestPeriod int `json:"smallestPeriod"`
+
+	// Start Start time from the beginning of the day
+	Start string `json:"start"`
+	Text  string `json:"text"`
+}
+
+// CreateBasicTaskJSONRequestBody defines body for CreateBasicTask for application/json ContentType.
+type CreateBasicTaskJSONRequestBody CreateBasicTaskJSONBody
+
+// UpdateBasicTaskJSONRequestBody defines body for UpdateBasicTask for application/json ContentType.
+type UpdateBasicTaskJSONRequestBody UpdateBasicTaskJSONBody
+
+// UpdateDefaultNotificationParamsJSONRequestBody defines body for UpdateDefaultNotificationParams for application/json ContentType.
+type UpdateDefaultNotificationParamsJSONRequestBody = NotificationParams
+
+// SetEventDoneStatusJSONRequestBody defines body for SetEventDoneStatus for application/json ContentType.
+type SetEventDoneStatusJSONRequestBody SetEventDoneStatusJSONBody
+
+// RescheduleEventJSONRequestBody defines body for RescheduleEvent for application/json ContentType.
+type RescheduleEventJSONRequestBody RescheduleEventJSONBody
+
+// CreatePeriodicTaskJSONRequestBody defines body for CreatePeriodicTask for application/json ContentType.
+type CreatePeriodicTaskJSONRequestBody CreatePeriodicTaskJSONBody
+
+// UpdatePeriodicTaskJSONRequestBody defines body for UpdatePeriodicTask for application/json ContentType.
+type UpdatePeriodicTaskJSONRequestBody UpdatePeriodicTaskJSONBody
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
-	// Set default event params
-	// (GET /event-params)
-	GetDefaultEventParams(w http.ResponseWriter, r *http.Request)
-	// Set default event params
-	// (PUT /event-params)
-	SetDefaultEventParams(w http.ResponseWriter, r *http.Request)
-	// List tasks
-	// (GET /task)
-	ListTasks(w http.ResponseWriter, r *http.Request, params ListTasksParams)
-	// Create new task
-	// (POST /task)
-	CreateTask(w http.ResponseWriter, r *http.Request)
+	// List basic tasks
+	// (GET /basic-tasks)
+	ListBasicTasks(w http.ResponseWriter, r *http.Request, params ListBasicTasksParams)
+	// Create basic tasks
+	// (POST /basic-tasks)
+	CreateBasicTask(w http.ResponseWriter, r *http.Request)
+	// List basic tasks
+	// (GET /basic-tasks/{taskID})
+	GetBasicTask(w http.ResponseWriter, r *http.Request, taskID int)
+	// Update basic task
+	// (PUT /basic-tasks/{taskID})
+	UpdateBasicTask(w http.ResponseWriter, r *http.Request, taskID int)
+	// Get default notification params
+	// (GET /default-notification-params)
+	GetDefaultNotificationParams(w http.ResponseWriter, r *http.Request)
+	// Update default notification params
+	// (PUT /default-notification-params)
+	UpdateDefaultNotificationParams(w http.ResponseWriter, r *http.Request)
+	// List events
+	// (GET /events)
+	ListEvents(w http.ResponseWriter, r *http.Request, params ListEventsParams)
 	// Get task
-	// (GET /task/{taskID})
-	GetTask(w http.ResponseWriter, r *http.Request, taskID int)
-	// Update task
-	// (PUT /task/{taskID})
-	UpdateTask(w http.ResponseWriter, r *http.Request, taskID int)
-	// Get task event params
-	// (GET /task/{taskID}/event-params)
-	GetTaskEventParams(w http.ResponseWriter, r *http.Request, taskID int)
-	// Set Task event params
-	// (PUT /task/{taskID}/event-params)
-	SetTaskEventParams(w http.ResponseWriter, r *http.Request, taskID int)
+	// (GET /events/{eventID})
+	GetEvent(w http.ResponseWriter, r *http.Request, eventID int)
+	// Update event
+	// (PUT /events/{eventID})
+	SetEventDoneStatus(w http.ResponseWriter, r *http.Request, eventID int)
+	// Update event
+	// (PATCH /events/{eventID}/reschedule)
+	RescheduleEvent(w http.ResponseWriter, r *http.Request, eventID int)
+	// List periodic tasks
+	// (GET /periodic-tasks)
+	ListPeriodicTasks(w http.ResponseWriter, r *http.Request, params ListPeriodicTasksParams)
+	// Create periodic tasks
+	// (POST /periodic-tasks)
+	CreatePeriodicTask(w http.ResponseWriter, r *http.Request)
+	// List periodic tasks
+	// (GET /periodic-tasks/{taskID})
+	GetPeriodicTask(w http.ResponseWriter, r *http.Request, taskID int)
+	// Update periodic task
+	// (PUT /periodic-tasks/{taskID})
+	UpdatePeriodicTask(w http.ResponseWriter, r *http.Request, taskID int)
 }
 
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
 
 type Unimplemented struct{}
 
-// Set default event params
-// (GET /event-params)
-func (_ Unimplemented) GetDefaultEventParams(w http.ResponseWriter, r *http.Request) {
+// List basic tasks
+// (GET /basic-tasks)
+func (_ Unimplemented) ListBasicTasks(w http.ResponseWriter, r *http.Request, params ListBasicTasksParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Set default event params
-// (PUT /event-params)
-func (_ Unimplemented) SetDefaultEventParams(w http.ResponseWriter, r *http.Request) {
+// Create basic tasks
+// (POST /basic-tasks)
+func (_ Unimplemented) CreateBasicTask(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List tasks
-// (GET /task)
-func (_ Unimplemented) ListTasks(w http.ResponseWriter, r *http.Request, params ListTasksParams) {
+// List basic tasks
+// (GET /basic-tasks/{taskID})
+func (_ Unimplemented) GetBasicTask(w http.ResponseWriter, r *http.Request, taskID int) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Create new task
-// (POST /task)
-func (_ Unimplemented) CreateTask(w http.ResponseWriter, r *http.Request) {
+// Update basic task
+// (PUT /basic-tasks/{taskID})
+func (_ Unimplemented) UpdateBasicTask(w http.ResponseWriter, r *http.Request, taskID int) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get default notification params
+// (GET /default-notification-params)
+func (_ Unimplemented) GetDefaultNotificationParams(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update default notification params
+// (PUT /default-notification-params)
+func (_ Unimplemented) UpdateDefaultNotificationParams(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List events
+// (GET /events)
+func (_ Unimplemented) ListEvents(w http.ResponseWriter, r *http.Request, params ListEventsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Get task
-// (GET /task/{taskID})
-func (_ Unimplemented) GetTask(w http.ResponseWriter, r *http.Request, taskID int) {
+// (GET /events/{eventID})
+func (_ Unimplemented) GetEvent(w http.ResponseWriter, r *http.Request, eventID int) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Update task
-// (PUT /task/{taskID})
-func (_ Unimplemented) UpdateTask(w http.ResponseWriter, r *http.Request, taskID int) {
+// Update event
+// (PUT /events/{eventID})
+func (_ Unimplemented) SetEventDoneStatus(w http.ResponseWriter, r *http.Request, eventID int) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Get task event params
-// (GET /task/{taskID}/event-params)
-func (_ Unimplemented) GetTaskEventParams(w http.ResponseWriter, r *http.Request, taskID int) {
+// Update event
+// (PATCH /events/{eventID}/reschedule)
+func (_ Unimplemented) RescheduleEvent(w http.ResponseWriter, r *http.Request, eventID int) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Set Task event params
-// (PUT /task/{taskID}/event-params)
-func (_ Unimplemented) SetTaskEventParams(w http.ResponseWriter, r *http.Request, taskID int) {
+// List periodic tasks
+// (GET /periodic-tasks)
+func (_ Unimplemented) ListPeriodicTasks(w http.ResponseWriter, r *http.Request, params ListPeriodicTasksParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create periodic tasks
+// (POST /periodic-tasks)
+func (_ Unimplemented) CreatePeriodicTask(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List periodic tasks
+// (GET /periodic-tasks/{taskID})
+func (_ Unimplemented) GetPeriodicTask(w http.ResponseWriter, r *http.Request, taskID int) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update periodic task
+// (PUT /periodic-tasks/{taskID})
+func (_ Unimplemented) UpdatePeriodicTask(w http.ResponseWriter, r *http.Request, taskID int) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -175,42 +336,8 @@ type ServerInterfaceWrapper struct {
 
 type MiddlewareFunc func(http.Handler) http.Handler
 
-// GetDefaultEventParams operation middleware
-func (siw *ServerInterfaceWrapper) GetDefaultEventParams(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetDefaultEventParams(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r.WithContext(ctx))
-}
-
-// SetDefaultEventParams operation middleware
-func (siw *ServerInterfaceWrapper) SetDefaultEventParams(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SetDefaultEventParams(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r.WithContext(ctx))
-}
-
-// ListTasks operation middleware
-func (siw *ServerInterfaceWrapper) ListTasks(w http.ResponseWriter, r *http.Request) {
+// ListBasicTasks operation middleware
+func (siw *ServerInterfaceWrapper) ListBasicTasks(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var err error
@@ -218,7 +345,152 @@ func (siw *ServerInterfaceWrapper) ListTasks(w http.ResponseWriter, r *http.Requ
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	// Parameter object where we will unmarshal all parameters from the context
-	var params ListTasksParams
+	var params ListBasicTasksParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "limit", r.URL.Query(), &params.Limit)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "offset", r.URL.Query(), &params.Offset)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListBasicTasks(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// CreateBasicTask operation middleware
+func (siw *ServerInterfaceWrapper) CreateBasicTask(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateBasicTask(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// GetBasicTask operation middleware
+func (siw *ServerInterfaceWrapper) GetBasicTask(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "taskID" -------------
+	var taskID int
+
+	err = runtime.BindStyledParameterWithOptions("simple", "taskID", chi.URLParam(r, "taskID"), &taskID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "taskID", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetBasicTask(w, r, taskID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// UpdateBasicTask operation middleware
+func (siw *ServerInterfaceWrapper) UpdateBasicTask(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "taskID" -------------
+	var taskID int
+
+	err = runtime.BindStyledParameterWithOptions("simple", "taskID", chi.URLParam(r, "taskID"), &taskID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "taskID", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateBasicTask(w, r, taskID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// GetDefaultNotificationParams operation middleware
+func (siw *ServerInterfaceWrapper) GetDefaultNotificationParams(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDefaultNotificationParams(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// UpdateDefaultNotificationParams operation middleware
+func (siw *ServerInterfaceWrapper) UpdateDefaultNotificationParams(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateDefaultNotificationParams(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// ListEvents operation middleware
+func (siw *ServerInterfaceWrapper) ListEvents(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListEventsParams
 
 	// ------------- Optional query parameter "from" -------------
 
@@ -253,7 +525,7 @@ func (siw *ServerInterfaceWrapper) ListTasks(w http.ResponseWriter, r *http.Requ
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListTasks(w, r, params)
+		siw.Handler.ListEvents(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -263,14 +535,136 @@ func (siw *ServerInterfaceWrapper) ListTasks(w http.ResponseWriter, r *http.Requ
 	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
-// CreateTask operation middleware
-func (siw *ServerInterfaceWrapper) CreateTask(w http.ResponseWriter, r *http.Request) {
+// GetEvent operation middleware
+func (siw *ServerInterfaceWrapper) GetEvent(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "eventID" -------------
+	var eventID int
+
+	err = runtime.BindStyledParameterWithOptions("simple", "eventID", chi.URLParam(r, "eventID"), &eventID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "eventID", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetEvent(w, r, eventID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// SetEventDoneStatus operation middleware
+func (siw *ServerInterfaceWrapper) SetEventDoneStatus(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "eventID" -------------
+	var eventID int
+
+	err = runtime.BindStyledParameterWithOptions("simple", "eventID", chi.URLParam(r, "eventID"), &eventID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "eventID", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetEventDoneStatus(w, r, eventID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// RescheduleEvent operation middleware
+func (siw *ServerInterfaceWrapper) RescheduleEvent(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "eventID" -------------
+	var eventID int
+
+	err = runtime.BindStyledParameterWithOptions("simple", "eventID", chi.URLParam(r, "eventID"), &eventID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "eventID", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RescheduleEvent(w, r, eventID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// ListPeriodicTasks operation middleware
+func (siw *ServerInterfaceWrapper) ListPeriodicTasks(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListPeriodicTasksParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "limit", r.URL.Query(), &params.Limit)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "offset", r.URL.Query(), &params.Offset)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListPeriodicTasks(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// CreatePeriodicTask operation middleware
+func (siw *ServerInterfaceWrapper) CreatePeriodicTask(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.CreateTask(w, r)
+		siw.Handler.CreatePeriodicTask(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -280,8 +674,8 @@ func (siw *ServerInterfaceWrapper) CreateTask(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
-// GetTask operation middleware
-func (siw *ServerInterfaceWrapper) GetTask(w http.ResponseWriter, r *http.Request) {
+// GetPeriodicTask operation middleware
+func (siw *ServerInterfaceWrapper) GetPeriodicTask(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var err error
@@ -298,7 +692,7 @@ func (siw *ServerInterfaceWrapper) GetTask(w http.ResponseWriter, r *http.Reques
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetTask(w, r, taskID)
+		siw.Handler.GetPeriodicTask(w, r, taskID)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -308,8 +702,8 @@ func (siw *ServerInterfaceWrapper) GetTask(w http.ResponseWriter, r *http.Reques
 	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
-// UpdateTask operation middleware
-func (siw *ServerInterfaceWrapper) UpdateTask(w http.ResponseWriter, r *http.Request) {
+// UpdatePeriodicTask operation middleware
+func (siw *ServerInterfaceWrapper) UpdatePeriodicTask(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var err error
@@ -326,63 +720,7 @@ func (siw *ServerInterfaceWrapper) UpdateTask(w http.ResponseWriter, r *http.Req
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.UpdateTask(w, r, taskID)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r.WithContext(ctx))
-}
-
-// GetTaskEventParams operation middleware
-func (siw *ServerInterfaceWrapper) GetTaskEventParams(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	var err error
-
-	// ------------- Path parameter "taskID" -------------
-	var taskID int
-
-	err = runtime.BindStyledParameterWithOptions("simple", "taskID", chi.URLParam(r, "taskID"), &taskID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "taskID", Err: err})
-		return
-	}
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetTaskEventParams(w, r, taskID)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r.WithContext(ctx))
-}
-
-// SetTaskEventParams operation middleware
-func (siw *ServerInterfaceWrapper) SetTaskEventParams(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	var err error
-
-	// ------------- Path parameter "taskID" -------------
-	var taskID int
-
-	err = runtime.BindStyledParameterWithOptions("simple", "taskID", chi.URLParam(r, "taskID"), &taskID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "taskID", Err: err})
-		return
-	}
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SetTaskEventParams(w, r, taskID)
+		siw.Handler.UpdatePeriodicTask(w, r, taskID)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -506,28 +844,46 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/event-params", wrapper.GetDefaultEventParams)
+		r.Get(options.BaseURL+"/basic-tasks", wrapper.ListBasicTasks)
 	})
 	r.Group(func(r chi.Router) {
-		r.Put(options.BaseURL+"/event-params", wrapper.SetDefaultEventParams)
+		r.Post(options.BaseURL+"/basic-tasks", wrapper.CreateBasicTask)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/task", wrapper.ListTasks)
+		r.Get(options.BaseURL+"/basic-tasks/{taskID}", wrapper.GetBasicTask)
 	})
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/task", wrapper.CreateTask)
+		r.Put(options.BaseURL+"/basic-tasks/{taskID}", wrapper.UpdateBasicTask)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/task/{taskID}", wrapper.GetTask)
+		r.Get(options.BaseURL+"/default-notification-params", wrapper.GetDefaultNotificationParams)
 	})
 	r.Group(func(r chi.Router) {
-		r.Put(options.BaseURL+"/task/{taskID}", wrapper.UpdateTask)
+		r.Put(options.BaseURL+"/default-notification-params", wrapper.UpdateDefaultNotificationParams)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/task/{taskID}/event-params", wrapper.GetTaskEventParams)
+		r.Get(options.BaseURL+"/events", wrapper.ListEvents)
 	})
 	r.Group(func(r chi.Router) {
-		r.Put(options.BaseURL+"/task/{taskID}/event-params", wrapper.SetTaskEventParams)
+		r.Get(options.BaseURL+"/events/{eventID}", wrapper.GetEvent)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/events/{eventID}", wrapper.SetEventDoneStatus)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/events/{eventID}/reschedule", wrapper.RescheduleEvent)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/periodic-tasks", wrapper.ListPeriodicTasks)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/periodic-tasks", wrapper.CreatePeriodicTask)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/periodic-tasks/{taskID}", wrapper.GetPeriodicTask)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/periodic-tasks/{taskID}", wrapper.UpdatePeriodicTask)
 	})
 
 	return r

@@ -200,7 +200,7 @@ func (s *Service) SetEventDoneStatus(ctx context.Context, eventID, userID int, d
 	return nil
 }
 
-func (s *Service) CreateAndAddEvent(ctx context.Context, task domains.EventCreator, userID int) error {
+func (s *Service) createAndAddEvent(ctx context.Context, task domains.EventCreator, userID int) error {
 	defParams, err := s.repo.DefaultEventParams().Get(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("get default params: %w", err)

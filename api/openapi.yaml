@@ -8,7 +8,7 @@ info:
     That way, with time, we can improve the API in general, and expose some of the new features in OAS3.
 
     _If you're looking for the Swagger 2.0/OAS 2.0 version of Petstore, then click [here](https://editor.swagger.io/?url=https://petstore.swagger.io/v2/swagger.yaml). Alternatively, you can load via the `Edit > Load Petstore OAS 2.0` menu option!_
-    
+
     Some useful links:
     - [The Pet Store repository](https://github.com/swagger-api/swagger-petstore)
     - [The source API definition for the Pet Store](https://github.com/swagger-api/swagger-petstore/blob/master/src/main/resources/openapi.yaml)
@@ -28,9 +28,13 @@ tags:
   - name: Authentication
     description: Authentication
   - name: Tasks
-    description: Create and manafe your tasks
-  - name: EventParams
-    description: Manage Event params
+    description: Create and manage your tasks
+  - name: Basic tasks
+    description: Create and manage your basic tasks
+  - name: Periodic tasks
+    description: Create and manage your periodic tasks
+  - name: Events
+    description: Create and manager your events
 paths:
   /auth/register:
     post:
@@ -46,16 +50,16 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RegistrationBody'
+              $ref: "#/components/schemas/RegistrationBody"
         required: true
       responses:
-        '200':
+        "200":
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Tokens'
-        '405':
+                $ref: "#/components/schemas/Tokens"
+        "405":
           description: Invalid input
   /auth/login:
     post:
@@ -71,27 +75,27 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/LoginBody'
+              $ref: "#/components/schemas/LoginBody"
         required: true
       responses:
-        '200':
+        "200":
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Tokens'
-        '405':
+                $ref: "#/components/schemas/Tokens"
+        "405":
           description: Invalid input
 
-  /task:
+  /events:
     get:
-      summary: List tasks
+      summary: List events
       tags:
-        - Tasks
+        - Events
       security:
         - bearerAuth: []
-      description: List tasks
-      operationId: listTasks
+      description: List events
+      operationId: listEvents
       parameters:
         - in: query
           name: from
@@ -106,203 +110,453 @@ paths:
         - $ref: "#/components/parameters/limitParam"
         - $ref: "#/components/parameters/offsetParam"
       responses:
-        '200':
+        "200":
           description: Successful operation
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Task'
-        '405':
-          description: Invalid input
-    post:
-      summary: Create new task
-      tags:
-        - Tasks
-      security:
-        - bearerAuth: []
-      description: Create new task
-      operationId: createTask
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateTaskReqBody'
-        required: true
-      responses:
-        '201':
-          description: Successfull creation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Task'
-        '405':
+                  $ref: "#/components/schemas/Event"
+        "405":
           description: Invalid input
 
-  /task/{taskID}:
+  /events/{eventID}:
     get:
       summary: Get task
       tags:
-        - Tasks
+        - Events
       security:
         - bearerAuth: []
       description: Get task
-      operationId: getTask
+      operationId: getEvent
       parameters:
         - in: path
-          name: taskID
+          name: eventID
           schema:
             type: integer
           required: true
-          description: task task id
+          description: event id
       responses:
-        '200':
+        "200":
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Task'
-        '405':
+                $ref: "#/components/schemas/Event"
+        "405":
           description: Invalid input
 
     put:
-      summary: Update task
+      summary: Update event
       tags:
-        - Tasks
+        - Events
       security:
         - bearerAuth: []
-      description: Update task
-      operationId: updateTask
+      description: Set done status
+      operationId: setEventDoneStatus
       parameters:
         - in: path
-          name: taskID
+          name: eventID
           schema:
             type: integer
           required: true
-          description: Task task id
+          description: Event id
       requestBody:
-        description: Update Task task
+        description: Update event request
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateTaskReqBody'
+              required:
+                - done
+              type: object
+              properties:
+                done:
+                  type: boolean
       responses:
-        '200':
+        "200":
           description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Task'
-        '405':
+        "405":
           description: Invalid input
 
-  /task/{taskID}/event-params:
+  /events/{eventID}/reschedule:
+    patch:
+      summary: Update event
+      tags:
+        - Events
+      security:
+        - bearerAuth: []
+      description: Reschedule event
+      operationId: rescheduleEvent
+      parameters:
+        - in: path
+          name: eventID
+          schema:
+            type: integer
+          required: true
+          description: Event id
+      requestBody:
+        description: Update event request
+        content:
+          application/json:
+            schema:
+              required:
+                - done
+                - nextSendTime
+              type: object
+              properties:
+                nextSendTime:
+                  type: string
+                  format: date-time
+                done:
+                  type: boolean
+      responses:
+        "200":
+          description: Successful operation
+        "405":
+          description: Invalid input
+
+  /basic-tasks:
     get:
-      summary: Get task event params
+      summary: List basic tasks
       tags:
-        - Tasks
-        - EventParams
+        - Basic tasks
       security:
         - bearerAuth: []
-      description: Get task event params
-      operationId: getTaskEventParams
+      description: List basic tasks
+      operationId: listBasicTasks
       parameters:
-        - in: path
-          name: taskID
-          schema:
-            type: integer
-          required: true
-          description: Task id
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/offsetParam"
       responses:
-        '200':
+        "200":
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EventParams'
-        '405':
+                type: array
+                items:
+                  $ref: "#/components/schemas/BasicTask"
+        "405":
           description: Invalid input
 
-    put:
-      summary: Set Task event params
+    post:
+      summary: Create basic tasks
       tags:
-        - Tasks
-        - EventParams
+        - Basic tasks
       security:
         - bearerAuth: []
-      description: Set task event params
-      operationId: setTaskEventParams
-      parameters:
-        - in: path
-          name: taskID
-          schema:
-            type: integer
-          required: true
-          description: Task task id
+      description: Create basic task
+      operationId: createBasicTask
       requestBody:
-        required: true
+        description: Create basic task request
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/EventParams'
+              required:
+                - text
+                - description
+                - sendTime
+              type: object
+              properties:
+                done:
+                  type: boolean
+                text:
+                  type: string
+                  example: Task text
+                description:
+                  type: string
+                  example: Description
+                sendTime:
+                  type: string
+                  format: date-time
+                notificationParams:
+                  $ref: "#/components/schemas/NotificationParams"
       responses:
-        '200':
+        "200":
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EventParams'
-        '405':
+                type: array
+                items:
+                  $ref: "#/components/schemas/BasicTask"
+        "405":
           description: Invalid input
 
-  /event-params:
+  /basic-tasks/{taskID}:
     get:
-      summary: Set default event params
+      summary: List basic tasks
       tags:
-        - EventParams
+        - Basic tasks
       security:
         - bearerAuth: []
-      description: get default event params
-      operationId: getDefaultEventParams
+      description: Get basic task
+      operationId: getBasicTask
+      parameters:
+        - in: path
+          name: taskID
+          schema:
+            type: integer
+          required: true
+          description: task id
       responses:
-        '200':
-          description: Successfull operation
+        "200":
+          description: Successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EventParams'
-        '405':
+                $ref: "#/components/schemas/BasicTask"
+        "405":
           description: Invalid input
 
     put:
-      summary: Set default event params
+      summary: Update basic task
       tags:
-        - EventParams
+        - Basic tasks
       security:
         - bearerAuth: []
-      description: set default event params
-      operationId: setDefaultEventParams
+      description: Update basic task
+      operationId: updateBasicTask
+      parameters:
+        - in: path
+          name: taskID
+          schema:
+            type: integer
+          required: true
+          description: task id
       requestBody:
+        description: Create basic task request
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/EventParams'
-        required: true
+              required:
+                - text
+                - description
+                - sendTime
+              type: object
+              properties:
+                done:
+                  type: boolean
+                text:
+                  type: string
+                  example: Task text
+                description:
+                  type: string
+                  example: Description
+                sendTime:
+                  type: string
+                  format: date-time
+                notificationParams:
+                  $ref: "#/components/schemas/NotificationParams"
       responses:
-        '201':
-          description: Successfull creation
+        "200":
+          description: Successful operation
+        "405":
+          description: Invalid input
+
+  /periodic-tasks:
+    get:
+      summary: List periodic tasks
+      tags:
+        - Periodic tasks
+      security:
+        - bearerAuth: []
+      description: List periodic tasks
+      operationId: listPeriodicTasks
+      parameters:
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/offsetParam"
+      responses:
+        "200":
+          description: Successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EventParams'
-        '405':
+                type: array
+                items:
+                  $ref: "#/components/schemas/PeriodicTask"
+        "405":
           description: Invalid input
 
+    post:
+      summary: Create periodic tasks
+      tags:
+        - Periodic tasks
+      security:
+        - bearerAuth: []
+      description: Create periodic task
+      operationId: createPeriodicTask
+      requestBody:
+        description: Create periodic task request
+        content:
+          application/json:
+            schema:
+              required:
+                - text
+                - start
+                - smallestPeriod
+                - biggestPeriod
+              type: object
+              properties:
+                text:
+                  type: string
+                  example: Task text
+                description:
+                  type: string
+                  example: Description
+                smallestPeriod:
+                  type: integer
+                  minimum: 1
+                  example: 5
+                  description: minimum amount of days between events
+                biggestPeriod:
+                  type: integer
+                  minimum: 1
+                  example: 10
+                  description: maximum amount of days between events
+                start:
+                  type: string
+                  description: Start time from the beginning of the day
+                  format: iso8601
+                  example: 17h15m
+                notificationParams:
+                  $ref: "#/components/schemas/NotificationParams"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PeriodicTask"
+        "405":
+          description: Invalid input
+
+  /periodic-tasks/{taskID}:
+    get:
+      summary: List periodic tasks
+      tags:
+        - Periodic tasks
+      security:
+        - bearerAuth: []
+      description: Get periodic task
+      operationId: getPeriodicTask
+      parameters:
+        - in: path
+          name: taskID
+          schema:
+            type: integer
+          required: true
+          description: task id
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PeriodicTask"
+        "405":
+          description: Invalid input
+
+    put:
+      summary: Update periodic task
+      tags:
+        - Periodic tasks
+      security:
+        - bearerAuth: []
+      description: Update periodic task
+      operationId: updatePeriodicTask
+      parameters:
+        - in: path
+          name: taskID
+          schema:
+            type: integer
+          required: true
+          description: task id
+      requestBody:
+        description: Create periodic task request
+        content:
+          application/json:
+            schema:
+              required:
+                - text
+                - start
+                - smallestPeriod
+                - biggestPeriod
+              type: object
+              properties:
+                text:
+                  type: string
+                  example: Task text
+                description:
+                  type: string
+                  example: Description
+                smallestPeriod:
+                  type: integer
+                  minimum: 1
+                  example: 5
+                  description: minimum amount of days between events
+                biggestPeriod:
+                  type: integer
+                  minimum: 1
+                  example: 10
+                  description: maximum amount of days between events
+                start:
+                  type: string
+                  description: Start time from the beginning of the day
+                  format: iso8601
+                  example: 17h15m
+                notificationParams:
+                  $ref: "#/components/schemas/NotificationParams"
+      responses:
+        "200":
+          description: Successful operation
+        "405":
+          description: Invalid input
+
+  /default-notification-params:
+    get:
+      summary: Get default notification params
+      tags:
+        - Notification params
+      security:
+        - bearerAuth: []
+      description: Get default notification params
+      operationId: getDefaultNotificationParams
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationParams"
+        "405":
+          description: Invalid input
+
+    put:
+      summary: Update default notification params
+      tags:
+        - Notification params
+      security:
+        - bearerAuth: []
+      description: Update default notification params
+      operationId: updateDefaultNotificationParams
+      requestBody:
+        description: Update default notification params
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NotificationParams"
+      responses:
+        "200":
+          description: Successful operation
+        "405":
+          description: Invalid input
 
 components:
-
-# define reusable parameters:
+  # define reusable parameters:
   parameters:
     limitParam:
       name: limit
@@ -312,6 +566,7 @@ components:
       schema:
         type: integer
         format: int32
+        minimum: 0
     offsetParam:
       name: offset
       in: query
@@ -320,6 +575,7 @@ components:
       schema:
         type: integer
         format: int32
+        minimum: 0
   schemas:
     RegistrationBody:
       required:
@@ -359,34 +615,16 @@ components:
       type: object
       properties:
         accessToken:
-          $ref: '#/components/schemas/Token'
+          $ref: "#/components/schemas/Token"
         refreshToken:
-          $ref: '#/components/schemas/Token'
+          $ref: "#/components/schemas/Token"
 
     Token:
       type: string
       description: Jwt token
-#      format: byte
+      #      format: byte
       example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2dnZWRJbkFzIjoiYWRtaW4iLCJpYXQiOjE0MjI3Nzk2Mzh9.gzSraSYS8EXBxLN_oWnFSRgCzcmJmMjLiuyu5CSpyHI
-#      required: true
-
-    CreateTaskReqBody:
-      type: object
-      properties:
-        message:
-          type: string
-          example: Message
-        start:
-          type: string
-          format: date-time
-        description:
-          type: string
-          example: Description
-      required:
-        - message
-        - requiredTime
-        - periodic
-        - start
+    #      required: true
 
     SetTaskReqBody:
       required:
@@ -401,29 +639,17 @@ components:
           type: string
           format: date-time
 
-
-    UpdateTaskReqBody:
-      required:
-        - finish
-        - start
-        - done
-      type: object
-      properties:
-        description:
-          type: string
-          example: Task description
-        start:
-          type: string
-          format: date-time
-        done:
-          type: boolean
-
-    Task:
+    Event:
       required:
         - id
+        - userID
         - text
-        - start
+        - taskType
+        - taskID
+        - nextSendTime
+        - firstSendTime
         - done
+        - notificationParams
       type: object
       properties:
         id:
@@ -434,41 +660,109 @@ components:
           example: Task text
         description:
           type: string
-          example: Task description
-        start:
+          example: Description
+        taskType:
+          $ref: "#/components/schemas/TaskType"
+        taskID:
+          type: integer
+          example: 83532
+        nextSendTime:
+          type: string
+          format: date-time
+        firstSendTime:
           type: string
           format: date-time
         done:
           type: boolean
+        notificationParams:
+          $ref: "#/components/schemas/NotificationParams"
 
-    EventParams:
-      type: object
+    BasicTask:
       required:
-        - period
-        - info
+        - id
+        - text
+        - sendTime
+      type: object
       properties:
-        period:
+        id:
           type: integer
-          description: Required time for task in minutes
-          minimum: 1
-          example: 5
-        delayedTill:
+          example: 12542
+        text:
+          type: string
+          example: Task text
+        description:
+          type: string
+          example: Description
+        sendTime:
           type: string
           format: date-time
-        info:
-          $ref: '#/components/schemas/EventInfo'
+        notificationParams:
+          $ref: "#/components/schemas/NotificationParams"
 
+    PeriodicTask:
+      required:
+        - id
+        - text
+        - start
+        - smallestPeriod
+        - biggestPeriod
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 12542
+        text:
+          type: string
+          example: Task text
+        description:
+          type: string
+          example: Description
+        smallestPeriod:
+          type: integer
+          minimum: 1
+          example: 5
+          description: minimum amount of days between events
+        biggestPeriod:
+          type: integer
+          minimum: 1
+          example: 10
+          description: maximum amount of days between events
+        start:
+          type: string
+          description: Start time from the beginning of the day
+          format: iso8601
+          example: 17h15m
+        notificationParams:
+          $ref: "#/components/schemas/NotificationParams"
 
-    EventInfo:
+    TaskType:
+      type: string
+      enum:
+        - basic
+        - periodic
+
+    NotificationParams:
+      required:
+        - period
+        - notificationChannel
+      type: object
+      properties:
+        period:
+          type: string
+          format: iso8601
+          example: 5m
+        notificationChannel:
+          $ref: "#/components/schemas/NotificationChannel"
+
+    NotificationChannel:
       type: object
       properties:
         cmd:
-          type: boolean
+          type: string
         telegram:
           type: integer
         webhook:
           type: string
-
 
   securitySchemes:
     bearerAuth: # arbitrary name for the security scheme
@@ -479,4 +773,3 @@ components:
       type: apiKey
       name: api_key
       in: header
-

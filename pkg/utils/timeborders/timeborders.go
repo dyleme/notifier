@@ -23,3 +23,7 @@ func NewInfiniteUpper(lowerBorder time.Time) TimeBorders {
 func NewInfiniteLower(upperBorder time.Time) TimeBorders {
 	return TimeBorders{From: minTime, To: upperBorder}
 }
+
+func NewInfinite() TimeBorders {
+	return TimeBorders{From: minTime, To: maxTime}
+}
