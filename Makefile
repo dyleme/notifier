@@ -97,7 +97,21 @@ docker.build:
 .PHONY: docker.push
 docker.push: docker.build
 	docker push dyleme/schedudler
+	
+.PHONY: install
+install: install.generators install.mocks install.linter
+	
+.PHONY: install.generators
+install.generators:
+	go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.26.0 
+	go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.3.0
 
-
+.PHONY: install.linter
+install.linter:
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.59.1
+	
+.PHONY: install.mocks
+install.mocks:
+	go install go.uber.org/mock/mockgen@v0.4.0
 
 
