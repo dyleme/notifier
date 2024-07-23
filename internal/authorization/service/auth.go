@@ -64,10 +64,6 @@ type UserRepo interface {
 	UpdateBindingAttemptStatus(ctx context.Context, baID int, done bool) error
 }
 
-type NotifcationService interface {
-	CreateDefaultEventParams()
-}
-
 // JwtGenerator is an interface that provides method to create jwt tokens.
 type JwtGenerator interface {
 	// CreateToken is method which creates jwt token.

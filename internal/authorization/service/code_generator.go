@@ -1,14 +1,27 @@
 package service
 
 import (
-	"math/rand/v2"
-	"strconv"
+	// "math/rand/v2"
+	"crypto/rand"
+	"fmt"
+	"math/big"
 )
 
-type RandomIntSeq struct{}
+type RandomIntSeq struct {
+	MaxNumber *big.Int
+}
 
-const numberOfDigitsToGenerate = 7
+const maxNumber = 1_000_000
+
+func NewRandomIntSeq() RandomIntSeq {
+	return RandomIntSeq{MaxNumber: big.NewInt(maxNumber)}
+}
 
 func (ri RandomIntSeq) GenereateCode() string {
-	return strconv.Itoa(rand.IntN(1 << numberOfDigitsToGenerate)) //nolint:gosec // noneed in security
+	bigInt, err := rand.Int(rand.Reader, ri.MaxNumber)
+	if err != nil {
+		panic(err)
+	}
+
+	return fmt.Sprintf("%06d", bigInt.Int64())
 }

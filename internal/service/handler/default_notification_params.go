@@ -50,12 +50,5 @@ func (t TaskHandler) UpdateDefaultNotificationParams(w http.ResponseWriter, r *h
 		return
 	}
 
-	np, err := t.serv.SetDefaultNotificationParams(r.Context(), notifParams, userID)
-	if err != nil {
-		responses.KnownError(w, err)
-
-		return
-	}
-
 	responses.JSON(w, http.StatusOK, mapAPINotificationParams(np))
 }

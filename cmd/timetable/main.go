@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/Dyleme/timecache"
 	trmpgx "github.com/avito-tech/go-transaction-manager/pgxv5"
 	"github.com/avito-tech/go-transaction-manager/trm/manager"
 	"github.com/go-chi/chi/v5/middleware"
@@ -27,8 +26,6 @@ import (
 	"github.com/Dyleme/Notifier/internal/service/handler"
 	"github.com/Dyleme/Notifier/internal/service/repository"
 	"github.com/Dyleme/Notifier/internal/service/service"
-	tgHandler "github.com/Dyleme/Notifier/internal/telegram/handler"
-	"github.com/Dyleme/Notifier/internal/telegram/userinfo"
 	"github.com/Dyleme/Notifier/pkg/log"
 	"github.com/Dyleme/Notifier/pkg/log/slogpretty"
 	"github.com/Dyleme/Notifier/pkg/sqldatabase"
@@ -57,7 +54,7 @@ func main() { //nolint:funlen // main can be long
 
 	apiTokenMiddleware := authmiddleware.NewAPIToken(cfg.APIKey)
 	jwtGen := jwt.NewJwtGen(cfg.JWT)
-	codeGen := authService.RandomIntSeq{}
+	codeGen := authService.NewRandomIntSeq()
 	jwtMiddleware := authmiddleware.NewJWT(jwtGen)
 	authRepo := authRepository.New(db, trCtxGetter)
 	authSvc := authService.NewAuth(authRepo, &authService.HashGen{}, jwtGen, trManager, codeGen)
@@ -77,15 +74,15 @@ func main() { //nolint:funlen // main can be long
 		},
 	)
 
-	tg, err := tgHandler.New(svc, userinfo.NewUserRepoCache(authSvc), cfg.Telegram, timecache.New[int64, tgHandler.TextMessageHandler]())
-	if err != nil {
-		logger.Error("tg init error", log.Err(err))
+	// tg, err := tgHandler.New(svc, userinfo.NewUserRepoCache(authSvc), cfg.Telegram, timecache.New[int64, tgHandler.TextMessageHandler]())
+	// if err != nil {
+	// 	logger.Error("tg init error", log.Err(err))
 
-		return
-	}
+	// 	return
+	// }
 
-	notifierJob.SetNotifier(tg)
-	authSvc.SetCodeSender(tg)
+	notifierJob.SetNotifier(notifierjob.CmdNotifier{})
+	authSvc.SetCodeSender(authService.CmdCodeSender{})
 
 	go notifierJob.Run(ctx)
 
@@ -99,11 +96,11 @@ func main() { //nolint:funlen // main can be long
 
 		return nil
 	})
-	wg.Go(func() error {
-		tg.Run(ctx)
+	// wg.Go(func() error {
+	// 	tg.Run(ctx)
 
-		return nil
-	})
+	// 	return nil
+	// })
 	err = wg.Wait()
 	if err != nil {
 		logger.Error("serve error", log.Err(err))

@@ -9,15 +9,16 @@ CREATE INDEX tg_id_idx ON users (tg_id);
 CREATE INDEX tg_nickname_idx ON users (tg_nickname);
 
 CREATE TABLE binding_attempts (
-    id SERIAL PRIMARY KEY ,
+    id SERIAL PRIMARY KEY,
     tg_id INTEGER NOT NULL,
     login_timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     code VARCHAR(10) NOT NULL,
     done BOOLEAN NOT NULL DEFAULT FALSE,
     password_hash VARCHAR(250) NOT NULL,
-    CONSTRAINT login_tries_pkey PRIMARY KEY (tg_id, login_timestamp), 
-    FOREIGN KEY (binding_attempt_tg_id_fk) REFERENCES users (tg_id)
+    CONSTRAINT login_tries_unique UNIQUE (tg_id, login_timestamp), 
+    FOREIGN KEY (tg_id) REFERENCES users (tg_id)
 );
+CREATE INDEX binding_attempts_tg_id_login_timestamp_idx ON users (tg_nickname);
 -- +goose StatementEnd
 
 -- +goose Down
