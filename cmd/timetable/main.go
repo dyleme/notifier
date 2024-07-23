@@ -57,9 +57,10 @@ func main() { //nolint:funlen // main can be long
 
 	apiTokenMiddleware := authmiddleware.NewAPIToken(cfg.APIKey)
 	jwtGen := jwt.NewJwtGen(cfg.JWT)
+	codeGen := authService.RandomIntSeq{}
 	jwtMiddleware := authmiddleware.NewJWT(jwtGen)
-	authRepo := authRepository.New(db)
-	authSvc := authService.NewAuth(authRepo, &authService.HashGen{}, jwtGen, trManager)
+	authRepo := authRepository.New(db, trCtxGetter)
+	authSvc := authService.NewAuth(authRepo, &authService.HashGen{}, jwtGen, trManager, codeGen)
 	authHndlr := authHandler.New(authSvc)
 
 	router := server.Route(
@@ -84,6 +85,7 @@ func main() { //nolint:funlen // main can be long
 	}
 
 	notifierJob.SetNotifier(tg)
+	authSvc.SetCodeSender(tg)
 
 	go notifierJob.Run(ctx)
 

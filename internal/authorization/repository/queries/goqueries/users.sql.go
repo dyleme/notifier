@@ -11,62 +11,104 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const addBindingAttempt = `-- name: AddBindingAttempt :exec
+INSERT INTO binding_attempts (
+    tg_id,
+    code,
+    password_hash
+) VALUES (
+    $1,
+    $2,
+    $3
+)
+`
+
+type AddBindingAttemptParams struct {
+	TgID         int32  `db:"tg_id"`
+	Code         string `db:"code"`
+	PasswordHash string `db:"password_hash"`
+}
+
+func (q *Queries) AddBindingAttempt(ctx context.Context, db DBTX, arg AddBindingAttemptParams) error {
+	_, err := db.Exec(ctx, addBindingAttempt, arg.TgID, arg.Code, arg.PasswordHash)
+	return err
+}
+
 const addUser = `-- name: AddUser :one
 INSERT INTO users (
-                   email,
-                   password_hash,
-                   tg_id
+                   tg_id,
+                   tg_nickname
                    )
 VALUES (
         $1,
-        $2,
-        $3
+        $2
        )
-RETURNING id, email, password_hash, tg_id, timezone_offset, timezone_dst
+RETURNING id, password_hash, tg_id, timezone_offset, timezone_dst, tg_nickname
 `
 
 type AddUserParams struct {
-	Email        pgtype.Text `db:"email"`
-	PasswordHash pgtype.Text `db:"password_hash"`
-	TgID         pgtype.Int4 `db:"tg_id"`
+	TgID       int32  `db:"tg_id"`
+	TgNickname string `db:"tg_nickname"`
 }
 
-func (q *Queries) AddUser(ctx context.Context, arg AddUserParams) (User, error) {
-	row := q.db.QueryRow(ctx, addUser, arg.Email, arg.PasswordHash, arg.TgID)
+func (q *Queries) AddUser(ctx context.Context, db DBTX, arg AddUserParams) (User, error) {
+	row := db.QueryRow(ctx, addUser, arg.TgID, arg.TgNickname)
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.Email,
 		&i.PasswordHash,
 		&i.TgID,
 		&i.TimezoneOffset,
 		&i.TimezoneDst,
+		&i.TgNickname,
 	)
 	return i, err
 }
 
 const findUser = `-- name: FindUser :one
-SELECT id, email, password_hash, tg_id, timezone_offset, timezone_dst
+SELECT id, password_hash, tg_id, timezone_offset, timezone_dst, tg_nickname
 FROM users
-WHERE email = $1
+WHERE tg_nickname = $1
    OR tg_id = $2
 `
 
 type FindUserParams struct {
-	Email pgtype.Text `db:"email"`
-	TgID  pgtype.Int4 `db:"tg_id"`
+	TgNickname string `db:"tg_nickname"`
+	TgID       int32  `db:"tg_id"`
 }
 
-func (q *Queries) FindUser(ctx context.Context, arg FindUserParams) (User, error) {
-	row := q.db.QueryRow(ctx, findUser, arg.Email, arg.TgID)
+func (q *Queries) FindUser(ctx context.Context, db DBTX, arg FindUserParams) (User, error) {
+	row := db.QueryRow(ctx, findUser, arg.TgNickname, arg.TgID)
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.Email,
 		&i.PasswordHash,
 		&i.TgID,
 		&i.TimezoneOffset,
 		&i.TimezoneDst,
+		&i.TgNickname,
+	)
+	return i, err
+}
+
+const getLatestBindingAttempt = `-- name: GetLatestBindingAttempt :one
+SELECT id, tg_id, login_timestamp, code, done, password_hash
+FROM binding_attempts
+WHERE tg_id = $1
+ORDER BY login_timestamp DESC
+LIMIT 1
+`
+
+func (q *Queries) GetLatestBindingAttempt(ctx context.Context, db DBTX, tgID int32) (BindingAttempt, error) {
+	row := db.QueryRow(ctx, getLatestBindingAttempt, tgID)
+	var i BindingAttempt
+	err := row.Scan(
+		&i.ID,
+		&i.TgID,
+		&i.LoginTimestamp,
+		&i.Code,
+		&i.Done,
+		&i.PasswordHash,
 	)
 	return i, err
 }
@@ -75,7 +117,7 @@ const getLoginParameters = `-- name: GetLoginParameters :one
 SELECT id,
        password_hash
 FROM users
-WHERE email = $1
+WHERE tg_nickname = $1
 `
 
 type GetLoginParametersRow struct {
@@ -83,27 +125,53 @@ type GetLoginParametersRow struct {
 	PasswordHash pgtype.Text `db:"password_hash"`
 }
 
-func (q *Queries) GetLoginParameters(ctx context.Context, email pgtype.Text) (GetLoginParametersRow, error) {
-	row := q.db.QueryRow(ctx, getLoginParameters, email)
+func (q *Queries) GetLoginParameters(ctx context.Context, db DBTX, tgNickname string) (GetLoginParametersRow, error) {
+	row := db.QueryRow(ctx, getLoginParameters, tgNickname)
 	var i GetLoginParametersRow
 	err := row.Scan(&i.ID, &i.PasswordHash)
 	return i, err
 }
 
-const updateTime = `-- name: UpdateTime :exec
-UPDATE users
-SET timezone_offset = $1,
-    timezone_dst = $2
-WHERE id = $3
+const updateBindingAttempt = `-- name: UpdateBindingAttempt :exec
+UPDATE binding_attempts
+SET done = $1
+WHERE id = $2
 `
 
-type UpdateTimeParams struct {
-	TimezoneOffset int32 `db:"timezone_offset"`
-	IsDst          bool  `db:"is_dst"`
-	ID             int32 `db:"id"`
+type UpdateBindingAttemptParams struct {
+	Done bool  `db:"done"`
+	ID   int32 `db:"id"`
 }
 
-func (q *Queries) UpdateTime(ctx context.Context, arg UpdateTimeParams) error {
-	_, err := q.db.Exec(ctx, updateTime, arg.TimezoneOffset, arg.IsDst, arg.ID)
+func (q *Queries) UpdateBindingAttempt(ctx context.Context, db DBTX, arg UpdateBindingAttemptParams) error {
+	_, err := db.Exec(ctx, updateBindingAttempt, arg.Done, arg.ID)
+	return err
+}
+
+const updateUser = `-- name: UpdateUser :exec
+UPDATE users
+SET tg_nickname = $1,
+    password_hash = $2,
+    timezone_offset = $3,
+    timezone_dst = $4
+WHERE tg_id = $5
+`
+
+type UpdateUserParams struct {
+	TgNickname     string      `db:"tg_nickname"`
+	PasswordHash   pgtype.Text `db:"password_hash"`
+	TimezoneOffset int32       `db:"timezone_offset"`
+	TimezoneDst    bool        `db:"timezone_dst"`
+	TgID           int32       `db:"tg_id"`
+}
+
+func (q *Queries) UpdateUser(ctx context.Context, db DBTX, arg UpdateUserParams) error {
+	_, err := db.Exec(ctx, updateUser,
+		arg.TgNickname,
+		arg.PasswordHash,
+		arg.TimezoneOffset,
+		arg.TimezoneDst,
+		arg.TgID,
+	)
 	return err
 }
