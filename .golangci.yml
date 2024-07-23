@@ -33,7 +33,6 @@ linters-settings:
       - blank
       - dot
 
-
 issues:
   exclude-rules:
     # disable funlen for all _test.go files

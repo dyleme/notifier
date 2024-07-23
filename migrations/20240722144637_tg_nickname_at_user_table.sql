@@ -22,7 +22,7 @@ CREATE TABLE binding_attempts (
 
 -- +goose Down
 -- +goose StatementBegin
--- DROP TABLE login_tries;
+DROP TABLE binding_attempts;
 DROP INDEX tg_nickname_idx;
 DROP INDEX tg_id_idx;
 ALTER TABLE users DROP COLUMN tg_nickname;
