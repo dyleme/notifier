@@ -23,8 +23,12 @@ type BasicTaskRepository struct {
 	getter *trmpgx.CtxGetter
 }
 
-func (r *Repository) Tasks() service.BasicTaskRepository {
-	return r.tasksRepository
+func NewBasicTaskRepository(db *pgxpool.Pool, getter *trmpgx.CtxGetter) *BasicTaskRepository {
+	return &BasicTaskRepository{
+		q:      goqueries.New(),
+		db:     db,
+		getter: getter,
+	}
 }
 
 func dtoTask(bt goqueries.BasicTask) (domains.BasicTask, error) {

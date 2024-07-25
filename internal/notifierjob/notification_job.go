@@ -11,7 +11,6 @@ import (
 	trManager "github.com/avito-tech/go-transaction-manager/trm/manager"
 
 	"github.com/Dyleme/Notifier/internal/domains"
-	"github.com/Dyleme/Notifier/internal/service/service"
 	"github.com/Dyleme/Notifier/pkg/log"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
 	"github.com/Dyleme/Notifier/pkg/utils"
@@ -23,8 +22,9 @@ type Notifier interface {
 }
 
 type Repository interface {
-	DefaultEventParams() service.NotificationParamsRepository
-	Events() service.EventsRepository
+	Update(ctx context.Context, event domains.Event) error
+	ListNotSended(ctx context.Context, till time.Time) ([]domains.Event, error)
+	GetNearest(ctx context.Context) (domains.Event, error)
 }
 
 type NotifierJob struct {
@@ -94,7 +94,7 @@ func (nj *NotifierJob) setNextEventTime(ctx context.Context) {
 
 func (nj *NotifierJob) nearestCheckTime(ctx context.Context) time.Time {
 	nextPeriodicInvocationTime := time.Now().Truncate(time.Minute).Add(nj.checkPeriod)
-	event, err := nj.repo.Events().GetNearest(ctx)
+	event, err := nj.repo.GetNearest(ctx)
 	if err != nil {
 		var notFoundErr serverrors.NotFoundError
 		if !errors.As(err, &notFoundErr) {
@@ -110,7 +110,7 @@ func (nj *NotifierJob) nearestCheckTime(ctx context.Context) time.Time {
 
 func (nj *NotifierJob) notify(ctx context.Context) {
 	err := nj.tr.Do(ctx, func(ctx context.Context) error {
-		events, err := nj.repo.Events().ListNotSended(ctx, time.Now())
+		events, err := nj.repo.ListNotSended(ctx, time.Now())
 		if err != nil {
 			return fmt.Errorf("list not sended events: %w", err)
 		}
@@ -125,7 +125,7 @@ func (nj *NotifierJob) notify(ctx context.Context) {
 
 			ev = ev.Rescheule()
 
-			err = nj.repo.Events().Update(ctx, ev)
+			err = nj.repo.Update(ctx, ev)
 			if err != nil {
 				log.Ctx(ctx).Error("update event", log.Err(err), slog.Any("event", ev))
 			}

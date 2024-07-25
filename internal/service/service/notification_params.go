@@ -8,13 +8,13 @@ import (
 )
 
 //go:generate mockgen -destination=mocks/notification_params_mocks.go -package=mocks . NotificationParamsRepository
-type NotificationParamsRepository interface {
+type DefaultNotificationParamsRepository interface {
 	Set(ctx context.Context, userID int, params domains.NotificationParams) (domains.NotificationParams, error)
 	Get(ctx context.Context, userID int) (domains.NotificationParams, error)
 }
 
 func (s *Service) SetDefaultNotificationParams(ctx context.Context, params domains.NotificationParams, userID int) (domains.NotificationParams, error) {
-	defParams, err := s.repo.DefaultEventParams().Set(ctx, userID, params)
+	defParams, err := s.repos.defaultNotificationParams.Set(ctx, userID, params)
 	if err != nil {
 		err = fmt.Errorf("set deafault event params: %w", err)
 		logError(ctx, err)
@@ -26,7 +26,7 @@ func (s *Service) SetDefaultNotificationParams(ctx context.Context, params domai
 }
 
 func (s *Service) GetDefaultNotificationParams(ctx context.Context, userID int) (domains.NotificationParams, error) {
-	defParams, err := s.repo.DefaultEventParams().Get(ctx, userID)
+	defParams, err := s.repos.defaultNotificationParams.Get(ctx, userID)
 	if err != nil {
 		err = fmt.Errorf("get deafault event params: %w", err)
 		logError(ctx, err)

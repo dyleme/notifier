@@ -11,7 +11,6 @@ import (
 
 	"github.com/Dyleme/Notifier/internal/domains"
 	"github.com/Dyleme/Notifier/internal/service/repository/queries/goqueries"
-	"github.com/Dyleme/Notifier/internal/service/service"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
 )
 
@@ -21,8 +20,12 @@ type NotificationParamsRepository struct {
 	db     *pgxpool.Pool
 }
 
-func (r *Repository) DefaultEventParams() service.NotificationParamsRepository {
-	return r.eventParamsRepository
+func NewDefaultNotificationParamsRepository(db *pgxpool.Pool, getter *trmpgx.CtxGetter) *NotificationParamsRepository {
+	return &NotificationParamsRepository{
+		q:      goqueries.New(),
+		getter: getter,
+		db:     db,
+	}
 }
 
 func (nr *NotificationParamsRepository) Get(ctx context.Context, userID int) (domains.NotificationParams, error) {

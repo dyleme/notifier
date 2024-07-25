@@ -1,24 +1,18 @@
 package service_test
 
 import (
-	"context"
-
 	"github.com/Dyleme/Notifier/internal/service/service"
 )
 
 type RepositoryMock struct {
-	DefaultEventRepo  service.NotificationParamsRepository
+	DefaultEventRepo  service.DefaultNotificationParamsRepository
 	TasksRepo         service.BasicTaskRepository
 	TgImagesRepo      service.TgImagesRepository
 	PeriodicTasksRepo service.PeriodicTasksRepository
 	EventsRepo        service.EventsRepository
 }
 
-func (r *RepositoryMock) Atomic(ctx context.Context, fn func(ctx context.Context, repo service.Repository) error) error {
-	return fn(ctx, r)
-}
-
-func (r *RepositoryMock) DefaultEventParams() service.NotificationParamsRepository {
+func (r *RepositoryMock) DefaultEventParams() service.DefaultNotificationParamsRepository {
 	return r.DefaultEventRepo
 }
 

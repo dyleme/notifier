@@ -25,8 +25,12 @@ type EventsRepository struct {
 	getter *trmpgx.CtxGetter
 }
 
-func (r *Repository) Events() service.EventsRepository {
-	return r.eventsRepository
+func NewEventsRepository(db *pgxpool.Pool, getter *trmpgx.CtxGetter) *EventsRepository {
+	return &EventsRepository{
+		q:      goqueries.New(),
+		db:     db,
+		getter: getter,
+	}
 }
 
 const UnkownTaskType = goqueries.TaskType("unknown_type")

@@ -7,16 +7,16 @@ import (
 	trManager "github.com/avito-tech/go-transaction-manager/trm/manager"
 )
 
-type Repository interface {
-	DefaultEventParams() NotificationParamsRepository
-	Tasks() BasicTaskRepository
-	TgImages() TgImagesRepository
-	PeriodicTasks() PeriodicTasksRepository
-	Events() EventsRepository
+type repositories struct {
+	periodicTasks             PeriodicTasksRepository
+	basicTasks                BasicTaskRepository
+	tgImages                  TgImagesRepository
+	events                    EventsRepository
+	defaultNotificationParams DefaultNotificationParamsRepository
 }
 
 type Service struct {
-	repo        Repository
+	repos       repositories
 	notifierJob NotifierJob
 	tr          *trManager.Manager
 }
@@ -25,9 +25,23 @@ type NotifierJob interface {
 	UpdateWithTime(ctx context.Context, t time.Time)
 }
 
-func New(repo Repository, trManger *trManager.Manager, notifierJob NotifierJob) *Service {
+func New(
+	periodicTasks PeriodicTasksRepository,
+	basicTasks BasicTaskRepository,
+	tgImages TgImagesRepository,
+	events EventsRepository,
+	defaultNotificationParams DefaultNotificationParamsRepository,
+	trManger *trManager.Manager,
+	notifierJob NotifierJob,
+) *Service {
 	s := &Service{
-		repo:        repo,
+		repos: repositories{
+			periodicTasks:             periodicTasks,
+			basicTasks:                basicTasks,
+			tgImages:                  tgImages,
+			events:                    events,
+			defaultNotificationParams: defaultNotificationParams,
+		},
 		notifierJob: notifierJob,
 		tr:          trManger,
 	}

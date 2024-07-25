@@ -24,8 +24,12 @@ type PeriodicTaskRepository struct {
 	getter *trmpgx.CtxGetter
 }
 
-func (r *Repository) PeriodicTasks() service.PeriodicTasksRepository {
-	return r.periodicTaskRepository
+func NewPeriodicTaskRepository(db *pgxpool.Pool, getter *trmpgx.CtxGetter) *PeriodicTaskRepository {
+	return &PeriodicTaskRepository{
+		q:      goqueries.New(),
+		db:     db,
+		getter: getter,
+	}
 }
 
 func (p *PeriodicTaskRepository) dto(pt goqueries.PeriodicTask) domains.PeriodicTask {

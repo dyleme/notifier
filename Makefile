@@ -73,6 +73,11 @@ lint:
 	@$(LINTER) run -v
 
 
+.PHONY: test.build
+test.build:
+	@go build -o test_main ./cmd/timetable/
+	@rm test_main
+
 .PHONY: test
 test:
 	@echo "----------- Test project ----------------"
