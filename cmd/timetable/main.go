@@ -26,9 +26,12 @@ import (
 	"github.com/Dyleme/Notifier/internal/service/handler"
 	"github.com/Dyleme/Notifier/internal/service/repository"
 	"github.com/Dyleme/Notifier/internal/service/service"
+	tgHandler "github.com/Dyleme/Notifier/internal/telegram/handler"
+	"github.com/Dyleme/Notifier/internal/telegram/userinfo"
 	"github.com/Dyleme/Notifier/pkg/log"
 	"github.com/Dyleme/Notifier/pkg/log/slogpretty"
 	"github.com/Dyleme/Notifier/pkg/sqldatabase"
+	"github.com/Dyleme/timecache"
 )
 
 func main() { //nolint:funlen // main can be long
@@ -74,12 +77,12 @@ func main() { //nolint:funlen // main can be long
 		},
 	)
 
-	// tg, err := tgHandler.New(svc, userinfo.NewUserRepoCache(authSvc), cfg.Telegram, timecache.New[int64, tgHandler.TextMessageHandler]())
-	// if err != nil {
-	// 	logger.Error("tg init error", log.Err(err))
+	tg, err := tgHandler.New(svc, userinfo.NewUserRepoCache(authSvc), cfg.Telegram, timecache.New[int64, tgHandler.TextMessageHandler](), repo.KeyValueRepository())
+	if err != nil {
+		logger.Error("tg init error", log.Err(err))
 
-	// 	return
-	// }
+		return
+	}
 
 	notifierJob.SetNotifier(notifierjob.CmdNotifier{})
 	authSvc.SetCodeSender(authService.CmdCodeSender{})
@@ -96,11 +99,11 @@ func main() { //nolint:funlen // main can be long
 
 		return nil
 	})
-	// wg.Go(func() error {
-	// 	tg.Run(ctx)
+	wg.Go(func() error {
+		tg.Run(ctx)
 
-	// 	return nil
-	// })
+		return nil
+	})
 	err = wg.Wait()
 	if err != nil {
 		logger.Error("serve error", log.Err(err))

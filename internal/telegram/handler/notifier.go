@@ -2,7 +2,9 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/go-telegram/bot"
@@ -11,6 +13,8 @@ import (
 
 	"github.com/Dyleme/Notifier/internal/domains"
 	"github.com/Dyleme/Notifier/internal/telegram/userinfo"
+	"github.com/Dyleme/Notifier/pkg/log"
+	"github.com/Dyleme/Notifier/pkg/serverrors"
 )
 
 type Notification struct {
@@ -19,6 +23,32 @@ type Notification struct {
 	id        int
 	message   string
 	notifTime time.Time
+}
+
+func (n *Notification) deleteOldNotificationMsg(ctx context.Context, eventID, chatID, newMsgID int) error {
+	var oldMsgID int
+	err := n.th.kvRepo.GetValue(ctx, strconv.Itoa(eventID), oldMsgID)
+	var notFoundErr serverrors.NotFoundError
+	if errors.As(err, &notFoundErr) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("can't get message id [eventID=%v]: %w", eventID, err)
+	}
+	_, err = n.th.bot.DeleteMessage(ctx, &bot.DeleteMessageParams{
+		ChatID:    chatID,
+		MessageID: oldMsgID,
+	})
+	if err != nil {
+		return fmt.Errorf("can't delete message [eventID=%v]: %w", eventID, err)
+	}
+
+	err = n.th.kvRepo.PutValue(ctx, strconv.Itoa(eventID), newMsgID)
+	if err != nil {
+		return fmt.Errorf("can't set message id [eventID=%v]: %w", eventID, err)
+	}
+
+	return nil
 }
 
 func (th *TelegramHandler) Notify(ctx context.Context, event domains.SendingEvent) error {
@@ -46,13 +76,18 @@ func (n *Notification) sendMessage(ctx context.Context, chatID int64, user useri
 		Button("Done", nil, errorHandling(n.setDone)).
 		Button("Reschedule", nil, onSelectErrorHandling(n.SetTimeMsg))
 	text := n.message + " " + n.notifTime.In(user.Location()).Format(dayTimeFormat)
-	_, err := n.th.bot.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
+	msg, err := n.th.bot.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
 		ChatID:      chatID,
 		Text:        text,
 		ReplyMarkup: kb,
 	})
 	if err != nil {
 		return fmt.Errorf("send message [chatID=%v, text=%q]: %w", chatID, text, err)
+	}
+
+	err = n.deleteOldNotificationMsg(ctx, n.id, int(chatID), msg.ID)
+	if err != nil {
+		log.Ctx(ctx).Error("can't store message id", log.Err(err))
 	}
 
 	return nil

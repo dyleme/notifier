@@ -21,12 +21,14 @@ type TelegramHandler struct {
 	bot                 *bot.Bot
 	serv                *timetableService.Service
 	userRepo            UserRepo
+	kvRepo              KVRepo
 	waitingActionsStore WaitingActionsStore
 }
 
-func New(service *timetableService.Service, userRepo UserRepo, cfg Config, actionsStore WaitingActionsStore) (*TelegramHandler, error) {
+func New(service *timetableService.Service, userRepo UserRepo, cfg Config, actionsStore WaitingActionsStore, kvStore KVRepo) (*TelegramHandler, error) {
 	op := "New: %w"
 	tgHandler := TelegramHandler{
+		kvRepo:              kvStore,
 		serv:                service,
 		userRepo:            userRepo,
 		waitingActionsStore: actionsStore,
@@ -69,6 +71,12 @@ type WaitingActionsStore interface {
 type UserRepo interface {
 	GetUserInfo(ctx context.Context, tgID int) (userinfo.User, error)
 	UpdateUserTime(ctx context.Context, tgID int, timezoneOffset int, isDST bool) error
+}
+
+type KVRepo interface {
+	PutValue(ctx context.Context, key string, value any) error
+	GetValue(ctx context.Context, key string, value any) error
+	DeleteValue(ctx context.Context, key string) error
 }
 
 func (th *TelegramHandler) Handle(ctx context.Context, b *bot.Bot, update *models.Update) {
