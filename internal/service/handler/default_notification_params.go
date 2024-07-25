@@ -43,7 +43,14 @@ func (t TaskHandler) UpdateDefaultNotificationParams(w http.ResponseWriter, r *h
 		return
 	}
 
-	notifParams, err := mapDomainNotificationParams(body)
+	domainNp, err := mapDomainNotificationParams(body)
+	if err != nil {
+		responses.KnownError(w, err)
+
+		return
+	}
+
+	np, err := t.serv.SetDefaultNotificationParams(r.Context(), domainNp, userID)
 	if err != nil {
 		responses.KnownError(w, err)
 

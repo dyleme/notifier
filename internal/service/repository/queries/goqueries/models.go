@@ -94,6 +94,11 @@ type Event struct {
 	LastSendedTime     pgtype.Timestamptz         `db:"last_sended_time"`
 }
 
+type KeyValue struct {
+	Key   string `db:"key"`
+	Value []byte `db:"value"`
+}
+
 type PeriodicTask struct {
 	ID                 int32                       `db:"id"`
 	CreatedAt          pgtype.Timestamp            `db:"created_at"`

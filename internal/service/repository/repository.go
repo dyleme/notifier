@@ -16,6 +16,7 @@ type Repository struct {
 	eventParamsRepository  *NotificationParamsRepository
 	tgImagesRepository     *TgImagesRepository
 	eventsRepository       *EventsRepository
+	keyValueRepository     *KeyValueRepository
 }
 
 type Cache interface {
@@ -55,6 +56,11 @@ func New(pool *pgxpool.Pool, cache Cache, getter *trmpgx.CtxGetter) *Repository 
 			q:      q,
 			getter: getter,
 			db:     pool,
+		},
+		keyValueRepository: &KeyValueRepository{
+			q:      q,
+			db:     pool,
+			getter: getter,
 		},
 	}
 }
