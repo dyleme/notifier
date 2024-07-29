@@ -2,7 +2,7 @@
 -- +goose StatementBegin
 ALTER TABLE users DROP COLUMN email;
 ALTER TABLE users ALTER COLUMN tg_id SET NOT NULL;
-ALTER TABLE users ADD tg_nickname VARCHAR(250);
+ALTER TABLE users ADD tg_nickname VARCHAR(250) DEFAULT '';
 ALTER TABLE users ALTER COLUMN tg_nickname SET NOT NULL;
 ALTER TABLE users ADD CONSTRAINT unique_tg_nickname UNIQUE(tg_nickname);
 CREATE INDEX tg_id_idx ON users (tg_id);
