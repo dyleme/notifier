@@ -5,7 +5,7 @@ SET notification_params = dp.params
 FROM default_user_notification_params AS dp
 WHERE ev.user_id = dp.user_id;
 
-ALTER TABLE events 
+ALTER TABLE events
 ADD CONSTRAINT event_notification_params_not_nullable
 CHECK (notification_params IS NOT NULL);
 -- +goose StatementEnd

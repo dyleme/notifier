@@ -70,23 +70,6 @@ func (q *Queries) AddEvent(ctx context.Context, db DBTX, arg AddEventParams) (Ev
 	return i, err
 }
 
-const batchUpdateEvents = `-- name: BatchUpdateEvents :exec
-UPDATE events
-SET text = tmp.text,
-    next_send_time = tmp.event.NextSendTime,
-    first_send_time = tmp.event.FirstSendTime,
-    last_sended_time = tmp.event.LastSendedTime
-FROM (
-  VALUES($1) 
-) AS tmp(event)
-WHERE events.id = tmp.event.ID
-`
-
-func (q *Queries) BatchUpdateEvents(ctx context.Context, db DBTX, updatedEvents interface{}) error {
-	_, err := db.Exec(ctx, batchUpdateEvents, updatedEvents)
-	return err
-}
-
 const deleteEvent = `-- name: DeleteEvent :many
 DELETE FROM events
 WHERE id = $1

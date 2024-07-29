@@ -221,14 +221,3 @@ func (er *EventsRepository) GetNearest(ctx context.Context) (domains.Event, erro
 
 	return er.dto(event)
 }
-
-func (er *EventsRepository) BatchUpdate(ctx context.Context, events []domains.Event) error {
-	tx := er.getter.DefaultTrOrDB(ctx, er.db)
-
-	err := er.q.BatchUpdateEvents(ctx, tx, events)
-	if err != nil {
-		return fmt.Errorf("mark sended events: %w", serverrors.NewRepositoryError(err))
-	}
-
-	return nil
-}

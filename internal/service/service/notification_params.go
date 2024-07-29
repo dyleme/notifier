@@ -7,7 +7,7 @@ import (
 	"github.com/Dyleme/Notifier/internal/domains"
 )
 
-//go:generate mockgen -destination=mocks/notification_params_mocks.go -package=mocks . NotificationParamsRepository
+//go:generate mockgen -destination=mocks/notification_params_mocks.go -package=mocks . DefaultNotificationParamsRepository
 type DefaultNotificationParamsRepository interface {
 	Set(ctx context.Context, userID int, params domains.NotificationParams) (domains.NotificationParams, error)
 	Get(ctx context.Context, userID int) (domains.NotificationParams, error)
