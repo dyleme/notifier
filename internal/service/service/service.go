@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	trManager "github.com/avito-tech/go-transaction-manager/trm/manager"
+	"github.com/avito-tech/go-transaction-manager/trm"
 )
 
 type repositories struct {
@@ -18,11 +18,16 @@ type repositories struct {
 type Service struct {
 	repos       repositories
 	notifierJob NotifierJob
-	tr          *trManager.Manager
+	tr          TxManager
 }
 
 type NotifierJob interface {
 	UpdateWithTime(ctx context.Context, t time.Time)
+}
+
+type TxManager interface {
+	Do(ctx context.Context, fn func(ctx context.Context) error) (err error)
+	DoWithSettings(ctx context.Context, s trm.Settings, fn func(ctx context.Context) error) (err error)
 }
 
 func New(
@@ -31,7 +36,7 @@ func New(
 	tgImages TgImagesRepository,
 	events EventsRepository,
 	defaultNotificationParams DefaultNotificationParamsRepository,
-	trManger *trManager.Manager,
+	trManger TxManager,
 	notifierJob NotifierJob,
 ) *Service {
 	s := &Service{

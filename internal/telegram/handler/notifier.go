@@ -25,9 +25,13 @@ type Notification struct {
 	notifTime time.Time
 }
 
+func latestNotificatinMessageKey(eventID int) string {
+	return "latest_notification_message_" + strconv.Itoa(eventID)
+}
+
 func (n *Notification) deleteOldNotificationMsg(ctx context.Context, eventID, chatID, newMsgID int) error {
 	var oldMsgID int
-	err := n.th.kvRepo.GetValue(ctx, strconv.Itoa(eventID), oldMsgID)
+	err := n.th.kvRepo.GetValue(ctx, latestNotificatinMessageKey(eventID), oldMsgID)
 	var notFoundErr serverrors.NotFoundError
 	if errors.As(err, &notFoundErr) {
 		return nil
@@ -43,7 +47,7 @@ func (n *Notification) deleteOldNotificationMsg(ctx context.Context, eventID, ch
 		return fmt.Errorf("can't delete message [eventID=%v]: %w", eventID, err)
 	}
 
-	err = n.th.kvRepo.PutValue(ctx, strconv.Itoa(eventID), newMsgID)
+	err = n.th.kvRepo.PutValue(ctx, latestNotificatinMessageKey(eventID), newMsgID)
 	if err != nil {
 		return fmt.Errorf("can't set message id [eventID=%v]: %w", eventID, err)
 	}

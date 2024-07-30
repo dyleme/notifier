@@ -8,8 +8,10 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/Dyleme/timecache"
 	trmpgx "github.com/avito-tech/go-transaction-manager/pgxv5"
 	"github.com/avito-tech/go-transaction-manager/trm/manager"
+	"github.com/benbjohnson/clock"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"golang.org/x/sync/errgroup"
@@ -26,6 +28,8 @@ import (
 	"github.com/Dyleme/Notifier/internal/service/handler"
 	"github.com/Dyleme/Notifier/internal/service/repository"
 	"github.com/Dyleme/Notifier/internal/service/service"
+	tgHandler "github.com/Dyleme/Notifier/internal/telegram/handler"
+	"github.com/Dyleme/Notifier/internal/telegram/userinfo"
 	"github.com/Dyleme/Notifier/pkg/log"
 	"github.com/Dyleme/Notifier/pkg/log/slogpretty"
 	"github.com/Dyleme/Notifier/pkg/sqldatabase"
@@ -47,10 +51,12 @@ func main() { //nolint:funlen // main can be long
 	cache := repository.NewUniversalCache()
 	trManager := manager.Must(trmpgx.NewDefaultFactory(db))
 	trCtxGetter := trmpgx.DefaultCtxGetter
+	nower := clock.New()
 	notifierJob := notifierjob.New(
 		repository.NewEventsRepository(db, trCtxGetter),
 		cfg.NotifierJob,
 		trManager,
+		nower,
 	)
 	svc := service.New(
 		repository.NewPeriodicTaskRepository(db, trCtxGetter),
@@ -91,21 +97,21 @@ func main() { //nolint:funlen // main can be long
 		},
 	)
 
-	/* 	tg, err := tgHandler.New(
-	   		svc,
-	   		userinfo.NewUserRepoCache(authSvc),
-	   		cfg.Telegram,
-	   		timecache.New[int64, tgHandler.TextMessageHandler](),
-	   		repository.NewKeyValueRepository(db, trCtxGetter),
-	   	)
-	   	if err != nil {
-	   		logger.Error("tg init error", log.Err(err))
+	tg, err := tgHandler.New(
+		svc,
+		userinfo.NewUserRepoCache(authSvc),
+		cfg.Telegram,
+		timecache.New[int64, tgHandler.TextMessageHandler](),
+		repository.NewKeyValueRepository(db, trCtxGetter),
+	)
+	if err != nil {
+		logger.Error("tg init error", log.Err(err))
 
-	   		return
-	   	}
-	*/
-	notifierJob.SetNotifier(notifierjob.CmdNotifier{})
-	authSvc.SetCodeSender(authService.CmdCodeSender{})
+		return
+	}
+
+	notifierJob.SetNotifier(tg)
+	authSvc.SetCodeSender(tg)
 
 	go notifierJob.Run(ctx)
 
@@ -119,11 +125,11 @@ func main() { //nolint:funlen // main can be long
 
 		return nil
 	})
-	/* 	wg.Go(func() error {
+	wg.Go(func() error {
 		tg.Run(ctx)
 
 		return nil
-	}) */
+	})
 	err = wg.Wait()
 	if err != nil {
 		logger.Error("serve error", log.Err(err))
