@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
@@ -53,7 +55,24 @@ type telegramConfig struct {
 
 func Load() Config {
 	var collectConfigs compositeConfig
-	err := cleanenv.ReadConfig(".env", &collectConfigs)
+	filename := ".env"
+	folderPath, err := os.Getwd()
+	if err != nil {
+		panic(fmt.Errorf("can't get working dir: %w", err))
+	}
+
+	var pathToFile string
+	for folderPath != "/" {
+		pathToFile = folderPath + "/" + filename
+		_, err = os.Stat(pathToFile)
+		if err == nil {
+			break
+		}
+		idx := strings.LastIndex(folderPath, "/")
+		folderPath = folderPath[:idx]
+	}
+
+	err = cleanenv.ReadConfig(pathToFile, &collectConfigs)
 	if err != nil {
 		err = cleanenv.ReadEnv(&collectConfigs)
 		if err != nil {

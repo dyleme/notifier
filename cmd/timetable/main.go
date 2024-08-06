@@ -64,6 +64,7 @@ func main() { //nolint:funlen // main can be long
 		repository.NewTGImagesRepository(db, trCtxGetter, cache),
 		repository.NewEventsRepository(db, trCtxGetter),
 		repository.NewDefaultNotificationParamsRepository(db, trCtxGetter),
+		repository.NewTagsRepository(db, trCtxGetter),
 		trManager,
 		notifierJob,
 	)
@@ -110,8 +111,8 @@ func main() { //nolint:funlen // main can be long
 		return
 	}
 
-	notifierJob.SetNotifier(tg)
-	authSvc.SetCodeSender(tg)
+	notifierJob.SetNotifier(notifierjob.CmdNotifier{})
+	authSvc.SetCodeSender(authService.CmdCodeSender{})
 
 	go notifierJob.Run(ctx)
 

@@ -21,6 +21,7 @@ type PeriodicTask struct {
 	SmallestPeriod     time.Duration
 	BiggestPeriod      time.Duration
 	NotificationParams *NotificationParams
+	Tags               []Tag
 }
 
 type InvalidPeriodTimeError struct {
@@ -57,6 +58,7 @@ func (pt PeriodicTask) newEvent() (Event, error) {
 		NextSendTime:       sendTime,
 		FirstSendTime:      sendTime,
 		Done:               false,
+		Tags:               pt.Tags,
 	}, nil
 }
 

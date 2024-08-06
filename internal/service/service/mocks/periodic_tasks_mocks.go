@@ -86,7 +86,7 @@ func (mr *MockPeriodicTasksRepositoryMockRecorder) Get(arg0, arg1 any) *gomock.C
 }
 
 // List mocks base method.
-func (m *MockPeriodicTasksRepository) List(arg0 context.Context, arg1 int, arg2 service.ListParams) ([]domains.PeriodicTask, error) {
+func (m *MockPeriodicTasksRepository) List(arg0 context.Context, arg1 int, arg2 service.ListFilterParams) ([]domains.PeriodicTask, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2)
 	ret0, _ := ret[0].([]domains.PeriodicTask)
@@ -101,12 +101,11 @@ func (mr *MockPeriodicTasksRepositoryMockRecorder) List(arg0, arg1, arg2 any) *g
 }
 
 // Update mocks base method.
-func (m *MockPeriodicTasksRepository) Update(arg0 context.Context, arg1 domains.PeriodicTask) (domains.PeriodicTask, error) {
+func (m *MockPeriodicTasksRepository) Update(arg0 context.Context, arg1 domains.PeriodicTask) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Update", arg0, arg1)
-	ret0, _ := ret[0].(domains.PeriodicTask)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // Update indicates an expected call of Update.

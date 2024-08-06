@@ -7,6 +7,7 @@ import (
 	"github.com/Dyleme/Notifier/internal/authorization/authmiddleware"
 	"github.com/Dyleme/Notifier/internal/domains"
 	"github.com/Dyleme/Notifier/internal/service/handler/api"
+	"github.com/Dyleme/Notifier/internal/service/service"
 	"github.com/Dyleme/Notifier/pkg/http/requests"
 	"github.com/Dyleme/Notifier/pkg/http/responses"
 	"github.com/Dyleme/Notifier/pkg/log"
@@ -22,10 +23,11 @@ func (t TaskHandler) ListEvents(w http.ResponseWriter, r *http.Request, params a
 		return
 	}
 
-	listParams := parseListParams(params.Offset, params.Limit)
-	timeBorders := parseTimeParams(params.From, params.To)
-
-	events, err := t.serv.ListEvents(r.Context(), userID, timeBorders, listParams)
+	events, err := t.serv.ListEvents(r.Context(), userID, service.ListEventsFilterParams{
+		TimeBorders: parseTimeParams(params.From, params.To),
+		ListParams:  parseListParams(params.Offset, params.Limit),
+		Tags:        utils.ZeroIfNil(params.TagIDs),
+	})
 	if err != nil {
 		responses.KnownError(w, err)
 
@@ -64,6 +66,7 @@ func mapAPIEvent(event domains.Event) (api.Event, error) {
 		TaskID:             event.TaskID,
 		TaskType:           apiTaskType,
 		Text:               event.Text,
+		Tags:               mapAPITags(event.Tags),
 	}, nil
 }
 

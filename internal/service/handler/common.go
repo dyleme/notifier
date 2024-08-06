@@ -91,3 +91,22 @@ func mapDomainNotificationParams(np api.NotificationParams) (domains.Notificatio
 		},
 	}, nil
 }
+
+func mapDomainTags(ts []api.Tag, userID int) []domains.Tag {
+	return utils.DtoSlice(ts, func(t api.Tag) domains.Tag {
+		return domains.Tag{
+			ID:     t.Id,
+			UserID: userID,
+			Name:   t.Name,
+		}
+	})
+}
+
+func mapAPITags(ts []domains.Tag) []api.Tag {
+	return utils.DtoSlice(ts, func(t domains.Tag) api.Tag {
+		return api.Tag{
+			Id:   t.ID,
+			Name: t.Name,
+		}
+	})
+}

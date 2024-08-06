@@ -47,6 +47,7 @@ type Event struct {
 	FirstSendTime      time.Time
 	Done               bool
 	NotificationParams NotificationParams
+	Tags               []Tag
 }
 
 func (ev Event) BelongsTo(userID int) error {

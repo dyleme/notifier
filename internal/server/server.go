@@ -33,7 +33,7 @@ func New(handler http.Handler, cfg *Config) Server {
 			Handler:        handler,
 			MaxHeaderBytes: cfg.MaxHeaderBytes,
 			ReadTimeout:    cfg.ReadTimeout,
-			WriteTimeout:   cfg.WriteTimeout,
+			// WriteTimeout:   cfg.WriteTimeout,
 		},
 		gracefulShutdownTime: cfg.TimeForGracefulShutdown,
 	}

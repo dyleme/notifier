@@ -60,12 +60,25 @@ func (q *Queries) AddBasicTask(ctx context.Context, db DBTX, arg AddBasicTaskPar
 
 const countListBasicTasks = `-- name: CountListBasicTasks :one
 SELECT COUNT(*)
-FROM basic_tasks
-WHERE user_id = $1
+FROM basic_tasks as bt
+LEFT JOIN smth_to_tags as s2t
+  ON bt.id = s2t.smth_id
+LEFT JOIN tags as t
+  ON s2t.tag_id = t.id
+WHERE bt.user_id = $1
+  AND (
+    t.id = ANY ($2::int[]) 
+    OR array_length($2::int[], 1) is null
+  )
 `
 
-func (q *Queries) CountListBasicTasks(ctx context.Context, db DBTX, userID int32) (int64, error) {
-	row := db.QueryRow(ctx, countListBasicTasks, userID)
+type CountListBasicTasksParams struct {
+	UserID int32   `db:"user_id"`
+	TagIds []int32 `db:"tag_ids"`
+}
+
+func (q *Queries) CountListBasicTasks(ctx context.Context, db DBTX, arg CountListBasicTasksParams) (int64, error) {
+	row := db.QueryRow(ctx, countListBasicTasks, arg.UserID, arg.TagIds)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -128,36 +141,54 @@ func (q *Queries) GetBasicTask(ctx context.Context, db DBTX, id int32) (BasicTas
 }
 
 const listBasicTasks = `-- name: ListBasicTasks :many
-SELECT id, created_at, text, description, user_id, start, notification_params
-FROM basic_tasks
-WHERE user_id = $1
-ORDER BY id DESC
-LIMIT $3 OFFSET $2
+SELECT bt.id, bt.created_at, bt.text, bt.description, bt.user_id, bt.start, bt.notification_params
+FROM basic_tasks as bt
+LEFT JOIN smth_to_tags as s2t
+  ON bt.id = s2t.smth_id
+LEFT JOIN tags as t
+  ON s2t.tag_id = t.id
+WHERE bt.user_id = $1
+  AND (
+    t.id = ANY ($2::int[]) 
+    OR array_length($2::int[], 1) is null
+  )
+ORDER BY bt.id DESC
+LIMIT $4 OFFSET $3
 `
 
 type ListBasicTasksParams struct {
-	UserID int32 `db:"user_id"`
-	Off    int32 `db:"off"`
-	Lim    int32 `db:"lim"`
+	UserID int32   `db:"user_id"`
+	TagIds []int32 `db:"tag_ids"`
+	Off    int32   `db:"off"`
+	Lim    int32   `db:"lim"`
 }
 
-func (q *Queries) ListBasicTasks(ctx context.Context, db DBTX, arg ListBasicTasksParams) ([]BasicTask, error) {
-	rows, err := db.Query(ctx, listBasicTasks, arg.UserID, arg.Off, arg.Lim)
+type ListBasicTasksRow struct {
+	BasicTask BasicTask `db:"basic_task"`
+}
+
+func (q *Queries) ListBasicTasks(ctx context.Context, db DBTX, arg ListBasicTasksParams) ([]ListBasicTasksRow, error) {
+	rows, err := db.Query(ctx, listBasicTasks,
+		arg.UserID,
+		arg.TagIds,
+		arg.Off,
+		arg.Lim,
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []BasicTask
+	var items []ListBasicTasksRow
 	for rows.Next() {
-		var i BasicTask
+		var i ListBasicTasksRow
 		if err := rows.Scan(
-			&i.ID,
-			&i.CreatedAt,
-			&i.Text,
-			&i.Description,
-			&i.UserID,
-			&i.Start,
-			&i.NotificationParams,
+			&i.BasicTask.ID,
+			&i.BasicTask.CreatedAt,
+			&i.BasicTask.Text,
+			&i.BasicTask.Description,
+			&i.BasicTask.UserID,
+			&i.BasicTask.Start,
+			&i.BasicTask.NotificationParams,
 		); err != nil {
 			return nil, err
 		}
@@ -169,7 +200,7 @@ func (q *Queries) ListBasicTasks(ctx context.Context, db DBTX, arg ListBasicTask
 	return items, nil
 }
 
-const updateBasicTask = `-- name: UpdateBasicTask :one
+const updateBasicTask = `-- name: UpdateBasicTask :exec
 UPDATE basic_tasks
 SET start       = $1,
     text        = $2,
@@ -177,7 +208,6 @@ SET start       = $1,
     notification_params = $4
 WHERE id = $5
   AND user_id = $6
-RETURNING id, created_at, text, description, user_id, start, notification_params
 `
 
 type UpdateBasicTaskParams struct {
@@ -189,8 +219,8 @@ type UpdateBasicTaskParams struct {
 	UserID             int32                       `db:"user_id"`
 }
 
-func (q *Queries) UpdateBasicTask(ctx context.Context, db DBTX, arg UpdateBasicTaskParams) (BasicTask, error) {
-	row := db.QueryRow(ctx, updateBasicTask,
+func (q *Queries) UpdateBasicTask(ctx context.Context, db DBTX, arg UpdateBasicTaskParams) error {
+	_, err := db.Exec(ctx, updateBasicTask,
 		arg.Start,
 		arg.Text,
 		arg.Description,
@@ -198,15 +228,5 @@ func (q *Queries) UpdateBasicTask(ctx context.Context, db DBTX, arg UpdateBasicT
 		arg.ID,
 		arg.UserID,
 	)
-	var i BasicTask
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.Text,
-		&i.Description,
-		&i.UserID,
-		&i.Start,
-		&i.NotificationParams,
-	)
-	return i, err
+	return err
 }

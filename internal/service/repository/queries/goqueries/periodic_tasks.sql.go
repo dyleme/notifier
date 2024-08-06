@@ -68,12 +68,25 @@ func (q *Queries) AddPeriodicTask(ctx context.Context, db DBTX, arg AddPeriodicT
 
 const countListPeriodicTasks = `-- name: CountListPeriodicTasks :one
 SELECT COUNT(*)
-FROM periodic_tasks
-WHERE user_id = $1
+FROM periodic_tasks as pt
+LEFT JOIN smth_to_tags as s2t
+  ON pt.id = s2t.smth_id
+LEFT JOIN tags as t
+  ON s2t.tag_id = t.id
+WHERE pt.user_id = $1
+  AND (
+    t.id = ANY ($2::int[]) 
+    OR array_length($2::int[], 1) is null
+  )
 `
 
-func (q *Queries) CountListPeriodicTasks(ctx context.Context, db DBTX, userID int32) (int64, error) {
-	row := db.QueryRow(ctx, countListPeriodicTasks, userID)
+type CountListPeriodicTasksParams struct {
+	UserID int32   `db:"user_id"`
+	TagIds []int32 `db:"tag_ids"`
+}
+
+func (q *Queries) CountListPeriodicTasks(ctx context.Context, db DBTX, arg CountListPeriodicTasksParams) (int64, error) {
+	row := db.QueryRow(ctx, countListPeriodicTasks, arg.UserID, arg.TagIds)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -140,38 +153,56 @@ func (q *Queries) GetPeriodicTask(ctx context.Context, db DBTX, id int32) (Perio
 }
 
 const listPeriodicTasks = `-- name: ListPeriodicTasks :many
-SELECT id, created_at, text, description, user_id, start, smallest_period, biggest_period, notification_params
-FROM periodic_tasks
-WHERE user_id = $1
-ORDER BY id DESC
-LIMIT $3 OFFSET $2
+SELECT pt.id, pt.created_at, pt.text, pt.description, pt.user_id, pt.start, pt.smallest_period, pt.biggest_period, pt.notification_params
+FROM periodic_tasks as pt
+LEFT JOIN smth_to_tags as s2t
+  ON pt.id = s2t.smth_id
+LEFT JOIN tags as t
+  ON s2t.tag_id = t.id
+WHERE pt.user_id = $1
+  AND (
+    t.id = ANY ($2::int[]) 
+    OR array_length($2::int[], 1) is null
+  )
+ORDER BY pt.id DESC
+LIMIT $4 OFFSET $3
 `
 
 type ListPeriodicTasksParams struct {
-	UserID int32 `db:"user_id"`
-	Off    int32 `db:"off"`
-	Lim    int32 `db:"lim"`
+	UserID int32   `db:"user_id"`
+	TagIds []int32 `db:"tag_ids"`
+	Off    int32   `db:"off"`
+	Lim    int32   `db:"lim"`
 }
 
-func (q *Queries) ListPeriodicTasks(ctx context.Context, db DBTX, arg ListPeriodicTasksParams) ([]PeriodicTask, error) {
-	rows, err := db.Query(ctx, listPeriodicTasks, arg.UserID, arg.Off, arg.Lim)
+type ListPeriodicTasksRow struct {
+	PeriodicTask PeriodicTask `db:"periodic_task"`
+}
+
+func (q *Queries) ListPeriodicTasks(ctx context.Context, db DBTX, arg ListPeriodicTasksParams) ([]ListPeriodicTasksRow, error) {
+	rows, err := db.Query(ctx, listPeriodicTasks,
+		arg.UserID,
+		arg.TagIds,
+		arg.Off,
+		arg.Lim,
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []PeriodicTask
+	var items []ListPeriodicTasksRow
 	for rows.Next() {
-		var i PeriodicTask
+		var i ListPeriodicTasksRow
 		if err := rows.Scan(
-			&i.ID,
-			&i.CreatedAt,
-			&i.Text,
-			&i.Description,
-			&i.UserID,
-			&i.Start,
-			&i.SmallestPeriod,
-			&i.BiggestPeriod,
-			&i.NotificationParams,
+			&i.PeriodicTask.ID,
+			&i.PeriodicTask.CreatedAt,
+			&i.PeriodicTask.Text,
+			&i.PeriodicTask.Description,
+			&i.PeriodicTask.UserID,
+			&i.PeriodicTask.Start,
+			&i.PeriodicTask.SmallestPeriod,
+			&i.PeriodicTask.BiggestPeriod,
+			&i.PeriodicTask.NotificationParams,
 		); err != nil {
 			return nil, err
 		}

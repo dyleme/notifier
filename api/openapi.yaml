@@ -35,6 +35,8 @@ tags:
     description: Create and manage your periodic tasks
   - name: Events
     description: Create and manager your events
+  - name: Tags
+    description: Create and manage your tags
 paths:
   /auth/start-binding:
     post:
@@ -163,6 +165,7 @@ paths:
             format: date-time
         - $ref: "#/components/parameters/limitParam"
         - $ref: "#/components/parameters/offsetParam"
+        - $ref: "#/components/parameters/tagsParam"
       responses:
         "200":
           description: Successful operation
@@ -282,6 +285,7 @@ paths:
       parameters:
         - $ref: "#/components/parameters/limitParam"
         - $ref: "#/components/parameters/offsetParam"
+        - $ref: "#/components/parameters/tagsParam"
       responses:
         "200":
           description: Successful operation
@@ -311,6 +315,7 @@ paths:
                 - text
                 - description
                 - sendTime
+                - tags
               type: object
               properties:
                 done:
@@ -326,6 +331,10 @@ paths:
                   format: date-time
                 notificationParams:
                   $ref: "#/components/schemas/NotificationParams"
+                tags:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/Tag"
       responses:
         "200":
           description: Successful operation
@@ -388,6 +397,7 @@ paths:
                 - text
                 - description
                 - sendTime
+                - tags
               type: object
               properties:
                 done:
@@ -403,6 +413,10 @@ paths:
                   format: date-time
                 notificationParams:
                   $ref: "#/components/schemas/NotificationParams"
+                tags:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/Tag"
       responses:
         "200":
           description: Successful operation
@@ -421,6 +435,7 @@ paths:
       parameters:
         - $ref: "#/components/parameters/limitParam"
         - $ref: "#/components/parameters/offsetParam"
+        - $ref: "#/components/parameters/tagsParam"
       responses:
         "200":
           description: Successful operation
@@ -451,6 +466,7 @@ paths:
                 - start
                 - smallestPeriod
                 - biggestPeriod
+                - tags
               type: object
               properties:
                 text:
@@ -476,6 +492,10 @@ paths:
                   example: 17h15m
                 notificationParams:
                   $ref: "#/components/schemas/NotificationParams"
+                tags:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/Tag"
       responses:
         "200":
           description: Successful operation
@@ -539,6 +559,7 @@ paths:
                 - start
                 - smallestPeriod
                 - biggestPeriod
+                - tags
               type: object
               properties:
                 text:
@@ -564,6 +585,10 @@ paths:
                   example: 17h15m
                 notificationParams:
                   $ref: "#/components/schemas/NotificationParams"
+                tags:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/Tag"
       responses:
         "200":
           description: Successful operation
@@ -609,6 +634,113 @@ paths:
         "405":
           description: Invalid input
 
+  /tags:
+    get:
+      summary: List tags
+      tags:
+        - Tags
+      security:
+        - bearerAuth: []
+      description: List tags
+      operationId: listTags
+      parameters:
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/offsetParam"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Tag"
+
+        "405":
+          description: Invalid input
+
+    post:
+      summary: Create tag
+      tags:
+        - Tags
+      security:
+        - bearerAuth: []
+      description: Create new tag
+      operationId: createTag
+      requestBody:
+        description: Create tag params
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  example: Tag name
+
+      responses:
+        "200":
+          description: Successful operation
+        "405":
+          description: Invalid input
+
+  /tags/{tagID}:
+    get:
+      summary: Get tag
+      tags:
+        - Tags
+      security:
+        - bearerAuth: []
+      description: Get tag
+      operationId: getTag
+      parameters:
+        - in: path
+          name: tagID
+          schema:
+            type: integer
+          required: true
+          description: tag id
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Tag"
+        "405":
+          description: Invalid input
+
+    put:
+      summary: Update tag
+      tags:
+        - Tags
+      security:
+        - bearerAuth: []
+      description: Update tag
+      operationId: updateTag
+      parameters:
+        - in: path
+          name: tagID
+          schema:
+            type: integer
+          required: true
+          description: tag id
+      requestBody:
+        description: Update tag params
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Tag"
+      responses:
+        "200":
+          description: Successful operation
+        "405":
+          description: Invalid input
+
 components:
   # define reusable parameters:
   parameters:
@@ -630,6 +762,14 @@ components:
         type: integer
         format: int32
         minimum: 0
+    tagsParam:
+      name: tagIDs
+      in: query
+      required: false
+      schema:
+        type: array
+        items:
+          type: integer
   schemas:
     Tokens:
       type: object
@@ -657,6 +797,7 @@ components:
         - firstSendTime
         - done
         - notificationParams
+        - tags
       type: object
       properties:
         id:
@@ -683,12 +824,17 @@ components:
           type: boolean
         notificationParams:
           $ref: "#/components/schemas/NotificationParams"
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tag"
 
     BasicTask:
       required:
         - id
         - text
         - sendTime
+        - tags
       type: object
       properties:
         id:
@@ -705,6 +851,10 @@ components:
           format: date-time
         notificationParams:
           $ref: "#/components/schemas/NotificationParams"
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tag"
 
     PeriodicTask:
       required:
@@ -713,6 +863,7 @@ components:
         - start
         - smallestPeriod
         - biggestPeriod
+        - tags
       type: object
       properties:
         id:
@@ -741,12 +892,29 @@ components:
           example: 17h15m
         notificationParams:
           $ref: "#/components/schemas/NotificationParams"
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tag"
 
     TaskType:
       type: string
       enum:
         - basic
         - periodic
+
+    Tag:
+      required:
+        - id
+        - name
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 12542
+        name:
+          type: string
+          example: Task text
 
     NotificationParams:
       required:

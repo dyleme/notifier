@@ -12,6 +12,7 @@ import (
 	inKbr "github.com/go-telegram/ui/keyboard/inline"
 
 	"github.com/Dyleme/Notifier/internal/domains"
+	"github.com/Dyleme/Notifier/internal/service/service"
 )
 
 func (th *TelegramHandler) PeriodicTasksMenuInline(ctx context.Context, b *bot.Bot, mes *models.Message, _ []byte) error {
@@ -49,7 +50,10 @@ func (l *ListPeriodicTasks) listInline(ctx context.Context, b *bot.Bot, mes *mod
 		return fmt.Errorf(op, err)
 	}
 
-	tasks, err := l.th.serv.ListPeriodicTasks(ctx, user.ID, defaultListParams)
+	tasks, err := l.th.serv.ListPeriodicTasks(ctx, user.ID, service.ListFilterParams{
+		ListParams: defaultListParams,
+		TagIDs:     []int{},
+	})
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}
@@ -474,6 +478,7 @@ func (pt *PeriodicTask) UpdateInline(ctx context.Context, b *bot.Bot, msg *model
 		Start:              computeStartTime(pt.time, user.Location()),
 		SmallestPeriod:     pt.smallestPeriod,
 		BiggestPeriod:      pt.biggestPeriod,
+		Tags:               nil,
 		NotificationParams: nil,
 	}
 

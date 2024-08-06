@@ -12,8 +12,8 @@ import (
 //go:generate mockgen -destination=mocks/basic_tasks_mocks.go -package=mocks . BasicTaskRepository
 type BasicTaskRepository interface {
 	Add(ctx context.Context, task domains.BasicTask) (domains.BasicTask, error)
-	List(ctx context.Context, userID int, params ListParams) ([]domains.BasicTask, error)
-	Update(ctx context.Context, task domains.BasicTask) (domains.BasicTask, error)
+	List(ctx context.Context, userID int, params ListFilterParams) ([]domains.BasicTask, error)
+	Update(ctx context.Context, task domains.BasicTask) error
 	Delete(ctx context.Context, taskID int) error
 	Get(ctx context.Context, taskID int) (domains.BasicTask, error)
 }
@@ -68,9 +68,9 @@ func (s *Service) GetBasicTask(ctx context.Context, userID, taskID int) (domains
 	return tt, nil
 }
 
-func (s *Service) ListBasicTasks(ctx context.Context, userID int, listParams ListParams) ([]domains.BasicTask, error) {
+func (s *Service) ListBasicTasks(ctx context.Context, userID int, params ListFilterParams) ([]domains.BasicTask, error) {
 	op := "Service.ListTasks: %w"
-	tts, err := s.repos.basicTasks.List(ctx, userID, listParams)
+	tts, err := s.repos.basicTasks.List(ctx, userID, params)
 	if err != nil {
 		err = fmt.Errorf(op, err)
 		logError(ctx, err)
@@ -97,7 +97,7 @@ func (s *Service) UpdateBasicTask(ctx context.Context, params domains.BasicTask,
 		t.Description = params.Description
 		t.Start = params.Start
 
-		task, err = s.repos.basicTasks.Update(ctx, t)
+		err = s.repos.basicTasks.Update(ctx, t)
 		if err != nil {
 			return fmt.Errorf("update task: %w", err)
 		}

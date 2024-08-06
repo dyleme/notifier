@@ -111,6 +111,19 @@ type PeriodicTask struct {
 	NotificationParams *domains.NotificationParams `db:"notification_params"`
 }
 
+type SmthToTag struct {
+	SmthID int32 `db:"smth_id"`
+	TagID  int32 `db:"tag_id"`
+	UserID int32 `db:"user_id"`
+}
+
+type Tag struct {
+	ID        int32              `db:"id"`
+	CreatedAt pgtype.Timestamptz `db:"created_at"`
+	Name      string             `db:"name"`
+	UserID    int32              `db:"user_id"`
+}
+
 type TgImage struct {
 	ID       int32  `db:"id"`
 	Filename string `db:"filename"`

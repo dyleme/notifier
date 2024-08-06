@@ -16,6 +16,7 @@ type BasicTask struct {
 	Description        string
 	Start              time.Time
 	NotificationParams *NotificationParams
+	Tags               []Tag
 }
 
 func (bt BasicTask) newEvent() (Event, error) { //nolint:unparam //need for interface impolementation
@@ -31,6 +32,7 @@ func (bt BasicTask) newEvent() (Event, error) { //nolint:unparam //need for inte
 		NextSendTime:       bt.Start,
 		FirstSendTime:      bt.Start,
 		Done:               false,
+		Tags:               bt.Tags,
 	}, nil
 }
 

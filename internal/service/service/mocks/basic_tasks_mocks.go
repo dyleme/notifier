@@ -86,7 +86,7 @@ func (mr *MockBasicTaskRepositoryMockRecorder) Get(arg0, arg1 any) *gomock.Call 
 }
 
 // List mocks base method.
-func (m *MockBasicTaskRepository) List(arg0 context.Context, arg1 int, arg2 service.ListParams) ([]domains.BasicTask, error) {
+func (m *MockBasicTaskRepository) List(arg0 context.Context, arg1 int, arg2 service.ListFilterParams) ([]domains.BasicTask, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2)
 	ret0, _ := ret[0].([]domains.BasicTask)
@@ -101,12 +101,11 @@ func (mr *MockBasicTaskRepositoryMockRecorder) List(arg0, arg1, arg2 any) *gomoc
 }
 
 // Update mocks base method.
-func (m *MockBasicTaskRepository) Update(arg0 context.Context, arg1 domains.BasicTask) (domains.BasicTask, error) {
+func (m *MockBasicTaskRepository) Update(arg0 context.Context, arg1 domains.BasicTask) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Update", arg0, arg1)
-	ret0, _ := ret[0].(domains.BasicTask)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // Update indicates an expected call of Update.

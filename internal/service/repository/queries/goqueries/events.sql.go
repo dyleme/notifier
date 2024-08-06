@@ -234,26 +234,41 @@ func (q *Queries) ListNotSendedEvents(ctx context.Context, db DBTX, till pgtype.
 }
 
 const listUserEvents = `-- name: ListUserEvents :many
-SELECT id, created_at, user_id, text, description, task_id, task_type, next_send_time, done, notification_params, first_send_time, last_sended_time FROM events
-WHERE user_id = $1
+SELECT DISTINCT e.id, e.created_at, e.user_id, e.text, e.description, e.task_id, e.task_type, e.next_send_time, e.done, e.notification_params, e.first_send_time, e.last_sended_time 
+FROM events as e
+LEFT JOIN smth_to_tags as s2t
+  ON e.id = s2t.smth_id
+LEFT JOIN tags as t
+  ON s2t.tag_id = t.id
+WHERE e.user_id = $1
   AND next_send_time BETWEEN $2 AND $3
+  AND (
+    t.id = ANY ($4::int[]) 
+    OR array_length($4::int[], 1) is null
+  )
 ORDER BY next_send_time DESC
-LIMIT $5 OFFSET $4
+LIMIT $6 OFFSET $5
 `
 
 type ListUserEventsParams struct {
 	UserID   int32              `db:"user_id"`
 	FromTime pgtype.Timestamptz `db:"from_time"`
 	ToTime   pgtype.Timestamptz `db:"to_time"`
+	TagIds   []int32            `db:"tag_ids"`
 	Off      int32              `db:"off"`
 	Lim      int32              `db:"lim"`
 }
 
-func (q *Queries) ListUserEvents(ctx context.Context, db DBTX, arg ListUserEventsParams) ([]Event, error) {
+type ListUserEventsRow struct {
+	Event Event `db:"event"`
+}
+
+func (q *Queries) ListUserEvents(ctx context.Context, db DBTX, arg ListUserEventsParams) ([]ListUserEventsRow, error) {
 	rows, err := db.Query(ctx, listUserEvents,
 		arg.UserID,
 		arg.FromTime,
 		arg.ToTime,
+		arg.TagIds,
 		arg.Off,
 		arg.Lim,
 	)
@@ -261,22 +276,22 @@ func (q *Queries) ListUserEvents(ctx context.Context, db DBTX, arg ListUserEvent
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Event
+	var items []ListUserEventsRow
 	for rows.Next() {
-		var i Event
+		var i ListUserEventsRow
 		if err := rows.Scan(
-			&i.ID,
-			&i.CreatedAt,
-			&i.UserID,
-			&i.Text,
-			&i.Description,
-			&i.TaskID,
-			&i.TaskType,
-			&i.NextSendTime,
-			&i.Done,
-			&i.NotificationParams,
-			&i.FirstSendTime,
-			&i.LastSendedTime,
+			&i.Event.ID,
+			&i.Event.CreatedAt,
+			&i.Event.UserID,
+			&i.Event.Text,
+			&i.Event.Description,
+			&i.Event.TaskID,
+			&i.Event.TaskType,
+			&i.Event.NextSendTime,
+			&i.Event.Done,
+			&i.Event.NotificationParams,
+			&i.Event.FirstSendTime,
+			&i.Event.LastSendedTime,
 		); err != nil {
 			return nil, err
 		}

@@ -12,6 +12,7 @@ import (
 	"github.com/go-telegram/bot/models"
 	inKbr "github.com/go-telegram/ui/keyboard/inline"
 
+	"github.com/Dyleme/Notifier/internal/service/service"
 	"github.com/Dyleme/Notifier/pkg/log"
 	"github.com/Dyleme/Notifier/pkg/utils/timeborders"
 )
@@ -45,7 +46,11 @@ func (le *ListEvents) listInline(ctx context.Context, b *bot.Bot, mes *models.Me
 		return fmt.Errorf("user from ctx: %w", err)
 	}
 
-	events, err := le.th.serv.ListEvents(ctx, user.ID, timeborders.NewInfiniteUpper(time.Now()), defaultListParams)
+	events, err := le.th.serv.ListEvents(ctx, user.ID, service.ListEventsFilterParams{
+		TimeBorders: timeborders.NewInfiniteUpper(time.Now()),
+		ListParams:  defaultListParams,
+		Tags:        []int{},
+	})
 	if err != nil {
 		return fmt.Errorf("list events: %w", err)
 	}

@@ -31,9 +31,18 @@ ORDER BY next_send_time DESC
 LIMIT 1;
   
 -- name: ListUserEvents :many
-SELECT * FROM events
-WHERE user_id = @user_id
+SELECT DISTINCT sqlc.embed(e) 
+FROM events as e
+LEFT JOIN smth_to_tags as s2t
+  ON e.id = s2t.smth_id
+LEFT JOIN tags as t
+  ON s2t.tag_id = t.id
+WHERE e.user_id = @user_id
   AND next_send_time BETWEEN @from_time AND @to_time
+  AND (
+    t.id = ANY (@tag_ids::int[]) 
+    OR array_length(@tag_ids::int[], 1) is null
+  )
 ORDER BY next_send_time DESC
 LIMIT @lim OFFSET @off;
 
