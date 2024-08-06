@@ -66,6 +66,7 @@ func (t TaskHandler) CreateBasicTask(w http.ResponseWriter, r *http.Request) {
 		Start:              body.SendTime,
 		NotificationParams: notifParams,
 		Tags:               mapDomainTags(body.Tags, userID),
+		Notify:             body.Notify,
 	}
 
 	createdTask, err := t.serv.CreateBasicTask(r.Context(), basicTask)
@@ -131,6 +132,7 @@ func (t TaskHandler) UpdateBasicTask(w http.ResponseWriter, r *http.Request, tas
 		Start:              body.SendTime,
 		NotificationParams: notifParams,
 		Tags:               mapDomainTags(body.Tags, userID),
+		Notify:             body.Notify,
 	}, userID)
 	if err != nil {
 		responses.KnownError(w, err)
@@ -151,5 +153,6 @@ func mapAPIBasicTask(basicTask domains.BasicTask) api.BasicTask {
 		SendTime:           basicTask.Start,
 		Text:               basicTask.Text,
 		Tags:               mapAPITags(basicTask.Tags),
+		Notify:             basicTask.Notify,
 	}
 }

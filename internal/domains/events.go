@@ -45,6 +45,7 @@ type Event struct {
 	LastSendedTime     time.Time
 	NextSendTime       time.Time
 	FirstSendTime      time.Time
+	Notify             bool
 	Done               bool
 	NotificationParams NotificationParams
 	Tags               []Tag

@@ -40,6 +40,7 @@ func (er *BasicTaskRepository) dtoWithTags(bt goqueries.BasicTask, dbTags []goqu
 		Start:              pgxconv.TimeWithZone(bt.Start),
 		NotificationParams: bt.NotificationParams,
 		Tags:               utils.DtoSlice(dbTags, dtoTag),
+		Notify:             bt.Notify,
 	}
 
 	return basicTask

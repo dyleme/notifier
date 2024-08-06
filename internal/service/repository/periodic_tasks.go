@@ -43,6 +43,7 @@ func (p *PeriodicTaskRepository) dtoWithTags(pt goqueries.PeriodicTask, tags []g
 		BiggestPeriod:      time.Duration(pt.BiggestPeriod) * time.Minute,
 		NotificationParams: pt.NotificationParams,
 		Tags:               utils.DtoSlice(tags, dtoTag),
+		Notify:             pt.Notify,
 	}
 
 	return task

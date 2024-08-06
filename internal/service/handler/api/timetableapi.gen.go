@@ -28,9 +28,12 @@ type BasicTask struct {
 	Description        *string             `json:"description,omitempty"`
 	Id                 int                 `json:"id"`
 	NotificationParams *NotificationParams `json:"notificationParams,omitempty"`
-	SendTime           time.Time           `json:"sendTime"`
-	Tags               []Tag               `json:"tags"`
-	Text               string              `json:"text"`
+
+	// Notify Shoud this task be notified
+	Notify   bool      `json:"notify"`
+	SendTime time.Time `json:"sendTime"`
+	Tags     []Tag     `json:"tags"`
+	Text     string    `json:"text"`
 }
 
 // Event defines model for Event.
@@ -41,10 +44,13 @@ type Event struct {
 	Id                 int                `json:"id"`
 	NextSendTime       time.Time          `json:"nextSendTime"`
 	NotificationParams NotificationParams `json:"notificationParams"`
-	Tags               []Tag              `json:"tags"`
-	TaskID             int                `json:"taskID"`
-	TaskType           TaskType           `json:"taskType"`
-	Text               string             `json:"text"`
+
+	// Notify Shoud this task be notified
+	Notify   bool     `json:"notify"`
+	Tags     []Tag    `json:"tags"`
+	TaskID   int      `json:"taskID"`
+	TaskType TaskType `json:"taskType"`
+	Text     string   `json:"text"`
 }
 
 // NotificationChannel defines model for NotificationChannel.
@@ -67,6 +73,9 @@ type PeriodicTask struct {
 	Description        *string             `json:"description,omitempty"`
 	Id                 int                 `json:"id"`
 	NotificationParams *NotificationParams `json:"notificationParams,omitempty"`
+
+	// Notify Shoud this task be notified
+	Notify bool `json:"notify"`
 
 	// SmallestPeriod minimum amount of days between events
 	SmallestPeriod int `json:"smallestPeriod"`
@@ -110,9 +119,12 @@ type CreateBasicTaskJSONBody struct {
 	Description        string              `json:"description"`
 	Done               *bool               `json:"done,omitempty"`
 	NotificationParams *NotificationParams `json:"notificationParams,omitempty"`
-	SendTime           time.Time           `json:"sendTime"`
-	Tags               []Tag               `json:"tags"`
-	Text               string              `json:"text"`
+
+	// Notify Shoud this task be notified
+	Notify   bool      `json:"notify"`
+	SendTime time.Time `json:"sendTime"`
+	Tags     []Tag     `json:"tags"`
+	Text     string    `json:"text"`
 }
 
 // UpdateBasicTaskJSONBody defines parameters for UpdateBasicTask.
@@ -120,9 +132,12 @@ type UpdateBasicTaskJSONBody struct {
 	Description        string              `json:"description"`
 	Done               *bool               `json:"done,omitempty"`
 	NotificationParams *NotificationParams `json:"notificationParams,omitempty"`
-	SendTime           time.Time           `json:"sendTime"`
-	Tags               []Tag               `json:"tags"`
-	Text               string              `json:"text"`
+
+	// Notify Shoud this task be notified
+	Notify   bool      `json:"notify"`
+	SendTime time.Time `json:"sendTime"`
+	Tags     []Tag     `json:"tags"`
+	Text     string    `json:"text"`
 }
 
 // ListEventsParams defines parameters for ListEvents.
@@ -166,6 +181,9 @@ type CreatePeriodicTaskJSONBody struct {
 	Description        *string             `json:"description,omitempty"`
 	NotificationParams *NotificationParams `json:"notificationParams,omitempty"`
 
+	// Notify Shoud this task be notified
+	Notify bool `json:"notify"`
+
 	// SmallestPeriod minimum amount of days between events
 	SmallestPeriod int `json:"smallestPeriod"`
 
@@ -181,6 +199,9 @@ type UpdatePeriodicTaskJSONBody struct {
 	BiggestPeriod      int                 `json:"biggestPeriod"`
 	Description        *string             `json:"description,omitempty"`
 	NotificationParams *NotificationParams `json:"notificationParams,omitempty"`
+
+	// Notify Shoud this task be notified
+	Notify bool `json:"notify"`
 
 	// SmallestPeriod minimum amount of days between events
 	SmallestPeriod int `json:"smallestPeriod"`

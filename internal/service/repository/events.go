@@ -56,7 +56,7 @@ func (*EventsRepository) domainTaskType(taskType goqueries.TaskType) (domains.Ta
 	}
 }
 
-func (er *EventsRepository) dtoBase(dbEv goqueries.Event) (domains.Event, error) {
+func (er *EventsRepository) dto(dbEv goqueries.Event) (domains.Event, error) {
 	taskType, err := er.domainTaskType(dbEv.TaskType)
 	if err != nil {
 		return domains.Event{}, fmt.Errorf("domain task type: %w", err)
@@ -75,6 +75,7 @@ func (er *EventsRepository) dtoBase(dbEv goqueries.Event) (domains.Event, error)
 		FirstSendTime:      pgxconv.TimeWithZone(dbEv.FirstSendTime),
 		Done:               dbEv.Done,
 		Tags:               nil,
+		Notify:             dbEv.Notify,
 	}
 
 	return event, nil
@@ -99,6 +100,7 @@ func (er *EventsRepository) dtoWithTags(dbEv goqueries.Event, dbTags []goqueries
 		FirstSendTime:      pgxconv.TimeWithZone(dbEv.FirstSendTime),
 		Done:               dbEv.Done,
 		Tags:               utils.DtoSlice(dbTags, dtoTag),
+		Notify:             dbEv.Notify,
 	}
 
 	return event, nil
@@ -271,7 +273,7 @@ func (er *EventsRepository) ListNotSended(ctx context.Context, till time.Time) (
 		return nil, fmt.Errorf("list not sended notifiations: %w", serverrors.NewRepositoryError(err))
 	}
 
-	domainEvents, err := utils.DtoErrorSlice(events, er.dtoBase)
+	domainEvents, err := utils.DtoErrorSlice(events, er.dto)
 	if err != nil {
 		return nil, fmt.Errorf("list not sended notifiations: %w", serverrors.NewRepositoryError(err))
 	}
@@ -291,5 +293,5 @@ func (er *EventsRepository) GetNearest(ctx context.Context) (domains.Event, erro
 		return domains.Event{}, fmt.Errorf("list not sended notifiations: %w", serverrors.NewRepositoryError(err))
 	}
 
-	return er.dtoBase(event)
+	return er.dto(event)
 }

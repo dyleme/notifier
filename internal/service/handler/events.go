@@ -67,6 +67,7 @@ func mapAPIEvent(event domains.Event) (api.Event, error) {
 		TaskType:           apiTaskType,
 		Text:               event.Text,
 		Tags:               mapAPITags(event.Tags),
+		Notify:             event.Notify,
 	}, nil
 }
 

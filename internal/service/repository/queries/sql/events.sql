@@ -63,10 +63,12 @@ RETURNING *;
 -- name: ListNotSendedEvents :many
 SELECT * FROM events
 WHERE next_send_time <= @till
-  AND done = false;
+  AND done = false
+  AND notify = true;
 
 -- name: GetNearestEvent :one
 SELECT * FROM events
 WHERE done = false
+  AND notify = true 
 ORDER BY next_send_time ASC
 LIMIT 1;

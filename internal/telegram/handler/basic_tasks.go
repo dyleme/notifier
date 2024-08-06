@@ -465,6 +465,7 @@ func (bt *BasicTask) UpdateInline(ctx context.Context, b *bot.Bot, msg *models.M
 		Start:              t,
 		NotificationParams: nil,
 		Tags:               nil,
+		Notify:             true,
 	}, user.ID)
 	if err != nil {
 		return fmt.Errorf(op, err)

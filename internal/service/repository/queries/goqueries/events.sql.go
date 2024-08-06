@@ -31,7 +31,7 @@ INSERT INTO events (
     $6,
     $5,
     TIMESTAMP '1970-01-01 00:00:00'
-) RETURNING id, created_at, user_id, text, description, task_id, task_type, next_send_time, done, notification_params, first_send_time, last_sended_time
+) RETURNING id, created_at, user_id, text, description, task_id, task_type, next_send_time, done, notification_params, first_send_time, last_sended_time, notify
 `
 
 type AddEventParams struct {
@@ -66,6 +66,7 @@ func (q *Queries) AddEvent(ctx context.Context, db DBTX, arg AddEventParams) (Ev
 		&i.NotificationParams,
 		&i.FirstSendTime,
 		&i.LastSendedTime,
+		&i.Notify,
 	)
 	return i, err
 }
@@ -73,7 +74,7 @@ func (q *Queries) AddEvent(ctx context.Context, db DBTX, arg AddEventParams) (Ev
 const deleteEvent = `-- name: DeleteEvent :many
 DELETE FROM events
 WHERE id = $1
-RETURNING id, created_at, user_id, text, description, task_id, task_type, next_send_time, done, notification_params, first_send_time, last_sended_time
+RETURNING id, created_at, user_id, text, description, task_id, task_type, next_send_time, done, notification_params, first_send_time, last_sended_time, notify
 `
 
 func (q *Queries) DeleteEvent(ctx context.Context, db DBTX, id int32) ([]Event, error) {
@@ -98,6 +99,7 @@ func (q *Queries) DeleteEvent(ctx context.Context, db DBTX, id int32) ([]Event, 
 			&i.NotificationParams,
 			&i.FirstSendTime,
 			&i.LastSendedTime,
+			&i.Notify,
 		); err != nil {
 			return nil, err
 		}
@@ -110,7 +112,7 @@ func (q *Queries) DeleteEvent(ctx context.Context, db DBTX, id int32) ([]Event, 
 }
 
 const getEvent = `-- name: GetEvent :one
-SELECT id, created_at, user_id, text, description, task_id, task_type, next_send_time, done, notification_params, first_send_time, last_sended_time FROM events
+SELECT id, created_at, user_id, text, description, task_id, task_type, next_send_time, done, notification_params, first_send_time, last_sended_time, notify FROM events
 WHERE id = $1
 `
 
@@ -130,12 +132,13 @@ func (q *Queries) GetEvent(ctx context.Context, db DBTX, id int32) (Event, error
 		&i.NotificationParams,
 		&i.FirstSendTime,
 		&i.LastSendedTime,
+		&i.Notify,
 	)
 	return i, err
 }
 
 const getLatestEvent = `-- name: GetLatestEvent :one
-SELECT id, created_at, user_id, text, description, task_id, task_type, next_send_time, done, notification_params, first_send_time, last_sended_time FROM events
+SELECT id, created_at, user_id, text, description, task_id, task_type, next_send_time, done, notification_params, first_send_time, last_sended_time, notify FROM events
 WHERE task_id = $1
   AND task_type = $2
 ORDER BY next_send_time DESC
@@ -163,13 +166,15 @@ func (q *Queries) GetLatestEvent(ctx context.Context, db DBTX, arg GetLatestEven
 		&i.NotificationParams,
 		&i.FirstSendTime,
 		&i.LastSendedTime,
+		&i.Notify,
 	)
 	return i, err
 }
 
 const getNearestEvent = `-- name: GetNearestEvent :one
-SELECT id, created_at, user_id, text, description, task_id, task_type, next_send_time, done, notification_params, first_send_time, last_sended_time FROM events
+SELECT id, created_at, user_id, text, description, task_id, task_type, next_send_time, done, notification_params, first_send_time, last_sended_time, notify FROM events
 WHERE done = false
+  AND notify = true 
 ORDER BY next_send_time ASC
 LIMIT 1
 `
@@ -190,14 +195,16 @@ func (q *Queries) GetNearestEvent(ctx context.Context, db DBTX) (Event, error) {
 		&i.NotificationParams,
 		&i.FirstSendTime,
 		&i.LastSendedTime,
+		&i.Notify,
 	)
 	return i, err
 }
 
 const listNotSendedEvents = `-- name: ListNotSendedEvents :many
-SELECT id, created_at, user_id, text, description, task_id, task_type, next_send_time, done, notification_params, first_send_time, last_sended_time FROM events
+SELECT id, created_at, user_id, text, description, task_id, task_type, next_send_time, done, notification_params, first_send_time, last_sended_time, notify FROM events
 WHERE next_send_time <= $1
   AND done = false
+  AND notify = true
 `
 
 func (q *Queries) ListNotSendedEvents(ctx context.Context, db DBTX, till pgtype.Timestamptz) ([]Event, error) {
@@ -222,6 +229,7 @@ func (q *Queries) ListNotSendedEvents(ctx context.Context, db DBTX, till pgtype.
 			&i.NotificationParams,
 			&i.FirstSendTime,
 			&i.LastSendedTime,
+			&i.Notify,
 		); err != nil {
 			return nil, err
 		}
@@ -234,7 +242,7 @@ func (q *Queries) ListNotSendedEvents(ctx context.Context, db DBTX, till pgtype.
 }
 
 const listUserEvents = `-- name: ListUserEvents :many
-SELECT DISTINCT e.id, e.created_at, e.user_id, e.text, e.description, e.task_id, e.task_type, e.next_send_time, e.done, e.notification_params, e.first_send_time, e.last_sended_time 
+SELECT DISTINCT e.id, e.created_at, e.user_id, e.text, e.description, e.task_id, e.task_type, e.next_send_time, e.done, e.notification_params, e.first_send_time, e.last_sended_time, e.notify 
 FROM events as e
 LEFT JOIN smth_to_tags as s2t
   ON e.id = s2t.smth_id
@@ -292,6 +300,7 @@ func (q *Queries) ListUserEvents(ctx context.Context, db DBTX, arg ListUserEvent
 			&i.Event.NotificationParams,
 			&i.Event.FirstSendTime,
 			&i.Event.LastSendedTime,
+			&i.Event.Notify,
 		); err != nil {
 			return nil, err
 		}
@@ -310,7 +319,7 @@ SET text = $1,
     first_send_time = $3,
     done = $4
 WHERE id = $5
-RETURNING id, created_at, user_id, text, description, task_id, task_type, next_send_time, done, notification_params, first_send_time, last_sended_time
+RETURNING id, created_at, user_id, text, description, task_id, task_type, next_send_time, done, notification_params, first_send_time, last_sended_time, notify
 `
 
 type UpdateEventParams struct {
@@ -343,6 +352,7 @@ func (q *Queries) UpdateEvent(ctx context.Context, db DBTX, arg UpdateEventParam
 		&i.NotificationParams,
 		&i.FirstSendTime,
 		&i.LastSendedTime,
+		&i.Notify,
 	)
 	return i, err
 }

@@ -26,7 +26,7 @@ INSERT INTO basic_tasks (
   $4,
   $5
 )
-RETURNING id, created_at, text, description, user_id, start, notification_params
+RETURNING id, created_at, text, description, user_id, start, notification_params, notify
 `
 
 type AddBasicTaskParams struct {
@@ -54,6 +54,7 @@ func (q *Queries) AddBasicTask(ctx context.Context, db DBTX, arg AddBasicTaskPar
 		&i.UserID,
 		&i.Start,
 		&i.NotificationParams,
+		&i.Notify,
 	)
 	return i, err
 }
@@ -88,7 +89,7 @@ const deleteBasicTask = `-- name: DeleteBasicTask :many
 DELETE
 FROM basic_tasks
 WHERE id = $1
-RETURNING id, created_at, text, description, user_id, start, notification_params
+RETURNING id, created_at, text, description, user_id, start, notification_params, notify
 `
 
 func (q *Queries) DeleteBasicTask(ctx context.Context, db DBTX, id int32) ([]BasicTask, error) {
@@ -108,6 +109,7 @@ func (q *Queries) DeleteBasicTask(ctx context.Context, db DBTX, id int32) ([]Bas
 			&i.UserID,
 			&i.Start,
 			&i.NotificationParams,
+			&i.Notify,
 		); err != nil {
 			return nil, err
 		}
@@ -120,7 +122,7 @@ func (q *Queries) DeleteBasicTask(ctx context.Context, db DBTX, id int32) ([]Bas
 }
 
 const getBasicTask = `-- name: GetBasicTask :one
-SELECT id, created_at, text, description, user_id, start, notification_params
+SELECT id, created_at, text, description, user_id, start, notification_params, notify
 FROM basic_tasks
 WHERE id = $1
 `
@@ -136,12 +138,13 @@ func (q *Queries) GetBasicTask(ctx context.Context, db DBTX, id int32) (BasicTas
 		&i.UserID,
 		&i.Start,
 		&i.NotificationParams,
+		&i.Notify,
 	)
 	return i, err
 }
 
 const listBasicTasks = `-- name: ListBasicTasks :many
-SELECT bt.id, bt.created_at, bt.text, bt.description, bt.user_id, bt.start, bt.notification_params
+SELECT bt.id, bt.created_at, bt.text, bt.description, bt.user_id, bt.start, bt.notification_params, bt.notify
 FROM basic_tasks as bt
 LEFT JOIN smth_to_tags as s2t
   ON bt.id = s2t.smth_id
@@ -189,6 +192,7 @@ func (q *Queries) ListBasicTasks(ctx context.Context, db DBTX, arg ListBasicTask
 			&i.BasicTask.UserID,
 			&i.BasicTask.Start,
 			&i.BasicTask.NotificationParams,
+			&i.BasicTask.Notify,
 		); err != nil {
 			return nil, err
 		}

@@ -78,6 +78,7 @@ func (t TaskHandler) CreatePeriodicTask(w http.ResponseWriter, r *http.Request) 
 		BiggestPeriod:      24 * time.Hour * time.Duration(body.BiggestPeriod),
 		NotificationParams: notifParams,
 		Tags:               mapDomainTags(body.Tags, userID),
+		Notify:             body.Notify,
 	}
 
 	createdTask, err := t.serv.CreatePeriodicTask(r.Context(), basicTask, userID)
@@ -151,6 +152,7 @@ func (t TaskHandler) UpdatePeriodicTask(w http.ResponseWriter, r *http.Request, 
 		BiggestPeriod:      time.Duration(body.BiggestPeriod) * 24 * time.Hour,
 		NotificationParams: notifParams,
 		Tags:               mapDomainTags(body.Tags, userID),
+		Notify:             body.Notify,
 	}, userID)
 	if err != nil {
 		responses.KnownError(w, err)
@@ -163,13 +165,14 @@ func (t TaskHandler) UpdatePeriodicTask(w http.ResponseWriter, r *http.Request, 
 
 func mapAPIPeriodicTask(pt domains.PeriodicTask) api.PeriodicTask {
 	return api.PeriodicTask{
-		Id:                 pt.ID,
-		Description:        &pt.Description,
-		NotificationParams: mapPtrAPINotificationParams(pt.NotificationParams),
 		BiggestPeriod:      int(pt.BiggestPeriod / timeDay),
+		Description:        &pt.Description,
+		Id:                 pt.ID,
+		NotificationParams: mapPtrAPINotificationParams(pt.NotificationParams),
+		Notify:             pt.Notify,
 		SmallestPeriod:     int(pt.SmallestPeriod / timeDay),
 		Start:              pt.Start.String(),
-		Text:               pt.Text,
 		Tags:               mapAPITags(pt.Tags),
+		Text:               pt.Text,
 	}
 }

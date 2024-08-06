@@ -62,6 +62,7 @@ type BasicTask struct {
 	UserID             int32                       `db:"user_id"`
 	Start              pgtype.Timestamptz          `db:"start"`
 	NotificationParams *domains.NotificationParams `db:"notification_params"`
+	Notify             bool                        `db:"notify"`
 }
 
 type BindingAttempt struct {
@@ -92,6 +93,7 @@ type Event struct {
 	NotificationParams domains.NotificationParams `db:"notification_params"`
 	FirstSendTime      pgtype.Timestamptz         `db:"first_send_time"`
 	LastSendedTime     pgtype.Timestamptz         `db:"last_sended_time"`
+	Notify             bool                       `db:"notify"`
 }
 
 type KeyValue struct {
@@ -109,6 +111,7 @@ type PeriodicTask struct {
 	SmallestPeriod     int32                       `db:"smallest_period"`
 	BiggestPeriod      int32                       `db:"biggest_period"`
 	NotificationParams *domains.NotificationParams `db:"notification_params"`
+	Notify             bool                        `db:"notify"`
 }
 
 type SmthToTag struct {

@@ -28,7 +28,7 @@ VALUES ($1,
         $5,
         $6,
         $7)
-RETURNING id, created_at, text, description, user_id, start, smallest_period, biggest_period, notification_params
+RETURNING id, created_at, text, description, user_id, start, smallest_period, biggest_period, notification_params, notify
 `
 
 type AddPeriodicTaskParams struct {
@@ -62,6 +62,7 @@ func (q *Queries) AddPeriodicTask(ctx context.Context, db DBTX, arg AddPeriodicT
 		&i.SmallestPeriod,
 		&i.BiggestPeriod,
 		&i.NotificationParams,
+		&i.Notify,
 	)
 	return i, err
 }
@@ -96,7 +97,7 @@ const deletePeriodicTask = `-- name: DeletePeriodicTask :many
 DELETE
 FROM periodic_tasks
 WHERE id = $1
-RETURNING id, created_at, text, description, user_id, start, smallest_period, biggest_period, notification_params
+RETURNING id, created_at, text, description, user_id, start, smallest_period, biggest_period, notification_params, notify
 `
 
 func (q *Queries) DeletePeriodicTask(ctx context.Context, db DBTX, id int32) ([]PeriodicTask, error) {
@@ -118,6 +119,7 @@ func (q *Queries) DeletePeriodicTask(ctx context.Context, db DBTX, id int32) ([]
 			&i.SmallestPeriod,
 			&i.BiggestPeriod,
 			&i.NotificationParams,
+			&i.Notify,
 		); err != nil {
 			return nil, err
 		}
@@ -130,7 +132,7 @@ func (q *Queries) DeletePeriodicTask(ctx context.Context, db DBTX, id int32) ([]
 }
 
 const getPeriodicTask = `-- name: GetPeriodicTask :one
-SELECT id, created_at, text, description, user_id, start, smallest_period, biggest_period, notification_params
+SELECT id, created_at, text, description, user_id, start, smallest_period, biggest_period, notification_params, notify
 FROM periodic_tasks
 WHERE id = $1
 `
@@ -148,12 +150,13 @@ func (q *Queries) GetPeriodicTask(ctx context.Context, db DBTX, id int32) (Perio
 		&i.SmallestPeriod,
 		&i.BiggestPeriod,
 		&i.NotificationParams,
+		&i.Notify,
 	)
 	return i, err
 }
 
 const listPeriodicTasks = `-- name: ListPeriodicTasks :many
-SELECT pt.id, pt.created_at, pt.text, pt.description, pt.user_id, pt.start, pt.smallest_period, pt.biggest_period, pt.notification_params
+SELECT pt.id, pt.created_at, pt.text, pt.description, pt.user_id, pt.start, pt.smallest_period, pt.biggest_period, pt.notification_params, pt.notify
 FROM periodic_tasks as pt
 LEFT JOIN smth_to_tags as s2t
   ON pt.id = s2t.smth_id
@@ -203,6 +206,7 @@ func (q *Queries) ListPeriodicTasks(ctx context.Context, db DBTX, arg ListPeriod
 			&i.PeriodicTask.SmallestPeriod,
 			&i.PeriodicTask.BiggestPeriod,
 			&i.PeriodicTask.NotificationParams,
+			&i.PeriodicTask.Notify,
 		); err != nil {
 			return nil, err
 		}
@@ -224,7 +228,7 @@ SET start               = $1,
     biggest_period      = $6
 WHERE id = $7
   AND user_id = $8
-RETURNING id, created_at, text, description, user_id, start, smallest_period, biggest_period, notification_params
+RETURNING id, created_at, text, description, user_id, start, smallest_period, biggest_period, notification_params, notify
 `
 
 type UpdatePeriodicTaskParams struct {
@@ -260,6 +264,7 @@ func (q *Queries) UpdatePeriodicTask(ctx context.Context, db DBTX, arg UpdatePer
 		&i.SmallestPeriod,
 		&i.BiggestPeriod,
 		&i.NotificationParams,
+		&i.Notify,
 	)
 	return i, err
 }

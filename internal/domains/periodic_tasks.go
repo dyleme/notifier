@@ -17,6 +17,7 @@ type PeriodicTask struct {
 	Text               string
 	Description        string
 	UserID             int
+	Notify             bool
 	Start              time.Duration // Event time from beginning of day
 	SmallestPeriod     time.Duration
 	BiggestPeriod      time.Duration
@@ -59,6 +60,7 @@ func (pt PeriodicTask) newEvent() (Event, error) {
 		FirstSendTime:      sendTime,
 		Done:               false,
 		Tags:               pt.Tags,
+		Notify:             pt.Notify,
 	}, nil
 }
 

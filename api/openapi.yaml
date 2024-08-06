@@ -316,6 +316,7 @@ paths:
                 - description
                 - sendTime
                 - tags
+                - notify
               type: object
               properties:
                 done:
@@ -335,6 +336,10 @@ paths:
                   type: array
                   items:
                     $ref: "#/components/schemas/Tag"
+                notify:
+                  type: boolean
+                  description: Shoud this task be notified
+                  example: true
       responses:
         "200":
           description: Successful operation
@@ -398,6 +403,7 @@ paths:
                 - description
                 - sendTime
                 - tags
+                - notify
               type: object
               properties:
                 done:
@@ -417,6 +423,10 @@ paths:
                   type: array
                   items:
                     $ref: "#/components/schemas/Tag"
+                notify:
+                  type: boolean
+                  example: true
+                  description: Shoud this task be notified
       responses:
         "200":
           description: Successful operation
@@ -467,6 +477,7 @@ paths:
                 - smallestPeriod
                 - biggestPeriod
                 - tags
+                - notify
               type: object
               properties:
                 text:
@@ -496,6 +507,10 @@ paths:
                   type: array
                   items:
                     $ref: "#/components/schemas/Tag"
+                notify:
+                  type: boolean
+                  description: Shoud this task be notified
+                  example: true
       responses:
         "200":
           description: Successful operation
@@ -560,6 +575,7 @@ paths:
                 - smallestPeriod
                 - biggestPeriod
                 - tags
+                - notify
               type: object
               properties:
                 text:
@@ -589,6 +605,10 @@ paths:
                   type: array
                   items:
                     $ref: "#/components/schemas/Tag"
+                notify:
+                  type: boolean
+                  description: Shoud this task be notified
+                  example: true
       responses:
         "200":
           description: Successful operation
@@ -798,6 +818,7 @@ components:
         - done
         - notificationParams
         - tags
+        - notify
       type: object
       properties:
         id:
@@ -828,6 +849,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Tag"
+        notify:
+          type: boolean
+          description: Shoud this task be notified
+          example: true
 
     BasicTask:
       required:
@@ -835,6 +860,7 @@ components:
         - text
         - sendTime
         - tags
+        - notify
       type: object
       properties:
         id:
@@ -855,6 +881,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Tag"
+        notify:
+          type: boolean
+          description: Shoud this task be notified
+          example: true
 
     PeriodicTask:
       required:
@@ -864,6 +894,7 @@ components:
         - smallestPeriod
         - biggestPeriod
         - tags
+        - notify
       type: object
       properties:
         id:
@@ -896,6 +927,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Tag"
+        notify:
+          type: boolean
+          description: Shoud this task be notified
+          example: true
 
     TaskType:
       type: string

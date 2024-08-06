@@ -480,6 +480,7 @@ func (pt *PeriodicTask) UpdateInline(ctx context.Context, b *bot.Bot, msg *model
 		BiggestPeriod:      pt.biggestPeriod,
 		Tags:               nil,
 		NotificationParams: nil,
+		Notify:             true,
 	}
 
 	err = pt.th.serv.UpdatePeriodicTask(ctx, params, user.ID)
