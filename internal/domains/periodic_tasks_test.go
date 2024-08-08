@@ -34,18 +34,18 @@ func TestPeriodicTask_newEvent(t *testing.T) {
 			Description:        "description",
 			TaskType:           PeriodicTaskType,
 			TaskID:             1,
-			NotificationParams: *periodicTask.NotificationParams,
+			NotificationParams: periodicTask.NotificationParams,
 			LastSendedTime:     time.Time{},
-			NextSendTime:       time.Time{},
-			FirstSendTime:      time.Time{},
+			Time:               time.Time{},
+			FirstTime:          time.Time{},
 			Done:               false,
 		}
 
 		// do not check send time
-		actual.NextSendTime = time.Time{}
-		actual.FirstSendTime = time.Time{}
-		expected.NextSendTime = time.Time{}
-		expected.FirstSendTime = time.Time{}
+		actual.Time = time.Time{}
+		actual.FirstTime = time.Time{}
+		expected.Time = time.Time{}
+		expected.FirstTime = time.Time{}
 		require.Equal(t, expected, actual)
 	})
 
@@ -99,10 +99,10 @@ func TestPeriodicTask_newEvent(t *testing.T) {
 			t.Parallel()
 			for range 10 {
 				actualEvent, err := tc.pt.newEvent()
-				actual := actualEvent.NextSendTime
+				actual := actualEvent.Time
 
-				require.Equalf(t, actualEvent.NextSendTime, actualEvent.FirstSendTime,
-					"next send time[%v] not equal first send time[%v]", actualEvent.NextSendTime, actualEvent.FirstSendTime)
+				require.Equalf(t, actualEvent.Time, actualEvent.FirstTime,
+					"next send time[%v] not equal first send time[%v]", actualEvent.Time, actualEvent.FirstTime)
 				require.Equal(t, tc.isError, err != nil, "check error")
 				if tc.isError != (err != nil) {
 					t.Errorf("[waiting err = %v, actualError=%v]", tc.isError, err)

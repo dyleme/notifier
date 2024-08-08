@@ -54,14 +54,14 @@ func mapAPIEvent(event domains.Event) (api.Event, error) {
 	if err != nil {
 		return api.Event{}, err
 	}
-	apiNotificationParams := mapAPINotificationParams(event.NotificationParams)
+	apiNotificationParams := mapPtrAPINotificationParams(event.NotificationParams)
 
 	return api.Event{
 		Description:        &event.Description,
 		Done:               event.Done,
-		FirstSendTime:      event.FirstSendTime,
+		FirstSendTime:      event.FirstTime,
 		Id:                 event.ID,
-		NextSendTime:       event.NextSendTime,
+		NextSendTime:       event.Time,
 		NotificationParams: apiNotificationParams,
 		TaskID:             event.TaskID,
 		TaskType:           apiTaskType,

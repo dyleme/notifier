@@ -7,6 +7,7 @@ package goqueries
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -43,7 +44,7 @@ VALUES (
     $1,
     $2
 )
-RETURNING id, password_hash, tg_id, timezone_offset, timezone_dst, tg_nickname
+RETURNING id, password_hash, tg_id, timezone_offset, timezone_dst, tg_nickname, daily_notification_time
 `
 
 type AddUserParams struct {
@@ -61,12 +62,13 @@ func (q *Queries) AddUser(ctx context.Context, db DBTX, arg AddUserParams) (User
 		&i.TimezoneOffset,
 		&i.TimezoneDst,
 		&i.TgNickname,
+		&i.DailyNotificationTime,
 	)
 	return i, err
 }
 
 const findUser = `-- name: FindUser :one
-SELECT id, password_hash, tg_id, timezone_offset, timezone_dst, tg_nickname
+SELECT id, password_hash, tg_id, timezone_offset, timezone_dst, tg_nickname, daily_notification_time
 FROM users
 WHERE tg_nickname = $1
    OR tg_id = $2
@@ -87,6 +89,7 @@ func (q *Queries) FindUser(ctx context.Context, db DBTX, arg FindUserParams) (Us
 		&i.TimezoneOffset,
 		&i.TimezoneDst,
 		&i.TgNickname,
+		&i.DailyNotificationTime,
 	)
 	return i, err
 }
@@ -130,6 +133,67 @@ func (q *Queries) GetLoginParameters(ctx context.Context, db DBTX, tgNickname st
 	var i GetLoginParametersRow
 	err := row.Scan(&i.ID, &i.PasswordHash)
 	return i, err
+}
+
+const getNearestDailyNotificationTime = `-- name: GetNearestDailyNotificationTime :one
+(
+    SELECT daily_notification_time
+    FROM users as a
+    WHERE a.daily_notification_time > CURRENT_TIME
+    ORDER BY daily_notification_time
+    LIMIT 1
+)
+UNION ALL
+(
+    SELECT daily_notification_time
+    FROM users
+    WHERE daily_notification_time > '00:00:00+00:00'
+    ORDER BY daily_notification_time
+    LIMIT 1
+)
+ORDER BY daily_notification_time DESC
+LIMIT 1
+`
+
+func (q *Queries) GetNearestDailyNotificationTime(ctx context.Context, db DBTX) (time.Time, error) {
+	row := db.QueryRow(ctx, getNearestDailyNotificationTime)
+	var daily_notification_time time.Time
+	err := row.Scan(&daily_notification_time)
+	return daily_notification_time, err
+}
+
+const listUsersToNotfiy = `-- name: ListUsersToNotfiy :many
+SELECT id, password_hash, tg_id, timezone_offset, timezone_dst, tg_nickname, daily_notification_time
+FROM users
+WHERE daily_notification_time = $1
+`
+
+func (q *Queries) ListUsersToNotfiy(ctx context.Context, db DBTX, now time.Time) ([]User, error) {
+	rows, err := db.Query(ctx, listUsersToNotfiy, now)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.PasswordHash,
+			&i.TgID,
+			&i.TimezoneOffset,
+			&i.TimezoneDst,
+			&i.TgNickname,
+			&i.DailyNotificationTime,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const updateBindingAttempt = `-- name: UpdateBindingAttempt :exec

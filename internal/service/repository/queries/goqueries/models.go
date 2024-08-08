@@ -7,6 +7,7 @@ package goqueries
 import (
 	"database/sql/driver"
 	"fmt"
+	"time"
 
 	domains "github.com/Dyleme/Notifier/internal/domains"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -81,19 +82,19 @@ type DefaultUserNotificationParam struct {
 }
 
 type Event struct {
-	ID                 int32                      `db:"id"`
-	CreatedAt          pgtype.Timestamp           `db:"created_at"`
-	UserID             int32                      `db:"user_id"`
-	Text               string                     `db:"text"`
-	Description        pgtype.Text                `db:"description"`
-	TaskID             int32                      `db:"task_id"`
-	TaskType           TaskType                   `db:"task_type"`
-	NextSendTime       pgtype.Timestamptz         `db:"next_send_time"`
-	Done               bool                       `db:"done"`
-	NotificationParams domains.NotificationParams `db:"notification_params"`
-	FirstSendTime      pgtype.Timestamptz         `db:"first_send_time"`
-	LastSendedTime     pgtype.Timestamptz         `db:"last_sended_time"`
-	Notify             bool                       `db:"notify"`
+	ID                 int32                       `db:"id"`
+	CreatedAt          pgtype.Timestamp            `db:"created_at"`
+	UserID             int32                       `db:"user_id"`
+	Text               string                      `db:"text"`
+	Description        pgtype.Text                 `db:"description"`
+	TaskID             int32                       `db:"task_id"`
+	TaskType           TaskType                    `db:"task_type"`
+	Time               pgtype.Timestamptz          `db:"time"`
+	Done               bool                        `db:"done"`
+	NotificationParams *domains.NotificationParams `db:"notification_params"`
+	FirstTime          pgtype.Timestamptz          `db:"first_time"`
+	LastSendedTime     pgtype.Timestamptz          `db:"last_sended_time"`
+	Notify             bool                        `db:"notify"`
 }
 
 type KeyValue struct {
@@ -134,10 +135,11 @@ type TgImage struct {
 }
 
 type User struct {
-	ID             int32       `db:"id"`
-	PasswordHash   pgtype.Text `db:"password_hash"`
-	TgID           int32       `db:"tg_id"`
-	TimezoneOffset int32       `db:"timezone_offset"`
-	TimezoneDst    bool        `db:"timezone_dst"`
-	TgNickname     string      `db:"tg_nickname"`
+	ID                    int32       `db:"id"`
+	PasswordHash          pgtype.Text `db:"password_hash"`
+	TgID                  int32       `db:"tg_id"`
+	TimezoneOffset        int32       `db:"timezone_offset"`
+	TimezoneDst           bool        `db:"timezone_dst"`
+	TgNickname            string      `db:"tg_nickname"`
+	DailyNotificationTime time.Time   `db:"daily_notification_time"`
 }

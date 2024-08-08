@@ -4,18 +4,18 @@ INSERT INTO events (
     text,
     task_id,
     task_type,
-    next_send_time, 
+    time, 
     notification_params,
-    first_send_time,
+    first_time,
     last_sended_time
 ) VALUES (
     @user_id,
     @text,
     @task_id,
     @task_type,
-    @next_send_time,
+    @time,
     @notification_params,
-    @next_send_time,
+    @time,
     TIMESTAMP '1970-01-01 00:00:00'
 ) RETURNING *;
 
@@ -27,7 +27,7 @@ WHERE id = @id;
 SELECT * FROM events
 WHERE task_id = @task_id
   AND task_type = @task_type
-ORDER BY next_send_time DESC
+ORDER BY time DESC
 LIMIT 1;
   
 -- name: ListUserEvents :many
@@ -38,12 +38,12 @@ LEFT JOIN smth_to_tags as s2t
 LEFT JOIN tags as t
   ON s2t.tag_id = t.id
 WHERE e.user_id = @user_id
-  AND next_send_time BETWEEN @from_time AND @to_time
+  AND time BETWEEN @from_time AND @to_time
   AND (
     t.id = ANY (@tag_ids::int[]) 
     OR array_length(@tag_ids::int[], 1) is null
   )
-ORDER BY next_send_time DESC
+ORDER BY time DESC
 LIMIT @lim OFFSET @off;
 
 -- name: DeleteEvent :many
@@ -54,21 +54,34 @@ RETURNING *;
 -- name: UpdateEvent :one
 UPDATE events
 SET text = @text,
-    next_send_time = @next_send_time,
-    first_send_time = @first_send_time,
+    time = @time,
+    first_time = @first_time,
     done = @done
 WHERE id = @id
 RETURNING *;
 
 -- name: ListNotSendedEvents :many
 SELECT * FROM events
-WHERE next_send_time <= @till
+WHERE time <= @till
   AND done = false
   AND notify = true;
 
--- name: GetNearestEvent :one
-SELECT * FROM events
+-- name: GetNearestEventTime :one
+SELECT time FROM events
 WHERE done = false
   AND notify = true 
-ORDER BY next_send_time ASC
+ORDER BY time ASC
 LIMIT 1;
+
+-- name: ListUserDailyEvents :many
+SELECT * FROM events
+WHERE user_id = @user_id
+  AND time + @time_offset  BETWEEN CURRENT_DATE AND CURRENT_DATE + 1
+ORDER BY time ASC;
+
+-- name: ListNotDoneEvents :many
+SELECT * FROM events
+WHERE user_id = @user_id
+  AND done = false
+  AND time < NOW()
+ORDER BY time ASC;

@@ -33,10 +33,10 @@ func TestBasicTask_newEvent(t *testing.T) {
 			Description:        "description",
 			TaskType:           BasicTaskType,
 			TaskID:             1,
-			NotificationParams: *basicTask.NotificationParams,
+			NotificationParams: basicTask.NotificationParams,
 			LastSendedTime:     time.Time{},
-			NextSendTime:       time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
-			FirstSendTime:      time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+			Time:               time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+			FirstTime:          time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
 			Done:               false,
 		}
 

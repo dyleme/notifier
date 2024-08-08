@@ -16,8 +16,15 @@ func CreateEvent(eventCreator EventCreator, defaultParams NotificationParams) (E
 		return Event{}, fmt.Errorf("failed to create event: %w", err)
 	}
 
-	if utils.IsZero(event.NotificationParams) {
-		event.NotificationParams = defaultParams
+	if event.Notify {
+		if utils.IsZero(event.NotificationParams) {
+			event.NotificationParams = &defaultParams
+		}
+	}
+
+	err = event.Validate()
+	if err != nil {
+		return Event{}, err
 	}
 
 	return event, nil

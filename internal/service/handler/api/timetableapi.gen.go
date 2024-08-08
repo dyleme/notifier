@@ -38,12 +38,12 @@ type BasicTask struct {
 
 // Event defines model for Event.
 type Event struct {
-	Description        *string            `json:"description,omitempty"`
-	Done               bool               `json:"done"`
-	FirstSendTime      time.Time          `json:"firstSendTime"`
-	Id                 int                `json:"id"`
-	NextSendTime       time.Time          `json:"nextSendTime"`
-	NotificationParams NotificationParams `json:"notificationParams"`
+	Description        *string             `json:"description,omitempty"`
+	Done               bool                `json:"done"`
+	FirstSendTime      time.Time           `json:"firstSendTime"`
+	Id                 int                 `json:"id"`
+	NextSendTime       time.Time           `json:"nextSendTime"`
+	NotificationParams *NotificationParams `json:"notificationParams,omitempty"`
 
 	// Notify Shoud this task be notified
 	Notify   bool     `json:"notify"`

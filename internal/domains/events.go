@@ -2,6 +2,8 @@ package domains
 
 import (
 	"time"
+
+	"github.com/friendsofgo/errors"
 )
 
 type NotificationParams struct {
@@ -15,7 +17,7 @@ type Params struct {
 	Cmd      string `json:"cmd,omitempty"`
 }
 
-type SendingEvent struct {
+type Notification struct {
 	EventID     int
 	UserID      int
 	Message     string
@@ -24,14 +26,45 @@ type SendingEvent struct {
 	SendTime    time.Time
 }
 
-func NewSendingEvent(ev Event) SendingEvent {
-	return SendingEvent{
+type DailyNotification struct {
+	ToDo    []DailyNotificationEvent
+	NotDone []DailyNotificationEvent
+}
+type DailyNotificationEvent struct {
+	EventID     int
+	UserID      int
+	Message     string
+	Description string
+	Time        time.Time
+}
+
+var ErrNoNotifiedEvent = errors.New("not notified event")
+
+func (ev Event) NewNotification() (Notification, error) {
+	if !ev.Notify {
+		return Notification{}, ErrNoNotifiedEvent
+	}
+	err := ev.Validate()
+	if err != nil {
+		return Notification{}, err
+	}
+	return Notification{
 		EventID:     ev.ID,
 		UserID:      ev.UserID,
 		Message:     ev.Text,
 		Description: ev.Description,
-		Params:      ev.NotificationParams,
-		SendTime:    ev.NextSendTime,
+		Params:      *ev.NotificationParams,
+		SendTime:    ev.Time,
+	}, nil
+}
+
+func (ev Event) NewDailyNotificationEvent() DailyNotificationEvent {
+	return DailyNotificationEvent{
+		EventID:     ev.ID,
+		UserID:      ev.UserID,
+		Message:     ev.Text,
+		Description: ev.Description,
+		Time:        ev.Time,
 	}
 }
 
@@ -43,12 +76,20 @@ type Event struct {
 	TaskType           TaskType
 	TaskID             int
 	LastSendedTime     time.Time
-	NextSendTime       time.Time
-	FirstSendTime      time.Time
+	Time               time.Time
+	FirstTime          time.Time
 	Notify             bool
 	Done               bool
-	NotificationParams NotificationParams
+	NotificationParams *NotificationParams
 	Tags               []Tag
+}
+
+func (ev Event) Validate() error {
+	if ev.Notify && ev.NotificationParams == nil {
+		return ErrNotificaitonParamsRequired
+	}
+
+	return nil
 }
 
 func (ev Event) BelongsTo(userID int) error {
@@ -64,13 +105,7 @@ func (ev Event) Rescheule(now time.Time) Event {
 }
 
 func (ev Event) RescheuleToTime(t time.Time) Event {
-	ev.NextSendTime = t
-
-	return ev
-}
-
-func (ev Event) MarkDone() Event {
-	ev.Done = true
+	ev.Time = t
 
 	return ev
 }

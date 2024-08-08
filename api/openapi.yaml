@@ -816,7 +816,6 @@ components:
         - nextSendTime
         - firstSendTime
         - done
-        - notificationParams
         - tags
         - notify
       type: object

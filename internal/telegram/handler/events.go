@@ -74,7 +74,7 @@ func (le *ListEvents) listInline(ctx context.Context, b *bot.Bot, mes *models.Me
 	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick())
 	for _, event := range events {
 		ev := Event{th: le.th} //nolint:exhaustruct //fill it in ev.HandleBtnTaskChosen
-		text := event.Text + " " + event.NextSendTime.Format(dayTimeFormat)
+		text := event.Text + " " + event.Time.Format(dayTimeFormat)
 		kbr.Row().Button(text, []byte(strconv.Itoa(event.ID)), errorHandling(ev.HandleBtnChosen))
 	}
 	kbr.Row().Button("Cancel", nil, errorHandling(le.th.MainMenuInline))
@@ -119,7 +119,7 @@ func (ev *Event) HandleBtnChosen(ctx context.Context, b *bot.Bot, msg *models.Me
 	ev.id = event.ID
 	ev.text = event.Text
 	ev.isWorkflow = false
-	ev.time = event.NextSendTime
+	ev.time = event.Time
 
 	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick()).
 		Button("Edit", nil, onSelectErrorHandling(ev.EditMenuMsg)).

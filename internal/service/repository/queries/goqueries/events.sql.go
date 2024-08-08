@@ -18,9 +18,9 @@ INSERT INTO events (
     text,
     task_id,
     task_type,
-    next_send_time, 
+    time, 
     notification_params,
-    first_send_time,
+    first_time,
     last_sended_time
 ) VALUES (
     $1,
@@ -31,16 +31,16 @@ INSERT INTO events (
     $6,
     $5,
     TIMESTAMP '1970-01-01 00:00:00'
-) RETURNING id, created_at, user_id, text, description, task_id, task_type, next_send_time, done, notification_params, first_send_time, last_sended_time, notify
+) RETURNING id, created_at, user_id, text, description, task_id, task_type, time, done, notification_params, first_time, last_sended_time, notify
 `
 
 type AddEventParams struct {
-	UserID             int32                      `db:"user_id"`
-	Text               string                     `db:"text"`
-	TaskID             int32                      `db:"task_id"`
-	TaskType           TaskType                   `db:"task_type"`
-	NextSendTime       pgtype.Timestamptz         `db:"next_send_time"`
-	NotificationParams domains.NotificationParams `db:"notification_params"`
+	UserID             int32                       `db:"user_id"`
+	Text               string                      `db:"text"`
+	TaskID             int32                       `db:"task_id"`
+	TaskType           TaskType                    `db:"task_type"`
+	Time               pgtype.Timestamptz          `db:"time"`
+	NotificationParams *domains.NotificationParams `db:"notification_params"`
 }
 
 func (q *Queries) AddEvent(ctx context.Context, db DBTX, arg AddEventParams) (Event, error) {
@@ -49,7 +49,7 @@ func (q *Queries) AddEvent(ctx context.Context, db DBTX, arg AddEventParams) (Ev
 		arg.Text,
 		arg.TaskID,
 		arg.TaskType,
-		arg.NextSendTime,
+		arg.Time,
 		arg.NotificationParams,
 	)
 	var i Event
@@ -61,10 +61,10 @@ func (q *Queries) AddEvent(ctx context.Context, db DBTX, arg AddEventParams) (Ev
 		&i.Description,
 		&i.TaskID,
 		&i.TaskType,
-		&i.NextSendTime,
+		&i.Time,
 		&i.Done,
 		&i.NotificationParams,
-		&i.FirstSendTime,
+		&i.FirstTime,
 		&i.LastSendedTime,
 		&i.Notify,
 	)
@@ -74,7 +74,7 @@ func (q *Queries) AddEvent(ctx context.Context, db DBTX, arg AddEventParams) (Ev
 const deleteEvent = `-- name: DeleteEvent :many
 DELETE FROM events
 WHERE id = $1
-RETURNING id, created_at, user_id, text, description, task_id, task_type, next_send_time, done, notification_params, first_send_time, last_sended_time, notify
+RETURNING id, created_at, user_id, text, description, task_id, task_type, time, done, notification_params, first_time, last_sended_time, notify
 `
 
 func (q *Queries) DeleteEvent(ctx context.Context, db DBTX, id int32) ([]Event, error) {
@@ -94,10 +94,10 @@ func (q *Queries) DeleteEvent(ctx context.Context, db DBTX, id int32) ([]Event, 
 			&i.Description,
 			&i.TaskID,
 			&i.TaskType,
-			&i.NextSendTime,
+			&i.Time,
 			&i.Done,
 			&i.NotificationParams,
-			&i.FirstSendTime,
+			&i.FirstTime,
 			&i.LastSendedTime,
 			&i.Notify,
 		); err != nil {
@@ -112,7 +112,7 @@ func (q *Queries) DeleteEvent(ctx context.Context, db DBTX, id int32) ([]Event, 
 }
 
 const getEvent = `-- name: GetEvent :one
-SELECT id, created_at, user_id, text, description, task_id, task_type, next_send_time, done, notification_params, first_send_time, last_sended_time, notify FROM events
+SELECT id, created_at, user_id, text, description, task_id, task_type, time, done, notification_params, first_time, last_sended_time, notify FROM events
 WHERE id = $1
 `
 
@@ -127,10 +127,10 @@ func (q *Queries) GetEvent(ctx context.Context, db DBTX, id int32) (Event, error
 		&i.Description,
 		&i.TaskID,
 		&i.TaskType,
-		&i.NextSendTime,
+		&i.Time,
 		&i.Done,
 		&i.NotificationParams,
-		&i.FirstSendTime,
+		&i.FirstTime,
 		&i.LastSendedTime,
 		&i.Notify,
 	)
@@ -138,10 +138,10 @@ func (q *Queries) GetEvent(ctx context.Context, db DBTX, id int32) (Event, error
 }
 
 const getLatestEvent = `-- name: GetLatestEvent :one
-SELECT id, created_at, user_id, text, description, task_id, task_type, next_send_time, done, notification_params, first_send_time, last_sended_time, notify FROM events
+SELECT id, created_at, user_id, text, description, task_id, task_type, time, done, notification_params, first_time, last_sended_time, notify FROM events
 WHERE task_id = $1
   AND task_type = $2
-ORDER BY next_send_time DESC
+ORDER BY time DESC
 LIMIT 1
 `
 
@@ -161,48 +161,76 @@ func (q *Queries) GetLatestEvent(ctx context.Context, db DBTX, arg GetLatestEven
 		&i.Description,
 		&i.TaskID,
 		&i.TaskType,
-		&i.NextSendTime,
+		&i.Time,
 		&i.Done,
 		&i.NotificationParams,
-		&i.FirstSendTime,
+		&i.FirstTime,
 		&i.LastSendedTime,
 		&i.Notify,
 	)
 	return i, err
 }
 
-const getNearestEvent = `-- name: GetNearestEvent :one
-SELECT id, created_at, user_id, text, description, task_id, task_type, next_send_time, done, notification_params, first_send_time, last_sended_time, notify FROM events
+const getNearestEventTime = `-- name: GetNearestEventTime :one
+SELECT time FROM events
 WHERE done = false
   AND notify = true 
-ORDER BY next_send_time ASC
+ORDER BY time ASC
 LIMIT 1
 `
 
-func (q *Queries) GetNearestEvent(ctx context.Context, db DBTX) (Event, error) {
-	row := db.QueryRow(ctx, getNearestEvent)
-	var i Event
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.UserID,
-		&i.Text,
-		&i.Description,
-		&i.TaskID,
-		&i.TaskType,
-		&i.NextSendTime,
-		&i.Done,
-		&i.NotificationParams,
-		&i.FirstSendTime,
-		&i.LastSendedTime,
-		&i.Notify,
-	)
-	return i, err
+func (q *Queries) GetNearestEventTime(ctx context.Context, db DBTX) (pgtype.Timestamptz, error) {
+	row := db.QueryRow(ctx, getNearestEventTime)
+	var time pgtype.Timestamptz
+	err := row.Scan(&time)
+	return time, err
+}
+
+const listNotDoneEvents = `-- name: ListNotDoneEvents :many
+SELECT id, created_at, user_id, text, description, task_id, task_type, time, done, notification_params, first_time, last_sended_time, notify FROM events
+WHERE user_id = $1
+  AND done = false
+  AND time < NOW()
+ORDER BY time ASC
+`
+
+func (q *Queries) ListNotDoneEvents(ctx context.Context, db DBTX, userID int32) ([]Event, error) {
+	rows, err := db.Query(ctx, listNotDoneEvents, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Event
+	for rows.Next() {
+		var i Event
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UserID,
+			&i.Text,
+			&i.Description,
+			&i.TaskID,
+			&i.TaskType,
+			&i.Time,
+			&i.Done,
+			&i.NotificationParams,
+			&i.FirstTime,
+			&i.LastSendedTime,
+			&i.Notify,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listNotSendedEvents = `-- name: ListNotSendedEvents :many
-SELECT id, created_at, user_id, text, description, task_id, task_type, next_send_time, done, notification_params, first_send_time, last_sended_time, notify FROM events
-WHERE next_send_time <= $1
+SELECT id, created_at, user_id, text, description, task_id, task_type, time, done, notification_params, first_time, last_sended_time, notify FROM events
+WHERE time <= $1
   AND done = false
   AND notify = true
 `
@@ -224,10 +252,56 @@ func (q *Queries) ListNotSendedEvents(ctx context.Context, db DBTX, till pgtype.
 			&i.Description,
 			&i.TaskID,
 			&i.TaskType,
-			&i.NextSendTime,
+			&i.Time,
 			&i.Done,
 			&i.NotificationParams,
-			&i.FirstSendTime,
+			&i.FirstTime,
+			&i.LastSendedTime,
+			&i.Notify,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUserDailyEvents = `-- name: ListUserDailyEvents :many
+SELECT id, created_at, user_id, text, description, task_id, task_type, time, done, notification_params, first_time, last_sended_time, notify FROM events
+WHERE user_id = $1
+  AND time + $2  BETWEEN CURRENT_DATE AND CURRENT_DATE + 1
+ORDER BY time ASC
+`
+
+type ListUserDailyEventsParams struct {
+	UserID     int32              `db:"user_id"`
+	TimeOffset pgtype.Timestamptz `db:"time_offset"`
+}
+
+func (q *Queries) ListUserDailyEvents(ctx context.Context, db DBTX, arg ListUserDailyEventsParams) ([]Event, error) {
+	rows, err := db.Query(ctx, listUserDailyEvents, arg.UserID, arg.TimeOffset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Event
+	for rows.Next() {
+		var i Event
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UserID,
+			&i.Text,
+			&i.Description,
+			&i.TaskID,
+			&i.TaskType,
+			&i.Time,
+			&i.Done,
+			&i.NotificationParams,
+			&i.FirstTime,
 			&i.LastSendedTime,
 			&i.Notify,
 		); err != nil {
@@ -242,19 +316,19 @@ func (q *Queries) ListNotSendedEvents(ctx context.Context, db DBTX, till pgtype.
 }
 
 const listUserEvents = `-- name: ListUserEvents :many
-SELECT DISTINCT e.id, e.created_at, e.user_id, e.text, e.description, e.task_id, e.task_type, e.next_send_time, e.done, e.notification_params, e.first_send_time, e.last_sended_time, e.notify 
+SELECT DISTINCT e.id, e.created_at, e.user_id, e.text, e.description, e.task_id, e.task_type, e.time, e.done, e.notification_params, e.first_time, e.last_sended_time, e.notify 
 FROM events as e
 LEFT JOIN smth_to_tags as s2t
   ON e.id = s2t.smth_id
 LEFT JOIN tags as t
   ON s2t.tag_id = t.id
 WHERE e.user_id = $1
-  AND next_send_time BETWEEN $2 AND $3
+  AND time BETWEEN $2 AND $3
   AND (
     t.id = ANY ($4::int[]) 
     OR array_length($4::int[], 1) is null
   )
-ORDER BY next_send_time DESC
+ORDER BY time DESC
 LIMIT $6 OFFSET $5
 `
 
@@ -295,10 +369,10 @@ func (q *Queries) ListUserEvents(ctx context.Context, db DBTX, arg ListUserEvent
 			&i.Event.Description,
 			&i.Event.TaskID,
 			&i.Event.TaskType,
-			&i.Event.NextSendTime,
+			&i.Event.Time,
 			&i.Event.Done,
 			&i.Event.NotificationParams,
-			&i.Event.FirstSendTime,
+			&i.Event.FirstTime,
 			&i.Event.LastSendedTime,
 			&i.Event.Notify,
 		); err != nil {
@@ -315,26 +389,26 @@ func (q *Queries) ListUserEvents(ctx context.Context, db DBTX, arg ListUserEvent
 const updateEvent = `-- name: UpdateEvent :one
 UPDATE events
 SET text = $1,
-    next_send_time = $2,
-    first_send_time = $3,
+    time = $2,
+    first_time = $3,
     done = $4
 WHERE id = $5
-RETURNING id, created_at, user_id, text, description, task_id, task_type, next_send_time, done, notification_params, first_send_time, last_sended_time, notify
+RETURNING id, created_at, user_id, text, description, task_id, task_type, time, done, notification_params, first_time, last_sended_time, notify
 `
 
 type UpdateEventParams struct {
-	Text          string             `db:"text"`
-	NextSendTime  pgtype.Timestamptz `db:"next_send_time"`
-	FirstSendTime pgtype.Timestamptz `db:"first_send_time"`
-	Done          bool               `db:"done"`
-	ID            int32              `db:"id"`
+	Text      string             `db:"text"`
+	Time      pgtype.Timestamptz `db:"time"`
+	FirstTime pgtype.Timestamptz `db:"first_time"`
+	Done      bool               `db:"done"`
+	ID        int32              `db:"id"`
 }
 
 func (q *Queries) UpdateEvent(ctx context.Context, db DBTX, arg UpdateEventParams) (Event, error) {
 	row := db.QueryRow(ctx, updateEvent,
 		arg.Text,
-		arg.NextSendTime,
-		arg.FirstSendTime,
+		arg.Time,
+		arg.FirstTime,
 		arg.Done,
 		arg.ID,
 	)
@@ -347,10 +421,10 @@ func (q *Queries) UpdateEvent(ctx context.Context, db DBTX, arg UpdateEventParam
 		&i.Description,
 		&i.TaskID,
 		&i.TaskType,
-		&i.NextSendTime,
+		&i.Time,
 		&i.Done,
 		&i.NotificationParams,
-		&i.FirstSendTime,
+		&i.FirstTime,
 		&i.LastSendedTime,
 		&i.Notify,
 	)

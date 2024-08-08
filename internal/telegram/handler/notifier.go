@@ -55,7 +55,7 @@ func (n *Notification) deleteOldNotificationMsg(ctx context.Context, eventID, ch
 	return nil
 }
 
-func (th *TelegramHandler) Notify(ctx context.Context, event domains.SendingEvent) error {
+func (th *TelegramHandler) Notify(ctx context.Context, event domains.Notification) error {
 	user, err := th.userRepo.GetUserInfo(ctx, event.Params.Params.Telegram)
 	if err != nil {
 		return fmt.Errorf("get user info[tgID=%v]: %w", event.Params.Params.Telegram, err)

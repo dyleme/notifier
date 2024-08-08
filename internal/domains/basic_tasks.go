@@ -3,8 +3,6 @@ package domains
 import (
 	"fmt"
 	"time"
-
-	"github.com/Dyleme/Notifier/pkg/utils"
 )
 
 const BasicTaskType TaskType = "basic task"
@@ -28,10 +26,10 @@ func (bt BasicTask) newEvent() (Event, error) { //nolint:unparam //need for inte
 		Description:        bt.Description,
 		TaskType:           BasicTaskType,
 		TaskID:             bt.ID,
-		NotificationParams: utils.ZeroIfNil(bt.NotificationParams),
+		NotificationParams: bt.NotificationParams,
 		LastSendedTime:     time.Time{},
-		NextSendTime:       bt.Start,
-		FirstSendTime:      bt.Start,
+		Time:               bt.Start,
+		FirstTime:          bt.Start,
 		Done:               false,
 		Tags:               bt.Tags,
 		Notify:             bt.Notify,

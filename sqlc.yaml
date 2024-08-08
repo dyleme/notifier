@@ -46,3 +46,4 @@ sql:
               import: "github.com/Dyleme/Notifier/internal/domains"
               package: "domains"
               type: NotificationParams
+              pointer: true
