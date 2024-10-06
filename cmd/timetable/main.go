@@ -84,8 +84,8 @@ func main() { //nolint:funlen // main can be long
 		return
 	}
 
-	notifierJob.SetNotifier(notifierjob.CmdNotifier{})
-	authSvc.SetCodeSender(authService.CmdCodeSender{})
+	notifierJob.SetNotifier(tg)
+	authSvc.SetCodeSender(tg)
 
 	go notifierJob.Run(ctx)
 
