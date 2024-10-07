@@ -132,7 +132,7 @@ func (nj *NotifierJob) notify(ctx context.Context) {
 				log.Ctx(ctx).Error("notifier error", log.Err(err))
 			}
 
-			ev = ev.Rescheule(nj.nextSendTime)
+			ev = ev.Rescheule(nj.clock.Now())
 
 			err = nj.repo.Update(ctx, ev)
 			if err != nil {

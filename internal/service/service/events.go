@@ -105,7 +105,7 @@ func (s *Service) DeleteEvent(ctx context.Context, eventID, userID int) error {
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		ev, err := s.repos.events.Get(ctx, eventID)
 		if err != nil {
-			return fmt.Errorf("events get: %w", err)
+			return fmt.Errorf("events get[eventID=%v]: %w", eventID, err)
 		}
 
 		if err := ev.BelongsTo(userID); err != nil {
@@ -114,7 +114,7 @@ func (s *Service) DeleteEvent(ctx context.Context, eventID, userID int) error {
 
 		err = s.repos.events.Delete(ctx, eventID)
 		if err != nil {
-			return fmt.Errorf("events delete: %w", err)
+			return fmt.Errorf("events delete[eventID=%v]: %w", eventID, err)
 		}
 
 		return nil
