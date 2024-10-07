@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/Dyleme/timecache"
 	trmpgx "github.com/avito-tech/go-transaction-manager/pgxv5"
 	"github.com/avito-tech/go-transaction-manager/trm/manager"
 	"github.com/go-chi/chi/v5/middleware"
@@ -31,7 +32,6 @@ import (
 	"github.com/Dyleme/Notifier/pkg/log"
 	"github.com/Dyleme/Notifier/pkg/log/slogpretty"
 	"github.com/Dyleme/Notifier/pkg/sqldatabase"
-	"github.com/Dyleme/timecache"
 )
 
 func main() { //nolint:funlen // main can be long

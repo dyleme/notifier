@@ -70,7 +70,13 @@ gen.go:
 .PHONY: lint
 lint:
 	@echo "----------- Lint project ----------------"
-	@$(LINTER) run -v
+	@$(LINTER) run 
+	
+	
+.PHONY: lint-fix
+lint-fix:
+	@echo "----------- Lint project ----------------"
+	@$(LINTER) run --fix
 
 
 .PHONY: test
@@ -113,7 +119,7 @@ install.tools:
 
 .PHONY: install.linter
 install.linter:
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.59.1
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.61.0
 	
 .PHONY: install.mocks
 install.mocks:
