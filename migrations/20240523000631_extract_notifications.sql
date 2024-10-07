@@ -5,16 +5,16 @@ ALTER TABLE events RENAME TO basic_events;
 CREATE TYPE event_type AS ENUM ('periodic_event', 'basic_event');
 
 CREATE TABLE IF NOT EXISTS notifications (
-    id                  SERIAL PRIMARY KEY,
-    created_at          TIMESTAMP DEFAULT NOW()  NOT NULL,
-    user_id             INTEGER                  NOT NULL,
-    text                TEXT                     NOT NULL,
-    description         TEXT                             ,
-    event_id            INTEGER                  NOT NULL,
-    event_type          event_type               NOT NULL,
-    send_time           TIMESTAMP WITH TIME ZONE NOT NULL,
-    sended              BOOLEAN   DEFAULT FALSE  NOT NULL,
-    done                BOOLEAN   DEFAULT FALSE  NOT NULL,
+    id SERIAL PRIMARY KEY,
+    created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+    user_id INTEGER NOT NULL,
+    text TEXT NOT NULL,
+    description TEXT,
+    event_id INTEGER NOT NULL,
+    event_type EVENT_TYPE NOT NULL,
+    send_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    sended BOOLEAN DEFAULT FALSE NOT NULL,
+    done BOOLEAN DEFAULT FALSE NOT NULL,
     notification_params JSONB,
     UNIQUE (event_id, event_type)
 );
@@ -32,7 +32,7 @@ INSERT INTO notifications (
     sended,
     done,
     notification_params
-) SELECT 
+) SELECT
     created_at,
     user_id,
     text,
@@ -67,16 +67,16 @@ INSERT INTO notifications (
     n.sended,
     n.done,
     ev.notification_params
-FROM periodic_events as ev
-    JOIN periodic_events_notifications as n
-        ON ev.id = n.periodic_event_id;
+FROM periodic_events AS ev
+INNER JOIN periodic_events_notifications AS n
+    ON ev.id = n.periodic_event_id;
 
 DROP TABLE IF EXISTS periodic_events_notifications;
 
-ALTER TABLE basic_events 
-    DROP COLUMN send_time,
-    DROP COLUMN sended,
-    DROP COLUMN done;
+ALTER TABLE basic_events
+DROP COLUMN send_time,
+DROP COLUMN sended,
+DROP COLUMN done;
 
 
 
@@ -84,10 +84,11 @@ ALTER TABLE basic_events
 
 -- +goose Down
 -- +goose StatementBegin
-ALTER TABLE basic_events 
-    ADD COLUMN send_time TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW() + INTERVAL '1 year',
-    ADD COLUMN sended    BOOLEAN                  NOT NULL DEFAULT TRUE, 
-    ADD COLUMN done      BOOLEAN                  NOT NULL DEFAULT TRUE;
+ALTER TABLE basic_events
+ADD COLUMN send_time TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
++ INTERVAL '1 year',
+ADD COLUMN sended BOOLEAN NOT NULL DEFAULT TRUE,
+ADD COLUMN done BOOLEAN NOT NULL DEFAULT TRUE;
 
 UPDATE basic_events SET
     send_time = n.send_time,
@@ -99,13 +100,15 @@ WHERE basic_events.id = n.event_id;
 
 CREATE TABLE periodic_events_notifications
 (
-    id                SERIAL PRIMARY KEY,
-    created_at        TIMESTAMP DEFAULT NOW()  NOT NULL,
-    periodic_event_id INTEGER                  NOT NULL,
-    send_time         TIMESTAMP WITH TIME ZONE NOT NULL,
-    sended            BOOLEAN   DEFAULT FALSE  NOT NULL,
-    done              BOOLEAN   DEFAULT FALSE  NOT NULL,
-    CONSTRAINT fk_periodic_events_notifications_periodic_event_id FOREIGN KEY (periodic_event_id) REFERENCES periodic_events
+    id SERIAL PRIMARY KEY,
+    created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+    periodic_event_id INTEGER NOT NULL,
+    send_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    sended BOOLEAN DEFAULT FALSE NOT NULL,
+    done BOOLEAN DEFAULT FALSE NOT NULL,
+    CONSTRAINT fk_periodic_events_notifications_periodic_event_id FOREIGN KEY (
+        periodic_event_id
+    ) REFERENCES periodic_events
 );
 
 INSERT INTO periodic_events_notifications
@@ -128,7 +131,7 @@ INSERT INTO periodic_events_notifications
 
 DROP TABLE IF EXISTS notifications;
 
-DROP TYPE event_type;
+DROP TYPE EVENT_TYPE;
 
 ALTER TABLE basic_events RENAME TO events;
 -- +goose StatementEnd

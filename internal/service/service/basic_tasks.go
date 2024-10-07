@@ -27,7 +27,7 @@ func (s *Service) CreateBasicTask(ctx context.Context, task domains.BasicTask) (
 		var err error
 
 		log.Ctx(ctx).Debug("add task", "event", task)
-		createdTask, err = s.repo.Tasks().Add(ctx, task)
+		createdTask, err = s.repos.basicTasks.Add(ctx, task)
 		if err != nil {
 			return fmt.Errorf("add task: %w", err)
 		}
@@ -53,7 +53,7 @@ func (s *Service) CreateBasicTask(ctx context.Context, task domains.BasicTask) (
 
 func (s *Service) GetBasicTask(ctx context.Context, userID, taskID int) (domains.BasicTask, error) {
 	op := "Service.GetTask: %w"
-	tt, err := s.repo.Tasks().Get(ctx, taskID)
+	tt, err := s.repos.basicTasks.Get(ctx, taskID)
 	if err != nil {
 		err = fmt.Errorf(op, err)
 		logError(ctx, err)
@@ -70,7 +70,7 @@ func (s *Service) GetBasicTask(ctx context.Context, userID, taskID int) (domains
 
 func (s *Service) ListBasicTasks(ctx context.Context, userID int, listParams ListParams) ([]domains.BasicTask, error) {
 	op := "Service.ListTasks: %w"
-	tts, err := s.repo.Tasks().List(ctx, userID, listParams)
+	tts, err := s.repos.basicTasks.List(ctx, userID, listParams)
 	if err != nil {
 		err = fmt.Errorf(op, err)
 		logError(ctx, err)
@@ -84,7 +84,7 @@ func (s *Service) ListBasicTasks(ctx context.Context, userID int, listParams Lis
 func (s *Service) UpdateBasicTask(ctx context.Context, params domains.BasicTask, userID int) (domains.BasicTask, error) {
 	var task domains.BasicTask
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
-		t, err := s.repo.Tasks().Get(ctx, params.ID)
+		t, err := s.repos.basicTasks.Get(ctx, params.ID)
 		if err != nil {
 			return fmt.Errorf("get task: %w", err)
 		}
@@ -97,12 +97,12 @@ func (s *Service) UpdateBasicTask(ctx context.Context, params domains.BasicTask,
 		t.Description = params.Description
 		t.Start = params.Start
 
-		task, err = s.repo.Tasks().Update(ctx, t)
+		task, err = s.repos.basicTasks.Update(ctx, t)
 		if err != nil {
 			return fmt.Errorf("update task: %w", err)
 		}
 
-		event, err := s.repo.Events().GetLatest(ctx, t.ID, domains.BasicTaskType)
+		event, err := s.repos.events.GetLatest(ctx, t.ID, domains.BasicTaskType)
 		if err != nil {
 			return fmt.Errorf("get latest event: %w", err)
 		}
@@ -112,7 +112,7 @@ func (s *Service) UpdateBasicTask(ctx context.Context, params domains.BasicTask,
 			return fmt.Errorf("update event: %w", err)
 		}
 
-		err = s.repo.Events().Update(ctx, updatedEvent)
+		err = s.repos.events.Update(ctx, updatedEvent)
 		if err != nil {
 			return fmt.Errorf("update event: %w", err)
 		}
@@ -133,7 +133,7 @@ func (s *Service) UpdateBasicTask(ctx context.Context, params domains.BasicTask,
 
 func (s *Service) DeleteBasicTask(ctx context.Context, userID, taskID int) error {
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
-		task, err := s.repo.Tasks().Get(ctx, taskID)
+		task, err := s.repos.basicTasks.Get(ctx, taskID)
 		if err != nil {
 			return fmt.Errorf("get task: %w", err)
 		}
@@ -142,17 +142,17 @@ func (s *Service) DeleteBasicTask(ctx context.Context, userID, taskID int) error
 			return fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
 		}
 
-		event, err := s.repo.Events().GetLatest(ctx, taskID, domains.BasicTaskType)
+		event, err := s.repos.events.GetLatest(ctx, taskID, domains.BasicTaskType)
 		if err != nil {
 			return fmt.Errorf("get latest event: %w", err)
 		}
 
-		err = s.repo.Events().Delete(ctx, event.ID)
+		err = s.repos.events.Delete(ctx, event.ID)
 		if err != nil {
 			return fmt.Errorf("delete event: %w", err)
 		}
 
-		err = s.repo.Tasks().Delete(ctx, taskID)
+		err = s.repos.basicTasks.Delete(ctx, taskID)
 		if err != nil {
 			return fmt.Errorf("delete basic task: %w", err)
 		}

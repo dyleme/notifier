@@ -33,12 +33,12 @@ ALTER TABLE basic_tasks RENAME TO basic_events;
 ALTER TABLE periodic_tasks RENAME TO periodic_events;
 
 CREATE TABLE tasks (
-    id          SERIAL                                      PRIMARY KEY,
-    created_at  TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()   NOT NULL,
-    message     CHARACTER VARYING(250)                      NOT NULL,
-    user_id     INTEGER                                     NOT NULL,
-    periodic    BOOLEAN DEFAULT FALSE                       NOT NULL,
-    archived    BOOLEAN DEFAULT FALSE                       NOT NULL
+    id SERIAL PRIMARY KEY,
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW() NOT NULL,
+    message CHARACTER VARYING(250) NOT NULL,
+    user_id INTEGER NOT NULL,
+    periodic BOOLEAN DEFAULT FALSE NOT NULL,
+    archived BOOLEAN DEFAULT FALSE NOT NULL
 );
 
 

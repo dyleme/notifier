@@ -14,7 +14,6 @@ import (
 
 	"github.com/Dyleme/Notifier/internal/domains"
 	"github.com/Dyleme/Notifier/internal/service/repository/queries/goqueries"
-	"github.com/Dyleme/Notifier/internal/service/service"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
 )
 
@@ -25,8 +24,19 @@ type TgImagesRepository struct {
 	db     *pgxpool.Pool
 }
 
-func (r *Repository) TgImages() service.TgImagesRepository {
-	return r.tgImagesRepository
+type Cache interface {
+	Get(key string, obj any) error
+	Delete(key string) error
+	Add(key string, obj any) error
+}
+
+func NewTGImagesRepository(db *pgxpool.Pool, getter *trmpgx.CtxGetter, cache Cache) *TgImagesRepository {
+	return &TgImagesRepository{
+		q:      goqueries.New(),
+		cache:  cache,
+		getter: getter,
+		db:     db,
+	}
 }
 
 func newTgImageKey(filename string) string {

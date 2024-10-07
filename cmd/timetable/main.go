@@ -11,6 +11,7 @@ import (
 	"github.com/Dyleme/timecache"
 	trmpgx "github.com/avito-tech/go-transaction-manager/pgxv5"
 	"github.com/avito-tech/go-transaction-manager/trm/manager"
+	"github.com/benbjohnson/clock"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"golang.org/x/sync/errgroup"
@@ -50,9 +51,22 @@ func main() { //nolint:funlen // main can be long
 	cache := repository.NewUniversalCache()
 	trManager := manager.Must(trmpgx.NewDefaultFactory(db))
 	trCtxGetter := trmpgx.DefaultCtxGetter
-	repo := repository.New(db, cache, trCtxGetter)
-	notifierJob := notifierjob.New(repo, cfg.NotifierJob, trManager)
-	svc := service.New(repo, trManager, notifierJob)
+	nower := clock.New()
+	notifierJob := notifierjob.New(
+		repository.NewEventsRepository(db, trCtxGetter),
+		cfg.NotifierJob,
+		trManager,
+		nower,
+	)
+	svc := service.New(
+		repository.NewPeriodicTaskRepository(db, trCtxGetter),
+		repository.NewBasicTaskRepository(db, trCtxGetter),
+		repository.NewTGImagesRepository(db, trCtxGetter, cache),
+		repository.NewEventsRepository(db, trCtxGetter),
+		repository.NewDefaultNotificationParamsRepository(db, trCtxGetter),
+		trManager,
+		notifierJob,
+	)
 	timeTableHndlr := handler.New(svc)
 
 	apiTokenMiddleware := authmiddleware.NewAPIToken(cfg.APIKey)
@@ -60,7 +74,13 @@ func main() { //nolint:funlen // main can be long
 	codeGen := authService.NewRandomIntSeq()
 	jwtMiddleware := authmiddleware.NewJWT(jwtGen)
 	authRepo := authRepository.New(db, trCtxGetter)
-	authSvc := authService.NewAuth(authRepo, &authService.HashGen{}, jwtGen, trManager, codeGen)
+	authSvc := authService.NewAuth(
+		authRepo,
+		&authService.HashGen{},
+		jwtGen,
+		trManager,
+		codeGen,
+	)
 	authHndlr := authHandler.New(authSvc)
 
 	router := server.Route(
@@ -77,7 +97,13 @@ func main() { //nolint:funlen // main can be long
 		},
 	)
 
-	tg, err := tgHandler.New(svc, userinfo.NewUserRepoCache(authSvc), cfg.Telegram, timecache.New[int64, tgHandler.TextMessageHandler](), repo.KeyValueRepository())
+	tg, err := tgHandler.New(
+		svc,
+		userinfo.NewUserRepoCache(authSvc),
+		cfg.Telegram,
+		timecache.New[int64, tgHandler.TextMessageHandler](),
+		repository.NewKeyValueRepository(db, trCtxGetter),
+	)
 	if err != nil {
 		logger.Error("tg init error", log.Err(err))
 

@@ -3,26 +3,19 @@ package mocklogger
 import (
 	"context"
 	"fmt"
-	"io"
-	stdLog "log"
 	"log/slog"
 	"sync"
 )
 
 type MockHandler struct {
 	slog.Handler
-	l     *stdLog.Logger
 	err   error
 	errMx sync.Mutex
 }
 
-func NewHandler(
-	out io.Writer,
-	opts *slog.HandlerOptions,
-) *MockHandler {
+func NewHandler() *MockHandler {
 	h := &MockHandler{
-		Handler: slog.NewJSONHandler(out, opts),
-		l:       stdLog.New(out, "", 0),
+		Handler: slog.NewJSONHandler(nil, nil),
 		err:     nil,
 		errMx:   sync.Mutex{},
 	}

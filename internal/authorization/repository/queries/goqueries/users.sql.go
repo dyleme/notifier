@@ -36,13 +36,13 @@ func (q *Queries) AddBindingAttempt(ctx context.Context, db DBTX, arg AddBinding
 
 const addUser = `-- name: AddUser :one
 INSERT INTO users (
-                   tg_id,
-                   tg_nickname
-                   )
+    tg_id,
+    tg_nickname
+)
 VALUES (
-        $1,
-        $2
-       )
+    $1,
+    $2
+)
 RETURNING id, password_hash, tg_id, timezone_offset, timezone_dst, tg_nickname
 `
 

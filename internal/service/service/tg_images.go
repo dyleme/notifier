@@ -16,7 +16,7 @@ type TgImagesRepository interface {
 func (s *Service) GetTgImage(ctx context.Context, filename string) (domains.TgImage, error) {
 	op := "Service.GetTgImage: %w"
 
-	tgImage, err := s.repo.TgImages().Get(ctx, filename)
+	tgImage, err := s.repos.tgImages.Get(ctx, filename)
 	if err != nil {
 		err = fmt.Errorf(op, err)
 		logError(ctx, err)
@@ -30,7 +30,7 @@ func (s *Service) GetTgImage(ctx context.Context, filename string) (domains.TgIm
 func (s *Service) AddTgImage(ctx context.Context, filename, tgFileID string) error {
 	op := "Service.AddTgImage: %w"
 
-	err := s.repo.TgImages().Add(ctx, filename, tgFileID)
+	err := s.repos.tgImages.Add(ctx, filename, tgFileID)
 	if err != nil {
 		err = fmt.Errorf(op, err)
 		logError(ctx, err)

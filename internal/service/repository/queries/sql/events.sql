@@ -61,14 +61,3 @@ SELECT * FROM events
 WHERE done = false
 ORDER BY next_send_time ASC
 LIMIT 1;
-
--- name: BatchUpdateEvents :exec
-UPDATE events
-SET text = tmp.text,
-    next_send_time = tmp.event.NextSendTime,
-    first_send_time = tmp.event.FirstSendTime,
-    last_sended_time = tmp.event.LastSendedTime
-FROM (
-  VALUES(@updated_events) 
-) AS tmp(event)
-WHERE events.id = tmp.event.ID;

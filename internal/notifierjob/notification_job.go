@@ -8,23 +8,25 @@ import (
 	"sync"
 	"time"
 
-	trManager "github.com/avito-tech/go-transaction-manager/trm/manager"
+	"github.com/avito-tech/go-transaction-manager/trm"
+	"github.com/benbjohnson/clock"
 
 	"github.com/Dyleme/Notifier/internal/domains"
-	"github.com/Dyleme/Notifier/internal/service/service"
 	"github.com/Dyleme/Notifier/pkg/log"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
 	"github.com/Dyleme/Notifier/pkg/utils"
 )
 
-//go:generate mockgen -destination=mocks/event_job_mocks.go -package=mocks . Notifier
+//go:generate mockgen -destination=mocks/notifier_mocks.go -package=mocks . Repository
 type Notifier interface {
 	Notify(ctx context.Context, notif domains.SendingEvent) error
 }
 
+//go:generate mockgen -destination=mocks/repository_mocks.go -package=mocks . Notifier
 type Repository interface {
-	DefaultEventParams() service.NotificationParamsRepository
-	Events() service.EventsRepository
+	Update(ctx context.Context, event domains.Event) error
+	ListNotSended(ctx context.Context, till time.Time) ([]domains.Event, error)
+	GetNearest(ctx context.Context) (domains.Event, error)
 }
 
 type NotifierJob struct {
@@ -33,23 +35,30 @@ type NotifierJob struct {
 	checkPeriod  time.Duration
 	nextSendTime time.Time
 	sendTimeMx   *sync.RWMutex
-	timer        *time.Timer
-	tr           *trManager.Manager
+	timer        *clock.Timer
+	tm           TxManager
+	clock        clock.Clock
 }
 
 type Config struct {
 	CheckTasksPeriod time.Duration
 }
 
-func New(repo Repository, config Config, tr *trManager.Manager) *NotifierJob {
+type TxManager interface {
+	Do(ctx context.Context, fn func(ctx context.Context) error) (err error)
+	DoWithSettings(ctx context.Context, s trm.Settings, fn func(ctx context.Context) error) (err error)
+}
+
+func New(repo Repository, config Config, tr TxManager, nower clock.Clock) *NotifierJob {
 	return &NotifierJob{
 		repo:         repo,
 		notifier:     nil,
 		checkPeriod:  config.CheckTasksPeriod,
-		nextSendTime: time.Now().Add(config.CheckTasksPeriod),
+		nextSendTime: nower.Now().Add(config.CheckTasksPeriod),
 		sendTimeMx:   &sync.RWMutex{},
-		timer:        time.NewTimer(config.CheckTasksPeriod),
-		tr:           tr,
+		timer:        nower.Timer(config.CheckTasksPeriod),
+		tm:           tr,
+		clock:        nower,
 	}
 }
 
@@ -89,12 +98,12 @@ func (nj *NotifierJob) setNextEventTime(ctx context.Context) {
 	t := nj.nearestCheckTime(ctx)
 	log.Ctx(ctx).Debug("next event time", slog.Time("time", t))
 	nj.nextSendTime = t
-	nj.timer.Reset(time.Until(nj.nextSendTime))
+	nj.timer.Reset(nj.clock.Until(t))
 }
 
 func (nj *NotifierJob) nearestCheckTime(ctx context.Context) time.Time {
-	nextPeriodicInvocationTime := time.Now().Truncate(time.Minute).Add(nj.checkPeriod)
-	event, err := nj.repo.Events().GetNearest(ctx)
+	nextPeriodicInvocationTime := nj.clock.Now().Truncate(time.Minute).Add(nj.checkPeriod)
+	event, err := nj.repo.GetNearest(ctx)
 	if err != nil {
 		var notFoundErr serverrors.NotFoundError
 		if !errors.As(err, &notFoundErr) {
@@ -109,8 +118,8 @@ func (nj *NotifierJob) nearestCheckTime(ctx context.Context) time.Time {
 }
 
 func (nj *NotifierJob) notify(ctx context.Context) {
-	err := nj.tr.Do(ctx, func(ctx context.Context) error {
-		events, err := nj.repo.Events().ListNotSended(ctx, time.Now())
+	err := nj.tm.Do(ctx, func(ctx context.Context) error {
+		events, err := nj.repo.ListNotSended(ctx, nj.nextSendTime)
 		if err != nil {
 			return fmt.Errorf("list not sended events: %w", err)
 		}
@@ -123,9 +132,9 @@ func (nj *NotifierJob) notify(ctx context.Context) {
 				log.Ctx(ctx).Error("notifier error", log.Err(err))
 			}
 
-			ev = ev.Rescheule()
+			ev = ev.Rescheule(nj.clock.Now())
 
-			err = nj.repo.Events().Update(ctx, ev)
+			err = nj.repo.Update(ctx, ev)
 			if err != nil {
 				log.Ctx(ctx).Error("update event", log.Err(err), slog.Any("event", ev))
 			}

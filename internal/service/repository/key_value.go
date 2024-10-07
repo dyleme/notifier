@@ -20,14 +20,25 @@ type KeyValueRepository struct {
 	getter *trmpgx.CtxGetter
 }
 
-func (r *Repository) KeyValueRepository() *KeyValueRepository {
-	return r.keyValueRepository
+func NewKeyValueRepository(db *pgxpool.Pool, getter *trmpgx.CtxGetter) *KeyValueRepository {
+	return &KeyValueRepository{
+		q:      goqueries.New(),
+		db:     db,
+		getter: getter,
+	}
 }
 
-var errEmptyValue = errors.New("value is empty")
+var (
+	errEmptyValue = errors.New("value is empty")
+	errEmptyKey   = errors.New("empty key")
+)
 
 func (r *KeyValueRepository) PutValue(ctx context.Context, key string, value any) error {
 	tx := r.getter.DefaultTrOrDB(ctx, r.db)
+
+	if key == "" {
+		return serverrors.NewServiceError(errEmptyKey)
+	}
 
 	bts, err := json.Marshal(value)
 	if err != nil {

@@ -1,12 +1,12 @@
 -- name: AddUser :one
 INSERT INTO users (
-                   tg_id,
-                   tg_nickname
-                   )
+    tg_id,
+    tg_nickname
+)
 VALUES (
-        @tg_id,
-        @tg_nickname
-       )
+    @tg_id,
+    @tg_nickname
+)
 RETURNING *;
 
 -- name: FindUser :one

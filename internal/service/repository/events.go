@@ -25,8 +25,12 @@ type EventsRepository struct {
 	getter *trmpgx.CtxGetter
 }
 
-func (r *Repository) Events() service.EventsRepository {
-	return r.eventsRepository
+func NewEventsRepository(db *pgxpool.Pool, getter *trmpgx.CtxGetter) *EventsRepository {
+	return &EventsRepository{
+		q:      goqueries.New(),
+		db:     db,
+		getter: getter,
+	}
 }
 
 const UnkownTaskType = goqueries.TaskType("unknown_type")
@@ -216,15 +220,4 @@ func (er *EventsRepository) GetNearest(ctx context.Context) (domains.Event, erro
 	}
 
 	return er.dto(event)
-}
-
-func (er *EventsRepository) BatchUpdate(ctx context.Context, events []domains.Event) error {
-	tx := er.getter.DefaultTrOrDB(ctx, er.db)
-
-	err := er.q.BatchUpdateEvents(ctx, tx, events)
-	if err != nil {
-		return fmt.Errorf("mark sended events: %w", serverrors.NewRepositoryError(err))
-	}
-
-	return nil
 }
