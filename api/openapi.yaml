@@ -36,22 +36,33 @@ tags:
   - name: Events
     description: Create and manager your events
 paths:
-  /auth/register:
+  /auth/start-binding:
     post:
-      summary: Register new user
+      summary: Start binding user to tg account
       tags:
         - Authentication
       security:
         - apiKeyAuth: []
-      description: Register new user
-      operationId: registration
+      description: Start binding user to tg account
+      operationId: startBindingToTG
       requestBody:
-        description: Registration body
+        description: Bind body
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/RegistrationBody"
-        required: true
+              required:
+                - tgNickname
+                - password
+              type: object
+              properties:
+                tgNickname:
+                  type: string
+                  example: "@nickname"
+                password:
+                  type: string
+                  description: Password
+                  format: password
+                  example: password
       responses:
         "200":
           description: Successful operation
@@ -59,6 +70,38 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Tokens"
+        "405":
+          description: Invalid input
+
+  /auth/bind:
+    post:
+      summary: Bind user to tg account
+      tags:
+        - Authentication
+      security:
+        - apiKeyAuth: []
+      description: Bind user to tg account
+      operationId: bindToTG
+      requestBody:
+        description: Bind body
+        content:
+          application/json:
+            schema:
+              required:
+                - tgNickname
+                - code
+              type: object
+              properties:
+                tgNickname:
+                  type: string
+                  example: "@nickname"
+                code:
+                  type: string
+                  description: code gained from TG
+                  example: "3809435"
+      responses:
+        "200":
+          description: Successful operation
         "405":
           description: Invalid input
   /auth/login:
@@ -75,8 +118,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/LoginBody"
-        required: true
+              required:
+                - loginString
+                - password
+              type: object
+              properties:
+                loginString:
+                  type: string
+                  description: nickname or email of user
+                  example: Nagibator228
+                password:
+                  type: string
+                  description: Password
+                  format: password
       responses:
         "200":
           description: Successful operation
@@ -577,40 +631,6 @@ components:
         format: int32
         minimum: 0
   schemas:
-    RegistrationBody:
-      required:
-        - email
-        - nickname
-        - password
-      type: object
-      properties:
-        email:
-          type: string
-          example: email@example.com
-          format: email
-        nickname:
-          type: string
-          example: Nagibator228
-        password:
-          type: string
-          description: Password
-          format: password
-
-    LoginBody:
-      required:
-        - loginString
-        - password
-      type: object
-      properties:
-        loginString:
-          type: string
-          description: nickname or email of user
-          example: Nagibator228
-        password:
-          type: string
-          description: Password
-          format: password
-
     Tokens:
       type: object
       properties:
@@ -625,19 +645,6 @@ components:
       #      format: byte
       example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2dnZWRJbkFzIjoiYWRtaW4iLCJpYXQiOjE0MjI3Nzk2Mzh9.gzSraSYS8EXBxLN_oWnFSRgCzcmJmMjLiuyu5CSpyHI
     #      required: true
-
-    SetTaskReqBody:
-      required:
-        - start
-        - done
-      type: object
-      properties:
-        description:
-          type: string
-          example: Task description
-        start:
-          type: string
-          format: date-time
 
     Event:
       required:

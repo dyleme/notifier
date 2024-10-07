@@ -2,7 +2,7 @@ package domains
 
 type User struct {
 	ID             int
-	Email          string
+	TgNickname     string
 	PasswordHash   []byte
 	TGID           int
 	TimeZoneOffset int

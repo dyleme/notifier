@@ -7,6 +7,7 @@ import (
 
 	"github.com/Dyleme/timecache"
 
+	"github.com/Dyleme/Notifier/internal/authorization/service"
 	"github.com/Dyleme/Notifier/internal/domains"
 )
 
@@ -17,6 +18,7 @@ type UserRepoCache struct {
 
 type UserRepo interface {
 	GetTGUserInfo(ctx context.Context, tgID int) (domains.User, error)
+	CreateUser(ctx context.Context, input service.CreateUserInput) (domains.User, error)
 	UpdateUserTime(ctx context.Context, id int, timezone domains.TimeZoneOffset, isDst bool) error
 }
 

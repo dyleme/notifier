@@ -70,7 +70,13 @@ gen.go:
 .PHONY: lint
 lint:
 	@echo "----------- Lint project ----------------"
-	@$(LINTER) run -v
+	@$(LINTER) run 
+	
+	
+.PHONY: lint-fix
+lint-fix:
+	@echo "----------- Lint project ----------------"
+	@$(LINTER) run --fix
 
 
 .PHONY: test
@@ -99,16 +105,21 @@ docker.push: docker.build
 	docker push dyleme/schedudler
 	
 .PHONY: install
-install: install.generators install.mocks install.linter
+install: install.generators install.mocks install.linter install.tools
 	
 .PHONY: install.generators
 install.generators:
 	go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.26.0 
 	go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.3.0
+	
+.PHONY: install.tools
+install.tools:
+	go install github.com/pressly/goose/v3/cmd/goose@v3.21.1
+	go install github.com/daixiang0/gci@v0.13.4
 
 .PHONY: install.linter
 install.linter:
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.59.1
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.61.0
 	
 .PHONY: install.mocks
 install.mocks:

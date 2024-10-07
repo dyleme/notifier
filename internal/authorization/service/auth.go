@@ -19,6 +19,10 @@ type HashGenerator interface {
 	IsValidPassword(password string, hash []byte) bool
 }
 
+type CodeSender interface {
+	SendBindingMessage(ctx context.Context, tgID int, code string) error
+}
+
 // HashGen struct is realization of the HashGenerator interface with the bcrypt package.
 type HashGen struct{}
 
@@ -37,30 +41,27 @@ func (h *HashGen) IsValidPassword(password string, hash []byte) bool {
 	return err == nil
 }
 
-type CreateUserInput struct {
-	Email    string
-	Password string
-	TGID     *int
-}
-
 type ValidateUserInput struct {
 	AuthName string
 	Password string
 }
 
-// UserRepo is an interface which provides methods to implement with repository.
-type UserRepo interface {
-	// CreateUser creates user in the repository.
-	Create(ctx context.Context, input CreateUserInput) (user domains.User, err error)
-
-	// GetPasswordHashAndID returns user password hash and id.
-	Get(ctx context.Context, authName string, tgID *int) (domains.User, error)
-
-	UpdateTime(ctx context.Context, id int, tzOffset domains.TimeZoneOffset, isDST bool) error
+type BindingAttempt struct {
+	ID           int
+	TGID         int
+	Code         string
+	PasswordHash string
+	Done         bool
 }
 
-type NotifcationService interface {
-	CreateDefaultEventParams()
+// UserRepo is an interface which provides methods to implement with repository.
+type UserRepo interface {
+	Create(ctx context.Context, input CreateUserInput) (user domains.User, err error)
+	Get(ctx context.Context, tgNickname string, tgID int) (domains.User, error)
+	Update(ctx context.Context, user domains.User) error
+	AddBindingAttempt(ctx context.Context, input BindingAttempt) error
+	GetLatestBindingAttempt(ctx context.Context, tgID int) (BindingAttempt, error)
+	UpdateBindingAttemptStatus(ctx context.Context, baID int, done bool) error
 }
 
 // JwtGenerator is an interface that provides method to create jwt tokens.
@@ -69,44 +70,122 @@ type JwtGenerator interface {
 	CreateToken(id int) (string, error)
 }
 
+type CodeGenerator interface {
+	GenereateCode() string
+}
+
 // AuthService struct provides the ability to create user and validate it.
 type AuthService struct {
-	repo    UserRepo
-	hashGen HashGenerator
-	jwtGen  JwtGenerator
-	tr      *trManager.Manager
+	repo          UserRepo
+	codeGenerator CodeGenerator
+	hashGen       HashGenerator
+	jwtGen        JwtGenerator
+	tg            CodeSender
+	tr            *trManager.Manager
 }
 
 // NewAuth is the constructor to the AuthService.
-func NewAuth(repo UserRepo, hashGen HashGenerator, jwtGen JwtGenerator, tr *trManager.Manager) *AuthService {
+func NewAuth(repo UserRepo, hashGen HashGenerator, jwtGen JwtGenerator, tr *trManager.Manager, codeGen CodeGenerator) *AuthService {
 	return &AuthService{
-		repo:    repo,
-		hashGen: hashGen,
-		jwtGen:  jwtGen,
-		tr:      tr,
+		repo:          repo,
+		codeGenerator: codeGen,
+		hashGen:       hashGen,
+		jwtGen:        jwtGen,
+		tr:            tr,
+		tg:            nil,
 	}
+}
+
+func (s *AuthService) SetCodeSender(tg CodeSender) {
+	s.tg = tg
+}
+
+type StartUserBindingInput struct {
+	TGNickname string
+	Password   string
 }
 
 // CreateUser function returns the id of the created user or error if any occures.
 // Function get password hash of the user and creates user and calls CreateUser method of repository.
-func (s *AuthService) CreateUser(ctx context.Context, input CreateUserInput) (string, error) {
-	op := "AuthService.CreateUser: %w"
-	input.Password = s.hashGen.GeneratePasswordHash(input.Password)
+func (s *AuthService) StartUserBinding(ctx context.Context, input StartUserBindingInput) error {
+	code := s.codeGenerator.GenereateCode()
+	passwordHash := s.hashGen.GeneratePasswordHash(input.Password)
+	err := s.tr.Do(ctx, func(ctx context.Context) error {
+		user, err := s.repo.Get(ctx, input.TGNickname, 0)
+		if err != nil {
+			return fmt.Errorf("get user: %w", err)
+		}
+		err = s.repo.AddBindingAttempt(ctx, BindingAttempt{
+			ID:           0,
+			TGID:         user.TGID,
+			Code:         code,
+			PasswordHash: passwordHash,
+			Done:         false,
+		})
+		if err != nil {
+			return fmt.Errorf("add binding attempt: %w", err)
+		}
 
-	user, err := s.repo.Create(ctx, input)
+		err = s.tg.SendBindingMessage(ctx, user.TGID, code)
+		if err != nil {
+			return fmt.Errorf("send binding message: %w", err)
+		}
+
+		return nil
+	})
 	if err != nil {
-		return "", fmt.Errorf(op, err)
+		return fmt.Errorf("tr: %w", err)
 	}
 
-	accessToken, err := s.jwtGen.CreateToken(user.ID)
-	if err != nil {
-		return "", fmt.Errorf(op, err)
-	}
-
-	return accessToken, nil
+	return nil
 }
 
-var ErrWrongPassword = errors.New("wrong password")
+type BindUserInput struct {
+	Code       string
+	TGNickname string
+}
+
+func (s *AuthService) BindUser(ctx context.Context, input BindUserInput) error {
+	err := s.tr.Do(ctx, func(ctx context.Context) error {
+		user, err := s.repo.Get(ctx, input.TGNickname, 0)
+		if err != nil {
+			return fmt.Errorf("get user: %w", err)
+		}
+
+		ba, err := s.repo.GetLatestBindingAttempt(ctx, user.TGID)
+		if err != nil {
+			return fmt.Errorf("get binding attempt: %w", err)
+		}
+
+		if input.Code != ba.Code {
+			return ErrWrongCode
+		}
+
+		user.PasswordHash = []byte(ba.PasswordHash)
+
+		err = s.repo.Update(ctx, user)
+		if err != nil {
+			return fmt.Errorf("update user: %w", err)
+		}
+
+		err = s.repo.UpdateBindingAttemptStatus(ctx, ba.ID, true)
+		if err != nil {
+			return fmt.Errorf("update binding attempt status: %w", err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("tr: %w", err)
+	}
+
+	return nil
+}
+
+var (
+	ErrWrongPassword = errors.New("wrong password")
+	ErrWrongCode     = errors.New("wrong code")
+)
 
 // AuthUser returns the jwt token of the user, if the provided user exists  in repo and password is correct.
 // In any other situation function returns ("", err).
@@ -114,7 +193,7 @@ var ErrWrongPassword = errors.New("wrong password")
 // and create token with the help jwtGen.CreateToken.
 func (s *AuthService) AuthUser(ctx context.Context, input ValidateUserInput) (string, error) {
 	op := "AuthService.AuthUser: %w"
-	user, err := s.repo.Get(ctx, input.AuthName, nil)
+	user, err := s.repo.Get(ctx, input.AuthName, 0)
 	if err != nil {
 		return "", fmt.Errorf(op, err)
 	}
@@ -133,56 +212,64 @@ func (s *AuthService) AuthUser(ctx context.Context, input ValidateUserInput) (st
 
 func (s *AuthService) GetTGUserInfo(ctx context.Context, tgID int) (domains.User, error) {
 	op := "AuthService.GetTGUserInfo: %w"
-	var tgUser domains.User
-	err := s.tr.Do(ctx, func(ctx context.Context) error {
-		user, err := s.repo.Get(ctx, "", &tgID)
-		if err == nil { // err equal nil
-			tgUser = user
-		}
-
-		var notFoundErr serverrors.NotFoundError
-		if !errors.As(err, &notFoundErr) {
-			return err //nolint:wrapcheck // wrapping later
-		}
-
-		user, err = s.repo.Create(ctx, CreateUserInput{
-			Email:    "",
-			Password: "",
-			TGID:     &tgID,
-		})
-		if err != nil {
-			return err //nolint:wrapcheck // wrapping later
-		}
-		tgUser = user
-
-		return nil
-	})
+	user, err := s.repo.Get(ctx, "", tgID)
 	if err != nil {
 		return domains.User{}, fmt.Errorf(op, err)
 	}
 
-	return tgUser, nil
+	return user, nil
+}
+
+type CreateUserInput struct {
+	TGNickname string
+	TGID       int
+}
+
+func (s *AuthService) CreateUser(ctx context.Context, input CreateUserInput) (domains.User, error) {
+	var user domains.User
+	err := s.tr.Do(ctx, func(ctx context.Context) error {
+		var err error
+		user, err = s.repo.Create(ctx, CreateUserInput{
+			TGNickname: input.TGNickname,
+			TGID:       input.TGID,
+		})
+		if err != nil {
+			return fmt.Errorf("create user: %w", err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return domains.User{}, fmt.Errorf("tr: %w", err)
+	}
+
+	return user, nil
 }
 
 var ErrInvalidOffset = errors.New("invalid offset")
 
 func (s *AuthService) UpdateUserTime(ctx context.Context, id int, tzOffset domains.TimeZoneOffset, isDst bool) error {
-	op := "AuthService.UpdateUserTime: %w"
-
 	if !tzOffset.IsValid() {
-		return fmt.Errorf(op, ErrInvalidOffset)
+		return fmt.Errorf("invalid offset: %w", serverrors.NewBusinessLogicError("invalid offset"))
 	}
 
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
-		err := s.repo.UpdateTime(ctx, id, tzOffset, isDst)
+		user, err := s.repo.Get(ctx, "", id)
 		if err != nil {
-			return err //nolint:wrapcheck //wrapping later
+			return fmt.Errorf("get user: %w", err)
+		}
+		user.IsTimeZoneDST = isDst
+		user.TimeZoneOffset = int(tzOffset)
+
+		err = s.repo.Update(ctx, user)
+		if err != nil {
+			return fmt.Errorf("update user: %w", err)
 		}
 
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf(op, err)
+		return fmt.Errorf("tr: %w", err)
 	}
 
 	return nil
