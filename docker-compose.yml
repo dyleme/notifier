@@ -28,16 +28,16 @@ services:
       - postgresql
 
 
-  # service:
-  #   image: dyleme/schedudler
-  #   restart: always
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #   env_file: .env
-  #   container_name: schedudler
-  #   ports:
-  #     - "${APP_PORT}:${APP_PORT}"
-  #   depends_on:
-  #     - postgresql
-  #     - migrations
+  service:
+    image: dyleme/schedudler
+    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
+    container_name: schedudler
+    ports:
+      - "${APP_PORT}:${APP_PORT}"
+    depends_on:
+      - postgresql
+      - migrations

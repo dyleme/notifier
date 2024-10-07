@@ -36,7 +36,7 @@ func (pt PeriodicTask) newEvent() (Event, error) {
 	minDays := int(pt.SmallestPeriod / timeDay)
 	maxDays := int(pt.BiggestPeriod / timeDay)
 	if maxDays < minDays {
-		return Event{}, InvalidPeriodTimeError{smallest: pt.SmallestPeriod, biggest: pt.BiggestPeriod} //nolint:exhaustruct //returning error
+		return Event{}, InvalidPeriodTimeError{smallest: pt.SmallestPeriod, biggest: pt.BiggestPeriod}
 	}
 	days := int(pt.SmallestPeriod / timeDay)
 	if maxDays < minDays {

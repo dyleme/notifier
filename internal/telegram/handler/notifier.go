@@ -25,31 +25,29 @@ type Notification struct {
 	notifTime time.Time
 }
 
-func latestNotificatinMessageKey(eventID int) string {
-	return "latest_notification_message_" + strconv.Itoa(eventID)
-}
-
 func (n *Notification) deleteOldNotificationMsg(ctx context.Context, eventID, chatID, newMsgID int) error {
 	var oldMsgID int
-	err := n.th.kvRepo.GetValue(ctx, latestNotificatinMessageKey(eventID), oldMsgID)
-	var notFoundErr serverrors.NotFoundError
-	if errors.As(err, &notFoundErr) {
-		return nil
-	}
+	err := n.th.kvRepo.GetValue(ctx, strconv.Itoa(eventID), &oldMsgID)
 	if err != nil {
-		return fmt.Errorf("can't get message id [eventID=%v]: %w", eventID, err)
-	}
-	_, err = n.th.bot.DeleteMessage(ctx, &bot.DeleteMessageParams{
-		ChatID:    chatID,
-		MessageID: oldMsgID,
-	})
-	if err != nil {
-		return fmt.Errorf("can't delete message [eventID=%v]: %w", eventID, err)
+		var notFoundErr serverrors.NotFoundError
+		if !errors.As(err, &notFoundErr) {
+			return fmt.Errorf("get message id [eventID=%v]: %w", eventID, err)
+		}
+	} else {
+		log.Ctx(ctx).Info("got msgID", "eventID", eventID, "msgID", oldMsgID)
+		_, err = n.th.bot.DeleteMessage(ctx, &bot.DeleteMessageParams{
+			ChatID:    chatID,
+			MessageID: oldMsgID,
+		})
+		if err != nil {
+			log.Ctx(ctx).Warn("can't delete msg", "msgID", oldMsgID, "chatID", chatID)
+		}
 	}
 
-	err = n.th.kvRepo.PutValue(ctx, latestNotificatinMessageKey(eventID), newMsgID)
+	log.Ctx(ctx).Info("save msgID", "eventID", eventID, "msgID", newMsgID)
+	err = n.th.kvRepo.PutValue(ctx, strconv.Itoa(eventID), newMsgID)
 	if err != nil {
-		return fmt.Errorf("can't set message id [eventID=%v]: %w", eventID, err)
+		return fmt.Errorf("put message id [eventID=%v]: %w", eventID, err)
 	}
 
 	return nil
@@ -91,7 +89,7 @@ func (n *Notification) sendMessage(ctx context.Context, chatID int64, user useri
 
 	err = n.deleteOldNotificationMsg(ctx, n.id, int(chatID), msg.ID)
 	if err != nil {
-		log.Ctx(ctx).Error("can't store message id", log.Err(err))
+		log.Ctx(ctx).Error("update stored msg id", log.Err(err))
 	}
 
 	return nil
