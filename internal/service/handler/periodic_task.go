@@ -55,7 +55,7 @@ func (t TaskHandler) CreatePeriodicTask(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	notifParams, err := mapPtrDomainNotificationParams(body.NotificationParams)
+	notifParams, err := mapDomainNotificationParams(body.NotificationParams)
 	if err != nil {
 		responses.KnownError(w, err)
 
@@ -128,7 +128,7 @@ func (t TaskHandler) UpdatePeriodicTask(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	notifParams, err := mapPtrDomainNotificationParams(body.NotificationParams)
+	notifParams, err := mapDomainNotificationParams(body.NotificationParams)
 	if err != nil {
 		responses.KnownError(w, err)
 
@@ -168,7 +168,7 @@ func mapAPIPeriodicTask(pt domains.PeriodicTask) api.PeriodicTask {
 		BiggestPeriod:      int(pt.BiggestPeriod / timeDay),
 		Description:        &pt.Description,
 		Id:                 pt.ID,
-		NotificationParams: mapPtrAPINotificationParams(pt.NotificationParams),
+		NotificationParams: utils.Ptr(mapAPINotificationParams(pt.NotificationParams)),
 		Notify:             pt.Notify,
 		SmallestPeriod:     int(pt.SmallestPeriod / timeDay),
 		Start:              pt.Start.String(),

@@ -22,7 +22,6 @@ import (
 	authRepository "github.com/Dyleme/Notifier/internal/authorization/repository"
 	authService "github.com/Dyleme/Notifier/internal/authorization/service"
 	"github.com/Dyleme/Notifier/internal/config"
-	"github.com/Dyleme/Notifier/internal/notifier"
 	"github.com/Dyleme/Notifier/internal/notifier/eventnotifier"
 	"github.com/Dyleme/Notifier/internal/server"
 	custMiddleware "github.com/Dyleme/Notifier/internal/server/middleware"
@@ -116,8 +115,8 @@ func main() { //nolint:funlen // main can be long
 		return
 	}
 
-	eventsNotifier.SetNotifier(notifier.CmdNotifier{})
-	authSvc.SetCodeSender(authService.CmdCodeSender{})
+	eventsNotifier.SetNotifier(tg)
+	authSvc.SetCodeSender(tg)
 
 	go eventsNotifierJob.Run(ctx)
 

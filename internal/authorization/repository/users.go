@@ -149,7 +149,7 @@ func (r *Repository) UpdateBindingAttemptStatus(ctx context.Context, baID int, d
 
 func (r *Repository) GetNextTime(ctx context.Context) (time.Time, error) {
 	tx := r.getter.DefaultTrOrDB(ctx, r.db)
-	t, err := r.q.GetNearestDailyNotificationTime(ctx, tx)
+	ts, err := r.q.GetNearestDailyNotificationTime(ctx, tx)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return time.Time{}, fmt.Errorf("get next time: %w", serverrors.NewNotFoundError(err, "time"))
@@ -157,12 +157,12 @@ func (r *Repository) GetNextTime(ctx context.Context) (time.Time, error) {
 		return time.Time{}, fmt.Errorf("get next time: %w", serverrors.NewRepositoryError(err))
 	}
 
-	return t, nil
+	return pgxconv.OnlyTime(ts)
 }
 
 func (r *Repository) DailyNotificationsUsers(ctx context.Context, now time.Time) ([]domains.User, error) {
 	tx := r.getter.DefaultTrOrDB(ctx, r.db)
-	users, err := r.q.ListUsersToNotfiy(ctx, tx, now)
+	users, err := r.q.ListUsersToNotfiy(ctx, tx, pgxconv.PgOnlyTime(now))
 	if err != nil {
 		return nil, fmt.Errorf("get daily notifications users: %w", serverrors.NewRepositoryError(err))
 	}

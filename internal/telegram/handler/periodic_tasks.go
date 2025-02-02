@@ -447,7 +447,7 @@ func (pt *PeriodicTask) CreateInline(ctx context.Context, b *bot.Bot, msg *model
 		Start:              computeStartTime(pt.time, user.Location()),
 		SmallestPeriod:     pt.smallestPeriod,
 		BiggestPeriod:      pt.biggestPeriod,
-		NotificationParams: nil,
+		NotificationParams: domains.NotificationParams{},
 	}
 
 	_, err = pt.th.serv.CreatePeriodicTask(ctx, task, user.ID)
@@ -479,7 +479,7 @@ func (pt *PeriodicTask) UpdateInline(ctx context.Context, b *bot.Bot, msg *model
 		SmallestPeriod:     pt.smallestPeriod,
 		BiggestPeriod:      pt.biggestPeriod,
 		Tags:               nil,
-		NotificationParams: nil,
+		NotificationParams: domains.NotificationParams{},
 		Notify:             true,
 	}
 

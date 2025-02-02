@@ -70,9 +70,8 @@ func (er *EventsRepository) dto(dbEv goqueries.Event) (domains.Event, error) {
 		TaskType:           taskType,
 		TaskID:             int(dbEv.TaskID),
 		NotificationParams: dbEv.NotificationParams,
-		LastSendedTime:     pgxconv.TimeWithZone(dbEv.LastSendedTime),
-		Time:               pgxconv.TimeWithZone(dbEv.Time),
-		FirstTime:          pgxconv.TimeWithZone(dbEv.FirstTime),
+		NextSend:           pgxconv.TimeWithZone(dbEv.NextSend),
+		FirstSend:          pgxconv.TimeWithZone(dbEv.FirstSend),
 		Done:               dbEv.Done,
 		Tags:               nil,
 		Notify:             dbEv.Notify,
@@ -95,9 +94,8 @@ func (er *EventsRepository) dtoWithTags(dbEv goqueries.Event, dbTags []goqueries
 		TaskType:           taskType,
 		TaskID:             int(dbEv.TaskID),
 		NotificationParams: dbEv.NotificationParams,
-		LastSendedTime:     pgxconv.TimeWithZone(dbEv.LastSendedTime),
-		Time:               pgxconv.TimeWithZone(dbEv.Time),
-		FirstTime:          pgxconv.TimeWithZone(dbEv.FirstTime),
+		NextSend:           pgxconv.TimeWithZone(dbEv.NextSend),
+		FirstSend:          pgxconv.TimeWithZone(dbEv.FirstSend),
 		Done:               dbEv.Done,
 		Tags:               utils.DtoSlice(dbTags, dtoTag),
 		Notify:             dbEv.Notify,
@@ -118,7 +116,7 @@ func (er *EventsRepository) Add(ctx context.Context, event domains.Event) (domai
 		Text:               event.Text,
 		TaskID:             int32(event.TaskID),
 		TaskType:           taskType,
-		Time:               pgxconv.Timestamptz(event.Time),
+		NextSend:               pgxconv.Timestamptz(event.NextSend),
 		NotificationParams: event.NotificationParams,
 	})
 	if err != nil {
@@ -229,8 +227,8 @@ func (er *EventsRepository) Update(ctx context.Context, event domains.Event) err
 
 	_, err := er.q.UpdateEvent(ctx, tx, goqueries.UpdateEventParams{
 		Text:      event.Text,
-		Time:      pgxconv.Timestamptz(event.Time),
-		FirstTime: pgxconv.Timestamptz(event.FirstTime),
+		NextSend:      pgxconv.Timestamptz(event.NextSend),
+		FirstSend: pgxconv.Timestamptz(event.FirstSend),
 		Done:      event.Done,
 		ID:        int32(event.ID),
 	})

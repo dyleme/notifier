@@ -10,7 +10,7 @@ CREATE TABLE tags (
   CONSTRAINT tags_unique_name_user_id UNIQUE (name, user_id)
 );
 
-CREATE TABLE smth_to_tags (
+CREATE TABLE smth2tags (
   smth_id INT NOT NULL,
   tag_id INT NOT NULL,
   user_id INT NOT NULL,
@@ -22,6 +22,6 @@ CREATE TABLE smth_to_tags (
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE smth_to_tags;
+DROP TABLE smth2tags;
 DROP TABLE tags;
 -- +goose StatementEnd

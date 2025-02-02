@@ -18,12 +18,11 @@ func CreateEvent(eventCreator EventCreator, defaultParams NotificationParams) (E
 
 	if event.Notify {
 		if utils.IsZero(event.NotificationParams) {
-			event.NotificationParams = &defaultParams
+			event.NotificationParams = defaultParams
 		}
 	}
 
-	err = event.Validate()
-	if err != nil {
+	if err = event.Validate(); err != nil{ 
 		return Event{}, err
 	}
 

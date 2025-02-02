@@ -17,7 +17,7 @@ func TestBasicTask_newEvent(t *testing.T) {
 			Text:        "text",
 			Description: "description",
 			Start:       time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
-			NotificationParams: &NotificationParams{
+			NotificationParams: NotificationParams{
 				Period: time.Hour,
 				Params: Params{
 					Telegram: 3,
@@ -34,9 +34,9 @@ func TestBasicTask_newEvent(t *testing.T) {
 			TaskType:           BasicTaskType,
 			TaskID:             1,
 			NotificationParams: basicTask.NotificationParams,
-			LastSendedTime:     time.Time{},
-			Time:               time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
-			FirstTime:          time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+			LastSent:           time.Time{},
+			NextSend:           time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+			FirstSend:          time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
 			Done:               false,
 		}
 

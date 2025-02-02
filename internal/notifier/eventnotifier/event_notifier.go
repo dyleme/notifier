@@ -49,14 +49,15 @@ func (en *EventNotifier) SetNotifier(notifier Notifier) {
 	en.notifier = notifier
 }
 
-func (en *EventNotifier) GetNextTime(ctx context.Context) time.Time {
+func (en *EventNotifier) GetNextTime(ctx context.Context) (time.Time, bool) {
 	t, err := en.repo.GetNearest(ctx)
 	if err != nil {
 		log.Ctx(ctx).Error("get nearest event", log.Err(err))
-		return time.Time{}
+
+		return time.Time{}, false
 	}
 
-	return t
+	return t, true
 }
 
 func (en *EventNotifier) Do(ctx context.Context, now time.Time) {
@@ -82,6 +83,7 @@ func (en *EventNotifier) Do(ctx context.Context, now time.Time) {
 			ev = ev.Rescheule(now)
 
 			err = en.repo.Update(ctx, ev)
+			log.Ctx(ctx).Info("update event", slog.Any("event", ev))
 			if err != nil {
 				log.Ctx(ctx).Error("update event", log.Err(err), slog.Any("event", ev))
 			}

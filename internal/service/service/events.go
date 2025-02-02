@@ -86,7 +86,7 @@ func (s *Service) ChangeEventTime(ctx context.Context, eventID int, newTime time
 			return fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
 		}
 
-		ev.Time = newTime
+		ev.FirstSend = newTime
 
 		err = s.repos.events.Update(ctx, ev)
 		if err != nil {
@@ -220,7 +220,7 @@ func (s *Service) createAndAddEvent(ctx context.Context, task domains.EventCreat
 		return fmt.Errorf("add event: %w", err)
 	}
 
-	s.notifierJob.UpdateWithTime(ctx, event.Time)
+	s.notifierJob.UpdateWithTime(ctx, event.FirstSend)
 
 	return nil
 }

@@ -432,7 +432,7 @@ func (bt *BasicTask) CreateInline(ctx context.Context, b *bot.Bot, msg *models.M
 		Text:               bt.text,
 		Description:        bt.description,
 		Start:              t,
-		NotificationParams: nil,
+		NotificationParams: domains.NotificationParams{},
 	}
 
 	_, err = bt.th.serv.CreateBasicTask(ctx, task)
@@ -463,7 +463,7 @@ func (bt *BasicTask) UpdateInline(ctx context.Context, b *bot.Bot, msg *models.M
 		UserID:             user.ID,
 		Description:        bt.description,
 		Start:              t,
-		NotificationParams: nil,
+		NotificationParams: domains.NotificationParams{},
 		Tags:               nil,
 		Notify:             true,
 	}, user.ID)

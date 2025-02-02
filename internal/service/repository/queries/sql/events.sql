@@ -4,19 +4,17 @@ INSERT INTO events (
     text,
     task_id,
     task_type,
-    time, 
+    next_send, 
     notification_params,
-    first_time,
-    last_sended_time
+    first_send
 ) VALUES (
     @user_id,
     @text,
     @task_id,
     @task_type,
-    @time,
+    @next_send,
     @notification_params,
-    @time,
-    TIMESTAMP '1970-01-01 00:00:00'
+    @next_send
 ) RETURNING *;
 
 -- name: GetEvent :one
@@ -27,23 +25,23 @@ WHERE id = @id;
 SELECT * FROM events
 WHERE task_id = @task_id
   AND task_type = @task_type
-ORDER BY time DESC
+ORDER BY next_send DESC
 LIMIT 1;
   
 -- name: ListUserEvents :many
 SELECT DISTINCT sqlc.embed(e) 
 FROM events as e
-LEFT JOIN smth_to_tags as s2t
+LEFT JOIN smth2tags as s2t
   ON e.id = s2t.smth_id
 LEFT JOIN tags as t
   ON s2t.tag_id = t.id
 WHERE e.user_id = @user_id
-  AND time BETWEEN @from_time AND @to_time
+  AND next_send BETWEEN @from_time AND @to_time
   AND (
     t.id = ANY (@tag_ids::int[]) 
     OR array_length(@tag_ids::int[], 1) is null
   )
-ORDER BY time DESC
+ORDER BY next_send DESC
 LIMIT @lim OFFSET @off;
 
 -- name: DeleteEvent :many
@@ -54,34 +52,34 @@ RETURNING *;
 -- name: UpdateEvent :one
 UPDATE events
 SET text = @text,
-    time = @time,
-    first_time = @first_time,
+    next_send = @next_send,
+    first_send = @first_send,
     done = @done
 WHERE id = @id
 RETURNING *;
 
 -- name: ListNotSendedEvents :many
 SELECT * FROM events
-WHERE time <= @till
+WHERE next_send <= @till
   AND done = false
   AND notify = true;
 
 -- name: GetNearestEventTime :one
-SELECT time FROM events
+SELECT next_send FROM events
 WHERE done = false
   AND notify = true 
-ORDER BY time ASC
+ORDER BY next_send ASC
 LIMIT 1;
 
 -- name: ListUserDailyEvents :many
 SELECT * FROM events
 WHERE user_id = @user_id
-  AND time + @time_offset  BETWEEN CURRENT_DATE AND CURRENT_DATE + 1
-ORDER BY time ASC;
+  AND next_send + @time_offset  BETWEEN CURRENT_DATE AND CURRENT_DATE + 1
+ORDER BY next_send ASC;
 
 -- name: ListNotDoneEvents :many
 SELECT * FROM events
 WHERE user_id = @user_id
   AND done = false
-  AND time < NOW()
-ORDER BY time ASC;
+  AND next_send < NOW()
+ORDER BY next_send ASC;

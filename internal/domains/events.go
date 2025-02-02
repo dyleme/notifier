@@ -3,7 +3,8 @@ package domains
 import (
 	"time"
 
-	"github.com/friendsofgo/errors"
+	"github.com/Dyleme/Notifier/pkg/serverrors"
+	"github.com/Dyleme/Notifier/pkg/utils"
 )
 
 type NotificationParams struct {
@@ -17,7 +18,7 @@ type Params struct {
 	Cmd      string `json:"cmd,omitempty"`
 }
 
-type Notification struct {
+type SendingEvent struct {
 	EventID     int
 	UserID      int
 	Message     string
@@ -26,45 +27,14 @@ type Notification struct {
 	SendTime    time.Time
 }
 
-type DailyNotification struct {
-	ToDo    []DailyNotificationEvent
-	NotDone []DailyNotificationEvent
-}
-type DailyNotificationEvent struct {
-	EventID     int
-	UserID      int
-	Message     string
-	Description string
-	Time        time.Time
-}
-
-var ErrNoNotifiedEvent = errors.New("not notified event")
-
-func (ev Event) NewNotification() (Notification, error) {
-	if !ev.Notify {
-		return Notification{}, ErrNoNotifiedEvent
-	}
-	err := ev.Validate()
-	if err != nil {
-		return Notification{}, err
-	}
-	return Notification{
+func NewSendingEvent(ev Event) SendingEvent {
+	return SendingEvent{
 		EventID:     ev.ID,
 		UserID:      ev.UserID,
 		Message:     ev.Text,
 		Description: ev.Description,
-		Params:      *ev.NotificationParams,
-		SendTime:    ev.Time,
-	}, nil
-}
-
-func (ev Event) NewDailyNotificationEvent() DailyNotificationEvent {
-	return DailyNotificationEvent{
-		EventID:     ev.ID,
-		UserID:      ev.UserID,
-		Message:     ev.Text,
-		Description: ev.Description,
-		Time:        ev.Time,
+		Params:      ev.NotificationParams,
+		SendTime:    ev.NextSend,
 	}
 }
 
@@ -75,21 +45,12 @@ type Event struct {
 	Description        string
 	TaskType           TaskType
 	TaskID             int
-	LastSendedTime     time.Time
-	Time               time.Time
-	FirstTime          time.Time
-	Notify             bool
+	NextSend           time.Time
+	FirstSend          time.Time
 	Done               bool
-	NotificationParams *NotificationParams
+	Notify             bool
+	NotificationParams NotificationParams
 	Tags               []Tag
-}
-
-func (ev Event) Validate() error {
-	if ev.Notify && ev.NotificationParams == nil {
-		return ErrNotificaitonParamsRequired
-	}
-
-	return nil
 }
 
 func (ev Event) BelongsTo(userID int) error {
@@ -105,7 +66,38 @@ func (ev Event) Rescheule(now time.Time) Event {
 }
 
 func (ev Event) RescheuleToTime(t time.Time) Event {
-	ev.Time = t
+	ev.NextSend = t
 
 	return ev
+}
+
+func (ev Event) MarkDone() Event {
+	ev.Done = true
+
+	return ev
+}
+
+func (ev Event) NewNotification() (Notification, error) {
+	if err := ev.Validate(); err != nil {
+		return Notification{}, err
+	}
+
+	return Notification{
+		EventID:  ev.ID,
+		SendTime: ev.NextSend,
+		Message:  ev.Text,
+		Params: ev.NotificationParams,
+	}, nil
+}
+
+func (ev Event) Validate() error {
+	if ev.Notify && utils.IsZero(ev.NotificationParams) {
+		return serverrors.NewInvalidBusinessStateError("event", "mark as being notified but notification params are empty")
+	}
+
+	if !ev.Notify && !utils.IsZero(ev.NotificationParams) {
+		return serverrors.NewInvalidBusinessStateError("event", "mark as not being notified but notification params exists")
+	}
+
+	return nil
 }

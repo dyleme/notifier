@@ -51,7 +51,7 @@ func (t TaskHandler) CreateBasicTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	notifParams, err := mapPtrDomainNotificationParams(body.NotificationParams)
+	notifParams, err := mapDomainNotificationParams(body.NotificationParams)
 	if err != nil {
 		responses.KnownError(w, err)
 
@@ -117,7 +117,7 @@ func (t TaskHandler) UpdateBasicTask(w http.ResponseWriter, r *http.Request, tas
 		return
 	}
 
-	notifParams, err := mapPtrDomainNotificationParams(body.NotificationParams)
+	notifParams, err := mapDomainNotificationParams(body.NotificationParams)
 	if err != nil {
 		responses.KnownError(w, err)
 
@@ -149,7 +149,7 @@ func mapAPIBasicTask(basicTask domains.BasicTask) api.BasicTask {
 	return api.BasicTask{
 		Description:        &basicTask.Description,
 		Id:                 basicTask.ID,
-		NotificationParams: mapPtrAPINotificationParams(basicTask.NotificationParams),
+		NotificationParams: utils.Ptr(mapAPINotificationParams(basicTask.NotificationParams)),
 		SendTime:           basicTask.Start,
 		Text:               basicTask.Text,
 		Tags:               mapAPITags(basicTask.Tags),

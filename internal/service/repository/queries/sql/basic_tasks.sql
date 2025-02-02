@@ -22,7 +22,7 @@ WHERE id = @id;
 -- name: ListBasicTasks :many
 SELECT sqlc.embed(bt)
 FROM basic_tasks as bt
-LEFT JOIN smth_to_tags as s2t
+LEFT JOIN smth2tags as s2t
   ON bt.id = s2t.smth_id
 LEFT JOIN tags as t
   ON s2t.tag_id = t.id
@@ -37,7 +37,7 @@ LIMIT @lim OFFSET @OFF;
 -- name: CountListBasicTasks :one
 SELECT COUNT(*)
 FROM basic_tasks as bt
-LEFT JOIN smth_to_tags as s2t
+LEFT JOIN smth2tags as s2t
   ON bt.id = s2t.smth_id
 LEFT JOIN tags as t
   ON s2t.tag_id = t.id

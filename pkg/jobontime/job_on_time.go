@@ -20,7 +20,7 @@ type JobInTime struct {
 
 //go:generate	mockgen -destination=job_mocks_test.go -package=jobontime_test . Job
 type Job interface {
-	GetNextTime(ctx context.Context) time.Time
+	GetNextTime(ctx context.Context) (time.Time, bool)
 	Do(ctx context.Context, now time.Time)
 }
 
@@ -43,7 +43,7 @@ func (j *JobInTime) Run(ctx context.Context) {
 	for {
 		select {
 		case <-j.timer.C:
-			j.job.Do(ctx, j.nextSendTime)
+			j.job.Do(ctx, j.clock.Now())
 			j.setNextEventTime(ctx)
 		case <-ctx.Done():
 			j.timer.Stop()
@@ -64,8 +64,8 @@ func (j *JobInTime) setNextEventTime(ctx context.Context) {
 
 func (j *JobInTime) nearestCheckTime(ctx context.Context) time.Time {
 	nextPeriodicInvocationTime := j.clock.Now().Truncate(time.Minute).Add(j.checkPeriod)
-	t := j.job.GetNextTime(ctx)
-	if utils.IsZero(t) {
+	t, exist := j.job.GetNextTime(ctx)
+	if !exist {
 		return nextPeriodicInvocationTime
 	}
 

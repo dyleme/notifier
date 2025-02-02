@@ -21,12 +21,12 @@ WHERE id = @id;
 
 -- name: AddTagsToSmth :copyfrom
 INSERT INTO
-smth_to_tags (smth_id, tag_id, user_id)
+smth2tags (smth_id, tag_id, user_id)
 VALUES (@smth_id, @tag_id, @user_id);
 
 
 -- name: ListTagsForSmth :many
-SELECT t.* FROM smth_to_tags as s2t
+SELECT t.* FROM smth2tags as s2t
 JOIN tags as t 
 ON s2t.tag_id = t.id
 WHERE smth_id = @smth_id;
@@ -38,18 +38,18 @@ WHERE tag_id = ANY(@tag_ids::int[])
   AND user_id = @user_id;
 
 -- name: ListTagsForSmths :many
-SELECT s2t.smth_id,sqlc.embed(t) FROM smth_to_tags as s2t
+SELECT s2t.smth_id,sqlc.embed(t) FROM smth2tags as s2t
 JOIN tags as t 
 ON s2t.tag_id = t.id
 WHERE smth_id = ANY(@smth_ids::int[]);
 
 -- name: DeleteTagsFromSmth :exec
-DELETE FROM smth_to_tags
+DELETE FROM smth2tags
 WHERE smth_id = @smth_id 
 AND tag_id = ANY(@tag_ids::int[]);
 
 -- name: DeleteAllTagsForSmth :exec
-DELETE FROM smth_to_tags
+DELETE FROM smth2tags
 WHERE smth_id = @smth_id;
 
 -- name: UpdateTag :exec

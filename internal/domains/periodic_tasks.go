@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"time"
+
+	"github.com/Dyleme/Notifier/pkg/serverrors"
+	"github.com/Dyleme/Notifier/pkg/utils"
 )
 
 const timeDay = 24 * time.Hour
@@ -20,7 +23,7 @@ type PeriodicTask struct {
 	Start              time.Duration // Event time from beginning of day
 	SmallestPeriod     time.Duration
 	BiggestPeriod      time.Duration
-	NotificationParams *NotificationParams
+	NotificationParams NotificationParams
 	Tags               []Tag
 }
 
@@ -57,9 +60,8 @@ func (pt PeriodicTask) newEvent() (Event, error) {
 		TaskType:           PeriodicTaskType,
 		TaskID:             pt.ID,
 		NotificationParams: pt.NotificationParams,
-		LastSendedTime:     time.Time{},
-		Time:               sendTime,
-		FirstTime:          sendTime,
+		NextSend:           sendTime,
+		FirstSend:          sendTime,
 		Done:               false,
 		Tags:               pt.Tags,
 		Notify:             pt.Notify,
@@ -73,8 +75,8 @@ func (pt PeriodicTask) Validate() error {
 		return InvalidPeriodTimeError{smallest: pt.SmallestPeriod, biggest: pt.BiggestPeriod} //nolint:exhaustruct //returning error
 	}
 
-	if pt.Notify && pt.NotificationParams == nil {
-		return ErrNotificaitonParamsRequired
+	if pt.Notify && utils.IsZero(pt.NotificationParams) {
+		return serverrors.NewInvalidBusinessStateError("periodic task", "mark as notified, but notiffication params are empty")
 	}
 
 	return nil

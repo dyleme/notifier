@@ -48,7 +48,7 @@ func (dn *DailyNotifier) SetNotifier(notifier Notifier) {
 	dn.notifier = notifier
 }
 
-func (dn *DailyNotifier) GetNextTime(ctx context.Context) time.Time {
+func (dn *DailyNotifier) GetNextTime(ctx context.Context) (time.Time, bool) {
 	t, err := dn.repo.GetNextTime(ctx)
 	if err != nil {
 		var notFoundErr serverrors.NotFoundError
@@ -56,10 +56,10 @@ func (dn *DailyNotifier) GetNextTime(ctx context.Context) time.Time {
 			log.Ctx(ctx).Error("get next time error", log.Err(err))
 		}
 
-		return time.Time{}
+		return time.Time{}, false
 	}
 
-	return t
+	return t, true
 }
 
 func (dn *DailyNotifier) Do(ctx context.Context, now time.Time) {

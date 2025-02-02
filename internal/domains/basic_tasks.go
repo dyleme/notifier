@@ -14,7 +14,7 @@ type BasicTask struct {
 	Description        string
 	Notify             bool
 	Start              time.Time
-	NotificationParams *NotificationParams
+	NotificationParams NotificationParams
 	Tags               []Tag
 }
 
@@ -27,9 +27,8 @@ func (bt BasicTask) newEvent() (Event, error) { //nolint:unparam //need for inte
 		TaskType:           BasicTaskType,
 		TaskID:             bt.ID,
 		NotificationParams: bt.NotificationParams,
-		LastSendedTime:     time.Time{},
-		Time:               bt.Start,
-		FirstTime:          bt.Start,
+		NextSend:           bt.Start,
+		FirstSend:          bt.Start,
 		Done:               false,
 		Tags:               bt.Tags,
 		Notify:             bt.Notify,

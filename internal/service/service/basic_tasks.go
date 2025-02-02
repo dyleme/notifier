@@ -46,7 +46,7 @@ func (s *Service) CreateBasicTask(ctx context.Context, task domains.BasicTask) (
 		return domains.BasicTask{}, err
 	}
 
-	s.notifierJob.UpdateWithTime(ctx, createdEvent.Time)
+	s.notifierJob.UpdateWithTime(ctx, createdEvent.FirstSend)
 
 	return createdTask, nil
 }

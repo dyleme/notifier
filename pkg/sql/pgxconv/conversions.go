@@ -39,19 +39,32 @@ var (
 	maxTime = time.Unix(1<<63-1, 0)
 )
 
-func Time(timestamp pgtype.Timestamp) time.Time {
-	return timestamp.Time
+const (
+	onlyTimeFormat = "15:04:05-0700"
+)
+
+func OnlyTime(ts string) (time.Time, error) {
+	t, err := time.Parse(onlyTimeFormat, ts)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	return t, nil
+}
+
+func PgOnlyTime(t time.Time) string {
+	return t.Format(onlyTimeFormat)
 }
 
 func Timestamptz(t time.Time) pgtype.Timestamptz {
-	if t == minTime {
+	if t.Equal(minTime) {
 		return pgtype.Timestamptz{
 			Time:             time.Time{},
 			InfinityModifier: pgtype.NegativeInfinity,
 			Valid:            true,
 		}
 	}
-	if t == maxTime {
+	if t.Equal(maxTime) {
 		return pgtype.Timestamptz{
 			Time:             time.Time{},
 			InfinityModifier: pgtype.Infinity,
