@@ -151,8 +151,6 @@ linters:
     - dupl # some code is boilerplate # Tool for code clone detection [fast: true, auto-fix: false]
     - ireturn # Accept Interfaces, Return Concrete Types [fast: false, auto-fix: false]
     - err113 # Go linter to check the errors handling expressions [fast: false, auto-fix: false]
-    - gomnd #[deprecated] # An analyzer to detect magic numbers. [fast: true, auto-fix: false]
-    - execinquery # [deprecated] # execinquery is a linter about query string checker in Query function which reads your Go src files and warning it finds [fast: false, auto-fix: false]
     - exportloopref #[deprecated] checks for pointers to enclosing loop variables [fast: false, auto-fix: false]
 run:
   issues-exit-code: 1
