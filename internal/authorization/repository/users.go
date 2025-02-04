@@ -154,6 +154,7 @@ func (r *Repository) GetNextTime(ctx context.Context) (time.Time, error) {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return time.Time{}, fmt.Errorf("get next time: %w", serverrors.NewNotFoundError(err, "time"))
 		}
+
 		return time.Time{}, fmt.Errorf("get next time: %w", serverrors.NewRepositoryError(err))
 	}
 

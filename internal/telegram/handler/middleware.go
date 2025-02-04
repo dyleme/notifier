@@ -10,17 +10,33 @@ import (
 
 	"github.com/Dyleme/Notifier/internal/telegram/userinfo"
 	"github.com/Dyleme/Notifier/pkg/log"
+	"github.com/Dyleme/Notifier/pkg/serverrors"
 )
 
-func (th *TelegramHandler) tgUserID(update *models.Update) (int64, error) {
-	switch {
-	case update.Message != nil:
-		return update.Message.From.ID, nil
-	case update.CallbackQuery != nil:
-		return update.CallbackQuery.Sender.ID, nil
+func chatID(update *models.Update) int64 {
+	if update.Message != nil {
+		return update.Message.Chat.ID
+	}
+	if update.EditedMessage != nil {
+		return update.EditedMessage.Chat.ID
+	}
+	if update.CallbackQuery != nil {
+		return update.CallbackQuery.Sender.ID
 	}
 
-	return 0, errors.New("unknown id")
+	return 0
+}
+
+func recoverPanicMiddleware(next bot.HandlerFunc) bot.HandlerFunc {
+	return func(ctx context.Context, bot *bot.Bot, update *models.Update) {
+		defer func() {
+			if r := recover(); r != nil {
+				handleError(log.WithCtx(ctx, "panic", "true"), bot, chatID(update), fmt.Errorf("%v", r))
+			}
+		}()
+
+		next(ctx, bot, update)
+	}
 }
 
 func (th *TelegramHandler) UserMiddleware(next bot.HandlerFunc) bot.HandlerFunc {
@@ -32,18 +48,33 @@ func (th *TelegramHandler) UserMiddleware(next bot.HandlerFunc) bot.HandlerFunc 
 			return
 		}
 
-		tgUserID, err := th.tgUserID(update)
-		if err != nil {
-			handleError(ctx, b, chatID, err)
-
-			return
+		var tgUserID int64
+		var nickname string
+		switch {
+		case update.Message != nil:
+			tgUserID = update.Message.From.ID
+			nickname = update.Message.From.Username
+		case update.CallbackQuery != nil:
+			tgUserID = update.CallbackQuery.Sender.ID
+			nickname = update.CallbackQuery.Sender.Username
 		}
 
-		userInfo, err := th.userRepo.GetUserInfo(ctx, int(tgUserID))
+		var userInfo userinfo.User
+		userInfo, err = th.userRepo.GetUserInfo(ctx, int(tgUserID))
 		if err != nil {
-			handleError(ctx, b, chatID, err)
+			var notFoundErr serverrors.NotFoundError
+			if !errors.As(err, &notFoundErr) {
+				handleError(ctx, b, chatID, err)
 
-			return
+				return
+			}
+
+			userInfo, err = th.userRepo.CreateUser(ctx, int(tgUserID), nickname)
+			if err != nil {
+				handleError(ctx, b, chatID, err)
+
+				return
+			}
 		}
 
 		ctx = context.WithValue(ctx, userCtxKey, userInfo)
@@ -70,32 +101,6 @@ func UserFromCtx(ctx context.Context) (userinfo.User, error) {
 func loggingMiddleware(next bot.HandlerFunc) bot.HandlerFunc {
 	return func(ctx context.Context, bot *bot.Bot, update *models.Update) {
 		log.Ctx(ctx).Debug("got update", "update", update)
-
-		next(ctx, bot, update)
-	}
-}
-
-func chatID(update *models.Update) int64 {
-	if update.Message != nil {
-		return update.Message.Chat.ID
-	}
-	if update.EditedMessage != nil {
-		return update.EditedMessage.Chat.ID
-	}
-	if update.CallbackQuery != nil {
-		return update.CallbackQuery.Sender.ID
-	}
-
-	return 0
-}
-
-func recoverPanicMiddleware(next bot.HandlerFunc) bot.HandlerFunc {
-	return func(ctx context.Context, bot *bot.Bot, update *models.Update) {
-		defer func() {
-			if r := recover(); r != nil {
-				handleError(log.WithCtx(ctx, "panic", "true"), bot, chatID(update), fmt.Errorf("%v", r))
-			}
-		}()
 
 		next(ctx, bot, update)
 	}

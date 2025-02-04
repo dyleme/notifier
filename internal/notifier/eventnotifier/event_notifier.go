@@ -6,10 +6,11 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/avito-tech/go-transaction-manager/trm"
+
 	"github.com/Dyleme/Notifier/internal/domains"
 	"github.com/Dyleme/Notifier/pkg/log"
 	"github.com/Dyleme/Notifier/pkg/utils"
-	"github.com/avito-tech/go-transaction-manager/trm"
 )
 
 type Notifier interface {
@@ -72,11 +73,13 @@ func (en *EventNotifier) Do(ctx context.Context, now time.Time) {
 			notification, err := ev.NewNotification()
 			if err != nil {
 				log.Ctx(ctx).Error("new sending event", log.Err(err))
+
 				continue
 			}
 			err = en.notifier.Notify(ctx, notification)
 			if err != nil {
 				log.Ctx(ctx).Error("notifier error", log.Err(err))
+
 				continue
 			}
 

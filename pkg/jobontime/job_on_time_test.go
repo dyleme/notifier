@@ -2,7 +2,6 @@ package jobontime_test
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 	"testing"
 	"time"
@@ -14,7 +13,6 @@ import (
 	"github.com/Dyleme/Notifier/pkg/jobontime"
 	"github.com/Dyleme/Notifier/pkg/log"
 	"github.com/Dyleme/Notifier/pkg/log/mocklogger"
-	"github.com/Dyleme/Notifier/pkg/serverrors"
 )
 
 const testTimeout = 500 * time.Millisecond
@@ -39,8 +37,6 @@ func setup(t *testing.T) (m mock, check func()) { //nolint:nonamedreturns // for
 	return m, mckCtrl.Finish
 }
 
-var errEventNotFound = serverrors.NewNotFoundError(errors.New("not found"), "event")
-
 func TestNotificationJob_Run(t *testing.T) {
 	t.Parallel()
 	t.Run("check first event on start up", func(t *testing.T) {
@@ -48,9 +44,9 @@ func TestNotificationJob_Run(t *testing.T) {
 		mock, finish := setup(t)
 		defer finish()
 		nextInvocation := mock.clock.Now().Add(100 * time.Millisecond)
-		mock.job.EXPECT().GetNextTime(gomock.Any()).Return(nextInvocation)
+		mock.job.EXPECT().GetNextTime(gomock.Any()).Return(nextInvocation, true)
 		mock.job.EXPECT().Do(gomock.Any(), nextInvocation)
-		mock.job.EXPECT().GetNextTime(gomock.Any()).Return(time.Time{})
+		mock.job.EXPECT().GetNextTime(gomock.Any()).Return(time.Time{}, false)
 		ctx := context.Background()
 		ctx = log.InCtx(ctx, slog.New(mock.logger))
 		job := jobontime.New(mock.clock, mock.job, 5*time.Minute)
@@ -71,9 +67,9 @@ func TestNotificationJob_Run(t *testing.T) {
 		mock, finish := setup(t)
 		defer finish()
 		checkPeriod := 5 * time.Minute
-		mock.job.EXPECT().GetNextTime(gomock.Any()).Return(time.Time{})
+		mock.job.EXPECT().GetNextTime(gomock.Any()).Return(time.Time{}, false)
 		mock.job.EXPECT().Do(gomock.Any(), mock.clock.Now().Add(checkPeriod))
-		mock.job.EXPECT().GetNextTime(gomock.Any()).Return(time.Time{})
+		mock.job.EXPECT().GetNextTime(gomock.Any()).Return(time.Time{}, false)
 
 		ctx := log.InCtx(context.Background(), slog.New(mock.logger))
 		job := jobontime.New(mock.clock, mock.job, checkPeriod)

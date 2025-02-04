@@ -18,7 +18,7 @@ type BasicTask struct {
 	Tags               []Tag
 }
 
-func (bt BasicTask) newEvent() (Event, error) { //nolint:unparam //need for interface impolementation
+func (bt BasicTask) newEvent(_ time.Time) (Event, error) { //nolint:unparam //need for interface impolementation
 	return Event{
 		ID:                 0,
 		UserID:             bt.UserID,
@@ -36,7 +36,7 @@ func (bt BasicTask) newEvent() (Event, error) { //nolint:unparam //need for inte
 }
 
 func (bt BasicTask) UpdatedEvent(ev Event) (Event, error) {
-	updatedEvent, err := bt.newEvent()
+	updatedEvent, err := bt.newEvent(time.Now())
 	if err != nil {
 		return Event{}, fmt.Errorf("new event: %w", err)
 	}

@@ -66,7 +66,7 @@ func (s *Server) Run(ctx context.Context) error {
 			return fmt.Errorf("shutdown: %w", err)
 		}
 
-		log.Ctx(ctx).Info("server end graceful shutdown", slog.Duration("shutdown_dur", time.Since(gsStart)))
+		log.Ctx(ctx).Info("server end graceful shutdown", slog.String("shutdown_dur", time.Since(gsStart).String()))
 	}
 
 	return nil

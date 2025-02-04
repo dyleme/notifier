@@ -56,8 +56,6 @@ func mapAPINotificationParams(params domains.NotificationParams) api.Notificatio
 	}
 }
 
-
-
 func mapDomainNotificationParams(np *api.NotificationParams) (domains.NotificationParams, error) {
 	if np == nil {
 		return domains.NotificationParams{}, nil

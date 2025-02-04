@@ -116,7 +116,7 @@ func (er *EventsRepository) Add(ctx context.Context, event domains.Event) (domai
 		Text:               event.Text,
 		TaskID:             int32(event.TaskID),
 		TaskType:           taskType,
-		NextSend:               pgxconv.Timestamptz(event.NextSend),
+		NextSend:           pgxconv.Timestamptz(event.NextSend),
 		NotificationParams: event.NotificationParams,
 	})
 	if err != nil {
@@ -227,7 +227,7 @@ func (er *EventsRepository) Update(ctx context.Context, event domains.Event) err
 
 	_, err := er.q.UpdateEvent(ctx, tx, goqueries.UpdateEventParams{
 		Text:      event.Text,
-		NextSend:      pgxconv.Timestamptz(event.NextSend),
+		NextSend:  pgxconv.Timestamptz(event.NextSend),
 		FirstSend: pgxconv.Timestamptz(event.FirstSend),
 		Done:      event.Done,
 		ID:        int32(event.ID),

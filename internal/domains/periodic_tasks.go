@@ -38,7 +38,7 @@ func (i InvalidPeriodTimeError) Error() string {
 	return fmt.Sprintf("invalid period error biggest is before smallest %v < %v", i.biggest, i.smallest)
 }
 
-func (pt PeriodicTask) newEvent() (Event, error) {
+func (pt PeriodicTask) newEvent(now time.Time) (Event, error) {
 	err := pt.Validate()
 	if err != nil {
 		return Event{}, err
@@ -49,7 +49,7 @@ func (pt PeriodicTask) newEvent() (Event, error) {
 	if diff := maxDays - minDays; diff > 0 { // need if as rand.IntN panics if diff == 0
 		days = minDays + rand.IntN(diff) //nolint:gosec // no need to use crypto rand
 	}
-	dayBeginning := time.Now().Add(time.Duration(days) * timeDay).Truncate(timeDay)
+	dayBeginning := now.Add(time.Duration(days) * timeDay).Truncate(timeDay)
 	sendTime := dayBeginning.Add(pt.Start)
 
 	return Event{
@@ -72,7 +72,7 @@ func (pt PeriodicTask) Validate() error {
 	minDays := int(pt.SmallestPeriod / timeDay)
 	maxDays := int(pt.BiggestPeriod / timeDay)
 	if maxDays < minDays {
-		return InvalidPeriodTimeError{smallest: pt.SmallestPeriod, biggest: pt.BiggestPeriod} //nolint:exhaustruct //returning error
+		return InvalidPeriodTimeError{smallest: pt.SmallestPeriod, biggest: pt.BiggestPeriod}
 	}
 
 	if pt.Notify && utils.IsZero(pt.NotificationParams) {

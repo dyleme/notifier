@@ -7,15 +7,15 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/avito-tech/go-transaction-manager/trm"
+
 	"github.com/Dyleme/Notifier/internal/domains"
 	"github.com/Dyleme/Notifier/pkg/log"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
-	"github.com/Dyleme/Notifier/pkg/utils"
-	"github.com/avito-tech/go-transaction-manager/trm"
 )
 
 type Notifier interface {
-	Notify(ctx context.Context, notif domains.DailyNotification) error
+	Notify(ctx context.Context, notif domains.Notification) error
 }
 
 type Repository interface {
@@ -80,16 +80,9 @@ func (dn *DailyNotifier) Do(ctx context.Context, now time.Time) {
 				log.Ctx(ctx).Error("list not done events error", log.Err(err), slog.Time("run_time", now))
 			}
 
-			notification := domains.DailyNotification{
-				ToDo: utils.DtoSlice(events, func(e domains.Event) domains.DailyNotificationEvent {
-					return e.NewDailyNotificationEvent()
-				}),
-				NotDone: utils.DtoSlice(notDoneEvents, func(e domains.Event) domains.DailyNotificationEvent {
-					return e.NewDailyNotificationEvent()
-				}),
-			}
+			log.Ctx(ctx).Debug("user events", slog.Int("user_id", user.ID), slog.Any("events", events), slog.Any("not_done_events", notDoneEvents))
 
-			err = dn.notifier.Notify(ctx, notification)
+			err = dn.notifier.Notify(ctx, domains.Notification{})
 			if err != nil {
 				log.Ctx(ctx).Error("notify error", log.Err(err), slog.Time("run_time", now))
 			}

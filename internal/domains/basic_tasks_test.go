@@ -23,8 +23,15 @@ func TestBasicTask_newEvent(t *testing.T) {
 					Telegram: 3,
 				},
 			},
+			Tags: []Tag{
+				{
+					ID:     5,
+					UserID: 2,
+					Name:   "tag",
+				},
+			},
 		}
-		actual, _ := basicTask.newEvent()
+		actual, _ := basicTask.newEvent(time.Time{})
 
 		expected := Event{
 			ID:                 0,
@@ -33,11 +40,18 @@ func TestBasicTask_newEvent(t *testing.T) {
 			Description:        "description",
 			TaskType:           BasicTaskType,
 			TaskID:             1,
-			NotificationParams: basicTask.NotificationParams,
-			LastSent:           time.Time{},
 			NextSend:           time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
 			FirstSend:          time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
 			Done:               false,
+			Notify:             false,
+			NotificationParams: basicTask.NotificationParams,
+			Tags: []Tag{
+				{
+					ID:     5,
+					UserID: 2,
+					Name:   "tag",
+				},
+			},
 		}
 
 		require.Equal(t, expected, actual)

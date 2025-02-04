@@ -5,8 +5,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Dyleme/Notifier/pkg/utils"
 	"github.com/benbjohnson/clock"
+
+	"github.com/Dyleme/Notifier/pkg/utils"
 )
 
 type JobInTime struct {
@@ -18,20 +19,20 @@ type JobInTime struct {
 	job          Job
 }
 
-//go:generate	mockgen -destination=job_mocks_test.go -package=jobontime_test . Job
+//go:generate mockgen -destination=job_mocks_test.go -package=jobontime_test . Job
 type Job interface {
 	GetNextTime(ctx context.Context) (time.Time, bool)
 	Do(ctx context.Context, now time.Time)
 }
 
 func New(
-	clock clock.Clock,
+	cl clock.Clock,
 	job Job,
 	checkPeriod time.Duration,
 ) *JobInTime {
 	return &JobInTime{
-		clock:       clock,
-		timer:       clock.Timer(time.Hour),
+		clock:       cl,
+		timer:       cl.Timer(time.Hour),
 		sendTimeMx:  &sync.RWMutex{},
 		checkPeriod: checkPeriod,
 		job:         job,
@@ -64,12 +65,13 @@ func (j *JobInTime) setNextEventTime(ctx context.Context) {
 
 func (j *JobInTime) nearestCheckTime(ctx context.Context) time.Time {
 	nextPeriodicInvocationTime := j.clock.Now().Truncate(time.Minute).Add(j.checkPeriod)
-	t, exist := j.job.GetNextTime(ctx)
+
+	nextEventTime, exist := j.job.GetNextTime(ctx)
 	if !exist {
 		return nextPeriodicInvocationTime
 	}
 
-	return utils.MinTime(nextPeriodicInvocationTime, t)
+	return utils.MinTime(nextPeriodicInvocationTime, nextEventTime)
 }
 
 func (j *JobInTime) UpdateWithTime(ctx context.Context, t time.Time) {

@@ -23,8 +23,16 @@ func TestPeriodicTask_newEvent(t *testing.T) {
 				Period: time.Hour,
 				Params: Params{Telegram: 3},
 			},
+			Tags: []Tag{
+				{
+					ID:     5,
+					UserID: 2,
+					Name:   "tag",
+				},
+			},
 		}
-		actual, err := periodicTask.newEvent()
+
+		actual, err := periodicTask.newEvent(time.Now())
 		require.NoError(t, err)
 
 		expected := Event{
@@ -34,11 +42,18 @@ func TestPeriodicTask_newEvent(t *testing.T) {
 			Description:        "description",
 			TaskType:           PeriodicTaskType,
 			TaskID:             1,
-			NotificationParams: periodicTask.NotificationParams,
-			LastSent:           time.Time{},
 			NextSend:           time.Time{},
 			FirstSend:          time.Time{},
 			Done:               false,
+			Notify:             false,
+			NotificationParams: periodicTask.NotificationParams,
+			Tags: []Tag{
+				{
+					ID:     5,
+					UserID: 2,
+					Name:   "tag",
+				},
+			},
 		}
 
 		// do not check send time
@@ -98,7 +113,7 @@ func TestPeriodicTask_newEvent(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			for range 10 {
-				actualEvent, err := tc.pt.newEvent()
+				actualEvent, err := tc.pt.newEvent(nowTime)
 				actual := actualEvent.NextSend
 
 				require.Equalf(t, actualEvent.NextSend, actualEvent.FirstSend,

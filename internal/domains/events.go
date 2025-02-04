@@ -86,7 +86,7 @@ func (ev Event) NewNotification() (Notification, error) {
 		EventID:  ev.ID,
 		SendTime: ev.NextSend,
 		Message:  ev.Text,
-		Params: ev.NotificationParams,
+		Params:   ev.NotificationParams,
 	}, nil
 }
 
