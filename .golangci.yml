@@ -142,18 +142,18 @@ linters:
     - whitespace # Whitespace is a linter that checks for unnecessary newlines at the start and end of functions, if, for, etc. [fast: true, auto-fix: true]
     - zerologlint # Detects the wrong usage of `zerolog` that a user forgets to dispatch with `Send` or `Msg` [fast: false, auto-fix: false]
   disable:
-    - varnamelen # checks that the length of a variable's name matches its scope [fast: false, auto-fix: false]
-    - depguard # Go linter that checks if package imports are in a list of acceptable packages [fast: true, auto-fix: false]
-    - gochecknoglobals # Check that no global variables exist. [fast: false, auto-fix: false]
-    - wsl # add or remove empty lines [fast: true, auto-fix: false]
-    - lll # Reports long lines [fast: true, auto-fix: false]
-    - testpackage # linter that makes you use a separate _test package [fast: true, auto-fix: false]
-    - dupl # Tool for code clone detection [fast: true, auto-fix: false]
+    - varnamelen # short variable names is normal for go # checks that the length of a variable's name matches its scope [fast: false, auto-fix: false]
+    - depguard # not necessary for small project # Go linter that checks if package imports are in a list of acceptable packages [fast: true, auto-fix: false]
+    - gochecknoglobals # global variables are widely used in go code # Check that no global variables exist. [fast: false, auto-fix: false]
+    - wsl # to many empty lines # add or remove empty lines [fast: true, auto-fix: false]
+    - lll # long lines is not always bad # Reports long lines [fast: true, auto-fix: false]
+    - testpackage # I want to test logic in not exported functions # linter that makes you use a separate _test package [fast: true, auto-fix: false]
+    - dupl # some code is boilerplate # Tool for code clone detection [fast: true, auto-fix: false]
     - ireturn # Accept Interfaces, Return Concrete Types [fast: false, auto-fix: false]
     - err113 # Go linter to check the errors handling expressions [fast: false, auto-fix: false]
+    - gomnd #[deprecated] # An analyzer to detect magic numbers. [fast: true, auto-fix: false]
+    - execinquery # [deprecated] # execinquery is a linter about query string checker in Query function which reads your Go src files and warning it finds [fast: false, auto-fix: false]
     - exportloopref #[deprecated] checks for pointers to enclosing loop variables [fast: false, auto-fix: false]
-    - exhaustruct # Checks if all structure fields are initialized [fast: false, auto-fix: false]
-    - wrapcheck # Checks that errors returned from external packages are wrapped [fast: false, auto-fix: false]
 run:
   issues-exit-code: 1
   timeout: 2m

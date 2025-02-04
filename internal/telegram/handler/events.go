@@ -337,7 +337,7 @@ func (ev *Event) DeleteInline(ctx context.Context, b *bot.Bot, msg *models.Messa
 		return fmt.Errorf("delete inline: user from ctx: %w", err)
 	}
 
-	err = ev.th.serv.DeleteEvent(ctx, user.ID, ev.id)
+	err = ev.th.serv.DeleteEvent(ctx, ev.id, user.ID)
 	if err != nil {
 		return fmt.Errorf("delete inline: delete event: %w", err)
 	}
