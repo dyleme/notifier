@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"net/http/pprof"
 
 	"github.com/go-chi/chi/v5"
 
@@ -25,6 +26,7 @@ func Route(
 
 	authApi.HandlerFromMux(authHandler, apiKeyRouter)
 	tasksApi.HandlerFromMux(timetableHandler, bearerTokenRouter)
+	router.Get("/debug", pprof.Profile)
 
 	return router
 }

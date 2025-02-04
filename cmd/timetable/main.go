@@ -22,7 +22,7 @@ import (
 	authRepository "github.com/Dyleme/Notifier/internal/authorization/repository"
 	authService "github.com/Dyleme/Notifier/internal/authorization/service"
 	"github.com/Dyleme/Notifier/internal/config"
-	"github.com/Dyleme/Notifier/internal/notifierjob"
+	"github.com/Dyleme/Notifier/internal/notifier/eventnotifier"
 	"github.com/Dyleme/Notifier/internal/server"
 	custMiddleware "github.com/Dyleme/Notifier/internal/server/middleware"
 	"github.com/Dyleme/Notifier/internal/service/handler"
@@ -30,6 +30,7 @@ import (
 	"github.com/Dyleme/Notifier/internal/service/service"
 	tgHandler "github.com/Dyleme/Notifier/internal/telegram/handler"
 	"github.com/Dyleme/Notifier/internal/telegram/userinfo"
+	"github.com/Dyleme/Notifier/pkg/jobontime"
 	"github.com/Dyleme/Notifier/pkg/log"
 	"github.com/Dyleme/Notifier/pkg/log/slogpretty"
 	"github.com/Dyleme/Notifier/pkg/sqldatabase"
@@ -52,11 +53,14 @@ func main() { //nolint:funlen // main can be long
 	trManager := manager.Must(trmpgx.NewDefaultFactory(db))
 	trCtxGetter := trmpgx.DefaultCtxGetter
 	nower := clock.New()
-	notifierJob := notifierjob.New(
+	eventsNotifier := eventnotifier.New(
 		repository.NewEventsRepository(db, trCtxGetter),
-		cfg.NotifierJob,
 		trManager,
+	)
+	eventsNotifierJob := jobontime.New(
 		nower,
+		eventsNotifier,
+		cfg.NotifierJob.CheckTasksPeriod,
 	)
 	svc := service.New(
 		repository.NewPeriodicTaskRepository(db, trCtxGetter),
@@ -64,8 +68,9 @@ func main() { //nolint:funlen // main can be long
 		repository.NewTGImagesRepository(db, trCtxGetter, cache),
 		repository.NewEventsRepository(db, trCtxGetter),
 		repository.NewDefaultNotificationParamsRepository(db, trCtxGetter),
+		repository.NewTagsRepository(db, trCtxGetter),
 		trManager,
-		notifierJob,
+		eventsNotifierJob,
 	)
 	timeTableHndlr := handler.New(svc)
 
@@ -110,10 +115,10 @@ func main() { //nolint:funlen // main can be long
 		return
 	}
 
-	notifierJob.SetNotifier(tg)
+	eventsNotifier.SetNotifier(tg)
 	authSvc.SetCodeSender(tg)
 
-	go notifierJob.Run(ctx)
+	go eventsNotifierJob.Run(ctx)
 
 	serv := server.New(router, cfg.Server)
 

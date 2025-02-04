@@ -51,3 +51,27 @@ SET tg_nickname = @tg_nickname,
     timezone_offset = @timezone_offset,
     timezone_dst = @timezone_dst
 WHERE tg_id = @tg_id;
+
+-- name: GetNearestDailyNotificationTime :one
+(
+    SELECT daily_notification_time
+    FROM users as a
+    WHERE a.daily_notification_time > CURRENT_TIME
+    ORDER BY daily_notification_time
+    LIMIT 1
+)
+UNION ALL
+(
+    SELECT daily_notification_time
+    FROM users
+    WHERE daily_notification_time > '00:00:00+00:00'
+    ORDER BY daily_notification_time
+    LIMIT 1
+)
+ORDER BY daily_notification_time DESC
+LIMIT 1;
+
+-- name: ListUsersToNotfiy :many
+SELECT *
+FROM users
+WHERE daily_notification_time = @now;

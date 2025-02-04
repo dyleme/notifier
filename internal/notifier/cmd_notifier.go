@@ -1,4 +1,4 @@
-package notifierjob
+package notifier
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 
 type CmdNotifier struct{}
 
-func (cn CmdNotifier) Notify(ctx context.Context, notif domains.SendingEvent) error {
+func (cn CmdNotifier) Notify(ctx context.Context, notif domains.Notification) error {
 	log.Ctx(ctx).Info("notify", "notification", notif)
 
 	return nil

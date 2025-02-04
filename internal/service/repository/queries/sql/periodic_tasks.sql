@@ -22,16 +22,32 @@ FROM periodic_tasks
 WHERE id = @id;
 
 -- name: ListPeriodicTasks :many
-SELECT *
-FROM periodic_tasks
-WHERE user_id = @user_id
-ORDER BY id DESC
+SELECT sqlc.embed(pt)
+FROM periodic_tasks as pt
+LEFT JOIN smth2tags as s2t
+  ON pt.id = s2t.smth_id
+LEFT JOIN tags as t
+  ON s2t.tag_id = t.id
+WHERE pt.user_id = @user_id
+  AND (
+    t.id = ANY (@tag_ids::int[]) 
+    OR array_length(@tag_ids::int[], 1) is null
+  )
+ORDER BY pt.id DESC
 LIMIT @lim OFFSET @OFF;
 
 -- name: CountListPeriodicTasks :one
 SELECT COUNT(*)
-FROM periodic_tasks
-WHERE user_id = @user_id;
+FROM periodic_tasks as pt
+LEFT JOIN smth2tags as s2t
+  ON pt.id = s2t.smth_id
+LEFT JOIN tags as t
+  ON s2t.tag_id = t.id
+WHERE pt.user_id = @user_id
+  AND (
+    t.id = ANY (@tag_ids::int[]) 
+    OR array_length(@tag_ids::int[], 1) is null
+  );
 
 
 -- name: DeletePeriodicTask :many

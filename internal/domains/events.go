@@ -2,6 +2,9 @@ package domains
 
 import (
 	"time"
+
+	"github.com/Dyleme/Notifier/pkg/serverrors"
+	"github.com/Dyleme/Notifier/pkg/utils"
 )
 
 type NotificationParams struct {
@@ -31,7 +34,7 @@ func NewSendingEvent(ev Event) SendingEvent {
 		Message:     ev.Text,
 		Description: ev.Description,
 		Params:      ev.NotificationParams,
-		SendTime:    ev.NextSendTime,
+		SendTime:    ev.NextSend,
 	}
 }
 
@@ -42,11 +45,12 @@ type Event struct {
 	Description        string
 	TaskType           TaskType
 	TaskID             int
-	LastSendedTime     time.Time
-	NextSendTime       time.Time
-	FirstSendTime      time.Time
+	NextSend           time.Time
+	FirstSend          time.Time
 	Done               bool
+	Notify             bool
 	NotificationParams NotificationParams
+	Tags               []Tag
 }
 
 func (ev Event) BelongsTo(userID int) error {
@@ -62,7 +66,7 @@ func (ev Event) Rescheule(now time.Time) Event {
 }
 
 func (ev Event) RescheuleToTime(t time.Time) Event {
-	ev.NextSendTime = t
+	ev.NextSend = t
 
 	return ev
 }
@@ -71,4 +75,29 @@ func (ev Event) MarkDone() Event {
 	ev.Done = true
 
 	return ev
+}
+
+func (ev Event) NewNotification() (Notification, error) {
+	if err := ev.Validate(); err != nil {
+		return Notification{}, err
+	}
+
+	return Notification{
+		EventID:  ev.ID,
+		SendTime: ev.NextSend,
+		Message:  ev.Text,
+		Params:   ev.NotificationParams,
+	}, nil
+}
+
+func (ev Event) Validate() error {
+	if ev.Notify && utils.IsZero(ev.NotificationParams) {
+		return serverrors.NewInvalidBusinessStateError("event", "mark as being notified but notification params are empty")
+	}
+
+	if !ev.Notify && !utils.IsZero(ev.NotificationParams) {
+		return serverrors.NewInvalidBusinessStateError("event", "mark as not being notified but notification params exists")
+	}
+
+	return nil
 }

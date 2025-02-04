@@ -21,6 +21,7 @@ import (
 type MockTgImagesRepository struct {
 	ctrl     *gomock.Controller
 	recorder *MockTgImagesRepositoryMockRecorder
+	isgomock struct{}
 }
 
 // MockTgImagesRepositoryMockRecorder is the mock recorder for MockTgImagesRepository.
@@ -41,30 +42,30 @@ func (m *MockTgImagesRepository) EXPECT() *MockTgImagesRepositoryMockRecorder {
 }
 
 // Add mocks base method.
-func (m *MockTgImagesRepository) Add(arg0 context.Context, arg1, arg2 string) error {
+func (m *MockTgImagesRepository) Add(ctx context.Context, filename, tgFileID string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Add", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Add", ctx, filename, tgFileID)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Add indicates an expected call of Add.
-func (mr *MockTgImagesRepositoryMockRecorder) Add(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockTgImagesRepositoryMockRecorder) Add(ctx, filename, tgFileID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Add", reflect.TypeOf((*MockTgImagesRepository)(nil).Add), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Add", reflect.TypeOf((*MockTgImagesRepository)(nil).Add), ctx, filename, tgFileID)
 }
 
 // Get mocks base method.
-func (m *MockTgImagesRepository) Get(arg0 context.Context, arg1 string) (domains.TgImage, error) {
+func (m *MockTgImagesRepository) Get(ctx context.Context, filename string) (domains.TgImage, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1)
+	ret := m.ctrl.Call(m, "Get", ctx, filename)
 	ret0, _ := ret[0].(domains.TgImage)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockTgImagesRepositoryMockRecorder) Get(arg0, arg1 any) *gomock.Call {
+func (mr *MockTgImagesRepositoryMockRecorder) Get(ctx, filename any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockTgImagesRepository)(nil).Get), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockTgImagesRepository)(nil).Get), ctx, filename)
 }

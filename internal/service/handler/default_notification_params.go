@@ -43,7 +43,7 @@ func (t TaskHandler) UpdateDefaultNotificationParams(w http.ResponseWriter, r *h
 		return
 	}
 
-	domainNp, err := mapDomainNotificationParams(body)
+	domainNp, err := mapDomainNotificationParams(&body)
 	if err != nil {
 		responses.KnownError(w, err)
 

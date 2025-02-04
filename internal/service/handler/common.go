@@ -56,27 +56,10 @@ func mapAPINotificationParams(params domains.NotificationParams) api.Notificatio
 	}
 }
 
-func mapPtrAPINotificationParams(params *domains.NotificationParams) *api.NotificationParams {
-	if params == nil {
-		return nil
-	}
-
-	return utils.Ptr(mapAPINotificationParams(*params))
-}
-
-func mapPtrDomainNotificationParams(np *api.NotificationParams) (*domains.NotificationParams, error) {
+func mapDomainNotificationParams(np *api.NotificationParams) (domains.NotificationParams, error) {
 	if np == nil {
-		return nil, nil //nolint:nilnil // nil is a valid value
+		return domains.NotificationParams{}, nil
 	}
-	notifParams, err := mapDomainNotificationParams(*np)
-	if err != nil {
-		return nil, err
-	}
-
-	return &notifParams, nil
-}
-
-func mapDomainNotificationParams(np api.NotificationParams) (domains.NotificationParams, error) {
 	period, err := time.ParseDuration(np.Period)
 	if err != nil {
 		return domains.NotificationParams{}, serverrors.NewMappingError(err, "notificationParams.period") //nolint:wrapcheck // standart package error
@@ -90,4 +73,23 @@ func mapDomainNotificationParams(np api.NotificationParams) (domains.Notificatio
 			Cmd:      utils.ZeroIfNil(np.NotificationChannel.Cmd),
 		},
 	}, nil
+}
+
+func mapDomainTags(ts []api.Tag, userID int) []domains.Tag {
+	return utils.DtoSlice(ts, func(t api.Tag) domains.Tag {
+		return domains.Tag{
+			ID:     t.Id,
+			UserID: userID,
+			Name:   t.Name,
+		}
+	})
+}
+
+func mapAPITags(ts []domains.Tag) []api.Tag {
+	return utils.DtoSlice(ts, func(t domains.Tag) api.Tag {
+		return api.Tag{
+			Id:   t.ID,
+			Name: t.Name,
+		}
+	})
 }

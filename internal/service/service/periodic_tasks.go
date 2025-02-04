@@ -13,9 +13,9 @@ import (
 type PeriodicTasksRepository interface {
 	Add(ctx context.Context, task domains.PeriodicTask) (domains.PeriodicTask, error)
 	Get(ctx context.Context, taskID int) (domains.PeriodicTask, error)
-	Update(ctx context.Context, task domains.PeriodicTask) (domains.PeriodicTask, error)
+	Update(ctx context.Context, task domains.PeriodicTask) error
 	Delete(ctx context.Context, taskID int) error
-	List(ctx context.Context, userID int, listParams ListParams) ([]domains.PeriodicTask, error)
+	List(ctx context.Context, userID int, params ListFilterParams) ([]domains.PeriodicTask, error)
 }
 
 func (s *Service) CreatePeriodicTask(ctx context.Context, perTask domains.PeriodicTask, userID int) (domains.PeriodicTask, error) {
@@ -78,7 +78,6 @@ type UpdatePeriodicTaskParams struct {
 }
 
 func (s *Service) UpdatePeriodicTask(ctx context.Context, perTask domains.PeriodicTask, userID int) error {
-	var updatedTask domains.PeriodicTask
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		var oldTask domains.PeriodicTask
 		oldTask, err := s.repos.periodicTasks.Get(ctx, perTask.ID)
@@ -90,7 +89,7 @@ func (s *Service) UpdatePeriodicTask(ctx context.Context, perTask domains.Period
 			return fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
 		}
 
-		updatedTask, err = s.repos.periodicTasks.Update(ctx, perTask)
+		err = s.repos.periodicTasks.Update(ctx, perTask)
 		if err != nil {
 			return fmt.Errorf("update: %w", err)
 		}
@@ -98,6 +97,11 @@ func (s *Service) UpdatePeriodicTask(ctx context.Context, perTask domains.Period
 		event, err := s.repos.events.GetLatest(ctx, oldTask.ID, domains.PeriodicTaskType)
 		if err != nil {
 			return fmt.Errorf("delete event: %w", err)
+		}
+
+		updatedTask, err := s.repos.periodicTasks.Get(ctx, perTask.ID)
+		if err != nil {
+			return fmt.Errorf("get[taskID=%v]: %w", perTask.ID, err)
 		}
 
 		if !updatedTask.TimeParamsHasChanged(oldTask) {
@@ -163,10 +167,19 @@ func (s *Service) DeletePeriodicTask(ctx context.Context, taskID, userID int) er
 	return nil
 }
 
-func (s *Service) ListPeriodicTasks(ctx context.Context, userID int, listParams ListParams) ([]domains.PeriodicTask, error) {
-	tasks, err := s.repos.periodicTasks.List(ctx, userID, listParams)
+func (s *Service) ListPeriodicTasks(ctx context.Context, userID int, params ListFilterParams) ([]domains.PeriodicTask, error) {
+	var tasks []domains.PeriodicTask
+	err := s.tr.Do(ctx, func(ctx context.Context) error {
+		var err error
+		tasks, err = s.repos.periodicTasks.List(ctx, userID, params)
+		if err != nil {
+			return fmt.Errorf("list periodic tasks: %w", err)
+		}
+
+		return nil
+	})
 	if err != nil {
-		err = fmt.Errorf("list periodic tasks: %w", err)
+		err = fmt.Errorf("tr: %w", err)
 		logError(ctx, err)
 
 		return nil, err

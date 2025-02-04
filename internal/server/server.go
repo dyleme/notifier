@@ -33,7 +33,7 @@ func New(handler http.Handler, cfg *Config) Server {
 			Handler:        handler,
 			MaxHeaderBytes: cfg.MaxHeaderBytes,
 			ReadTimeout:    cfg.ReadTimeout,
-			WriteTimeout:   cfg.WriteTimeout,
+			// WriteTimeout:   cfg.WriteTimeout,
 		},
 		gracefulShutdownTime: cfg.TimeForGracefulShutdown,
 	}
@@ -66,7 +66,7 @@ func (s *Server) Run(ctx context.Context) error {
 			return fmt.Errorf("shutdown: %w", err)
 		}
 
-		log.Ctx(ctx).Info("server end graceful shutdown", slog.Duration("shutdown_dur", time.Since(gsStart)))
+		log.Ctx(ctx).Info("server end graceful shutdown", slog.String("shutdown_dur", time.Since(gsStart).String()))
 	}
 
 	return nil

@@ -67,6 +67,27 @@ func (u *UserRepoCache) GetUserInfo(ctx context.Context, tgID int) (User, error)
 	return userID, nil
 }
 
+func (u *UserRepoCache) CreateUser(ctx context.Context, tgID int, nickname string) (User, error) {
+	domainUser, err := u.userRepo.CreateUser(ctx, service.CreateUserInput{
+		TGNickname: nickname,
+		TGID:       tgID,
+	})
+	if err != nil {
+		return User{}, fmt.Errorf("repo create: %w", err)
+	}
+
+	user := User{
+		TGID:  domainUser.TGID,
+		ID:    domainUser.ID,
+		Zone:  domainUser.TimeZoneOffset,
+		IsDST: domainUser.IsTimeZoneDST,
+	}
+
+	u.cache.StoreDefDur(tgID, user)
+
+	return user, nil
+}
+
 func (u *UserRepoCache) UpdateUserTime(ctx context.Context, tgID, tzOffset int, isDST bool) error {
 	op := "UserRepoCache.UpdateUserTime: %w"
 	user, err := u.GetUserInfo(ctx, tgID)

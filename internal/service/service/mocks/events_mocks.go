@@ -15,7 +15,6 @@ import (
 
 	domains "github.com/Dyleme/Notifier/internal/domains"
 	service "github.com/Dyleme/Notifier/internal/service/service"
-	timeborders "github.com/Dyleme/Notifier/pkg/utils/timeborders"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -23,6 +22,7 @@ import (
 type MockEventsRepository struct {
 	ctrl     *gomock.Controller
 	recorder *MockEventsRepositoryMockRecorder
+	isgomock struct{}
 }
 
 // MockEventsRepositoryMockRecorder is the mock recorder for MockEventsRepository.
@@ -43,89 +43,89 @@ func (m *MockEventsRepository) EXPECT() *MockEventsRepositoryMockRecorder {
 }
 
 // Add mocks base method.
-func (m *MockEventsRepository) Add(arg0 context.Context, arg1 domains.Event) (domains.Event, error) {
+func (m *MockEventsRepository) Add(ctx context.Context, event domains.Event) (domains.Event, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Add", arg0, arg1)
+	ret := m.ctrl.Call(m, "Add", ctx, event)
 	ret0, _ := ret[0].(domains.Event)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Add indicates an expected call of Add.
-func (mr *MockEventsRepositoryMockRecorder) Add(arg0, arg1 any) *gomock.Call {
+func (mr *MockEventsRepositoryMockRecorder) Add(ctx, event any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Add", reflect.TypeOf((*MockEventsRepository)(nil).Add), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Add", reflect.TypeOf((*MockEventsRepository)(nil).Add), ctx, event)
 }
 
 // Delete mocks base method.
-func (m *MockEventsRepository) Delete(arg0 context.Context, arg1 int) error {
+func (m *MockEventsRepository) Delete(ctx context.Context, id int) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", arg0, arg1)
+	ret := m.ctrl.Call(m, "Delete", ctx, id)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockEventsRepositoryMockRecorder) Delete(arg0, arg1 any) *gomock.Call {
+func (mr *MockEventsRepositoryMockRecorder) Delete(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockEventsRepository)(nil).Delete), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockEventsRepository)(nil).Delete), ctx, id)
 }
 
 // Get mocks base method.
-func (m *MockEventsRepository) Get(arg0 context.Context, arg1 int) (domains.Event, error) {
+func (m *MockEventsRepository) Get(ctx context.Context, id int) (domains.Event, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1)
+	ret := m.ctrl.Call(m, "Get", ctx, id)
 	ret0, _ := ret[0].(domains.Event)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockEventsRepositoryMockRecorder) Get(arg0, arg1 any) *gomock.Call {
+func (mr *MockEventsRepositoryMockRecorder) Get(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockEventsRepository)(nil).Get), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockEventsRepository)(nil).Get), ctx, id)
 }
 
 // GetLatest mocks base method.
-func (m *MockEventsRepository) GetLatest(arg0 context.Context, arg1 int, arg2 domains.TaskType) (domains.Event, error) {
+func (m *MockEventsRepository) GetLatest(ctx context.Context, taskdID int, taskType domains.TaskType) (domains.Event, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetLatest", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "GetLatest", ctx, taskdID, taskType)
 	ret0, _ := ret[0].(domains.Event)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetLatest indicates an expected call of GetLatest.
-func (mr *MockEventsRepositoryMockRecorder) GetLatest(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockEventsRepositoryMockRecorder) GetLatest(ctx, taskdID, taskType any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatest", reflect.TypeOf((*MockEventsRepository)(nil).GetLatest), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatest", reflect.TypeOf((*MockEventsRepository)(nil).GetLatest), ctx, taskdID, taskType)
 }
 
 // List mocks base method.
-func (m *MockEventsRepository) List(arg0 context.Context, arg1 int, arg2 timeborders.TimeBorders, arg3 service.ListParams) ([]domains.Event, error) {
+func (m *MockEventsRepository) List(ctx context.Context, userID int, params service.ListEventsFilterParams) ([]domains.Event, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "List", ctx, userID, params)
 	ret0, _ := ret[0].([]domains.Event)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockEventsRepositoryMockRecorder) List(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockEventsRepositoryMockRecorder) List(ctx, userID, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockEventsRepository)(nil).List), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockEventsRepository)(nil).List), ctx, userID, params)
 }
 
 // Update mocks base method.
-func (m *MockEventsRepository) Update(arg0 context.Context, arg1 domains.Event) error {
+func (m *MockEventsRepository) Update(ctx context.Context, event domains.Event) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Update", arg0, arg1)
+	ret := m.ctrl.Call(m, "Update", ctx, event)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockEventsRepositoryMockRecorder) Update(arg0, arg1 any) *gomock.Call {
+func (mr *MockEventsRepositoryMockRecorder) Update(ctx, event any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockEventsRepository)(nil).Update), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockEventsRepository)(nil).Update), ctx, event)
 }

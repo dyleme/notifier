@@ -3,8 +3,6 @@ package domains
 import (
 	"fmt"
 	"time"
-
-	"github.com/Dyleme/Notifier/pkg/utils"
 )
 
 const BasicTaskType TaskType = "basic task"
@@ -14,11 +12,13 @@ type BasicTask struct {
 	UserID             int
 	Text               string
 	Description        string
+	Notify             bool
 	Start              time.Time
-	NotificationParams *NotificationParams
+	NotificationParams NotificationParams
+	Tags               []Tag
 }
 
-func (bt BasicTask) newEvent() (Event, error) { //nolint:unparam //need for interface impolementation
+func (bt BasicTask) newEvent(_ time.Time) (Event, error) { //nolint:unparam //need for interface impolementation
 	return Event{
 		ID:                 0,
 		UserID:             bt.UserID,
@@ -26,16 +26,17 @@ func (bt BasicTask) newEvent() (Event, error) { //nolint:unparam //need for inte
 		Description:        bt.Description,
 		TaskType:           BasicTaskType,
 		TaskID:             bt.ID,
-		NotificationParams: utils.ZeroIfNil(bt.NotificationParams),
-		LastSendedTime:     time.Time{},
-		NextSendTime:       bt.Start,
-		FirstSendTime:      bt.Start,
+		NotificationParams: bt.NotificationParams,
+		NextSend:           bt.Start,
+		FirstSend:          bt.Start,
 		Done:               false,
+		Tags:               bt.Tags,
+		Notify:             bt.Notify,
 	}, nil
 }
 
 func (bt BasicTask) UpdatedEvent(ev Event) (Event, error) {
-	updatedEvent, err := bt.newEvent()
+	updatedEvent, err := bt.newEvent(time.Now())
 	if err != nil {
 		return Event{}, fmt.Errorf("new event: %w", err)
 	}

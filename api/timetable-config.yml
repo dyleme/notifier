@@ -9,3 +9,4 @@ output-options:
     - Basic tasks
     - Periodic tasks
     - Notification params
+    - Tags

@@ -14,18 +14,24 @@ import (
 //go:generate mockgen -destination=mocks/events_mocks.go -package=mocks . EventsRepository
 type EventsRepository interface {
 	Add(ctx context.Context, event domains.Event) (domains.Event, error)
-	List(ctx context.Context, userID int, timeBorderes timeborders.TimeBorders, listParams ListParams) ([]domains.Event, error)
+	List(ctx context.Context, userID int, params ListEventsFilterParams) ([]domains.Event, error)
 	Get(ctx context.Context, id int) (domains.Event, error)
 	GetLatest(ctx context.Context, taskdID int, taskType domains.TaskType) (domains.Event, error)
 	Update(ctx context.Context, event domains.Event) error
 	Delete(ctx context.Context, id int) error
 }
 
-func (s *Service) ListEvents(ctx context.Context, userID int, timeBorders timeborders.TimeBorders, listParams ListParams) ([]domains.Event, error) {
+type ListEventsFilterParams struct {
+	TimeBorders timeborders.TimeBorders
+	ListParams  ListParams
+	Tags        []int
+}
+
+func (s *Service) ListEvents(ctx context.Context, userID int, params ListEventsFilterParams) ([]domains.Event, error) {
 	var events []domains.Event
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		var err error
-		events, err = s.repos.events.List(ctx, userID, timeBorders, listParams)
+		events, err = s.repos.events.List(ctx, userID, params)
 		if err != nil {
 			return fmt.Errorf("events: list: %w", err)
 		}
@@ -80,7 +86,7 @@ func (s *Service) ChangeEventTime(ctx context.Context, eventID int, newTime time
 			return fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
 		}
 
-		ev.NextSendTime = newTime
+		ev.FirstSend = newTime
 
 		err = s.repos.events.Update(ctx, ev)
 		if err != nil {
@@ -214,7 +220,7 @@ func (s *Service) createAndAddEvent(ctx context.Context, task domains.EventCreat
 		return fmt.Errorf("add event: %w", err)
 	}
 
-	s.notifierJob.UpdateWithTime(ctx, event.NextSendTime)
+	s.notifierJob.UpdateWithTime(ctx, event.FirstSend)
 
 	return nil
 }

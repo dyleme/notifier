@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
@@ -15,6 +16,7 @@ import (
 	"github.com/Dyleme/Notifier/internal/domains"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
 	"github.com/Dyleme/Notifier/pkg/sql/pgxconv"
+	"github.com/Dyleme/Notifier/pkg/utils"
 )
 
 func (r *Repository) Create(ctx context.Context, input service.CreateUserInput) (domains.User, error) {
@@ -143,4 +145,37 @@ func (r *Repository) UpdateBindingAttemptStatus(ctx context.Context, baID int, d
 	}
 
 	return nil
+}
+
+func (r *Repository) GetNextTime(ctx context.Context) (time.Time, error) {
+	tx := r.getter.DefaultTrOrDB(ctx, r.db)
+	ts, err := r.q.GetNearestDailyNotificationTime(ctx, tx)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return time.Time{}, fmt.Errorf("get next time: %w", serverrors.NewNotFoundError(err, "time"))
+		}
+
+		return time.Time{}, fmt.Errorf("get next time: %w", serverrors.NewRepositoryError(err))
+	}
+
+	return pgxconv.OnlyTime(ts)
+}
+
+func (r *Repository) DailyNotificationsUsers(ctx context.Context, now time.Time) ([]domains.User, error) {
+	tx := r.getter.DefaultTrOrDB(ctx, r.db)
+	users, err := r.q.ListUsersToNotfiy(ctx, tx, pgxconv.PgOnlyTime(now))
+	if err != nil {
+		return nil, fmt.Errorf("get daily notifications users: %w", serverrors.NewRepositoryError(err))
+	}
+
+	return utils.DtoSlice(users, func(u goqueries.User) domains.User {
+		return domains.User{
+			ID:             int(u.ID),
+			TgNickname:     u.TgNickname,
+			PasswordHash:   pgxconv.ByteSlice(u.PasswordHash),
+			TGID:           int(u.TgID),
+			TimeZoneOffset: int(u.TimezoneOffset),
+			IsTimeZoneDST:  u.TimezoneDst,
+		}
+	}), nil
 }

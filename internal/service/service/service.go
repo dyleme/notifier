@@ -13,6 +13,7 @@ type repositories struct {
 	tgImages                  TgImagesRepository
 	events                    EventsRepository
 	defaultNotificationParams DefaultNotificationParamsRepository
+	tags                      TagsRepository
 }
 
 type Service struct {
@@ -36,6 +37,7 @@ func New(
 	tgImages TgImagesRepository,
 	events EventsRepository,
 	defaultNotificationParams DefaultNotificationParamsRepository,
+	tags TagsRepository,
 	trManger TxManager,
 	notifierJob NotifierJob,
 ) *Service {
@@ -46,6 +48,7 @@ func New(
 			tgImages:                  tgImages,
 			events:                    events,
 			defaultNotificationParams: defaultNotificationParams,
+			tags:                      tags,
 		},
 		notifierJob: notifierJob,
 		tr:          trManger,

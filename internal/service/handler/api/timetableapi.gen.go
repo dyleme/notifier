@@ -28,21 +28,29 @@ type BasicTask struct {
 	Description        *string             `json:"description,omitempty"`
 	Id                 int                 `json:"id"`
 	NotificationParams *NotificationParams `json:"notificationParams,omitempty"`
-	SendTime           time.Time           `json:"sendTime"`
-	Text               string              `json:"text"`
+
+	// Notify Shoud this task be notified
+	Notify   bool      `json:"notify"`
+	SendTime time.Time `json:"sendTime"`
+	Tags     []Tag     `json:"tags"`
+	Text     string    `json:"text"`
 }
 
 // Event defines model for Event.
 type Event struct {
-	Description        *string            `json:"description,omitempty"`
-	Done               bool               `json:"done"`
-	FirstSendTime      time.Time          `json:"firstSendTime"`
-	Id                 int                `json:"id"`
-	NextSendTime       time.Time          `json:"nextSendTime"`
-	NotificationParams NotificationParams `json:"notificationParams"`
-	TaskID             int                `json:"taskID"`
-	TaskType           TaskType           `json:"taskType"`
-	Text               string             `json:"text"`
+	Description        *string             `json:"description,omitempty"`
+	Done               bool                `json:"done"`
+	FirstSendTime      time.Time           `json:"firstSendTime"`
+	Id                 int                 `json:"id"`
+	NextSendTime       time.Time           `json:"nextSendTime"`
+	NotificationParams *NotificationParams `json:"notificationParams,omitempty"`
+
+	// Notify Shoud this task be notified
+	Notify   bool     `json:"notify"`
+	Tags     []Tag    `json:"tags"`
+	TaskID   int      `json:"taskID"`
+	TaskType TaskType `json:"taskType"`
+	Text     string   `json:"text"`
 }
 
 // NotificationChannel defines model for NotificationChannel.
@@ -66,12 +74,22 @@ type PeriodicTask struct {
 	Id                 int                 `json:"id"`
 	NotificationParams *NotificationParams `json:"notificationParams,omitempty"`
 
+	// Notify Shoud this task be notified
+	Notify bool `json:"notify"`
+
 	// SmallestPeriod minimum amount of days between events
 	SmallestPeriod int `json:"smallestPeriod"`
 
 	// Start Start time from the beginning of the day
 	Start string `json:"start"`
+	Tags  []Tag  `json:"tags"`
 	Text  string `json:"text"`
+}
+
+// Tag defines model for Tag.
+type Tag struct {
+	Id   int    `json:"id"`
+	Name string `json:"name"`
 }
 
 // TaskType defines model for TaskType.
@@ -83,6 +101,9 @@ type LimitParam = int32
 // OffsetParam defines model for offsetParam.
 type OffsetParam = int32
 
+// TagsParam defines model for tagsParam.
+type TagsParam = []int
+
 // ListBasicTasksParams defines parameters for ListBasicTasks.
 type ListBasicTasksParams struct {
 	// Limit Limits the number of returned results
@@ -90,6 +111,7 @@ type ListBasicTasksParams struct {
 
 	// Offset Offset from which start returned results
 	Offset *OffsetParam `form:"offset,omitempty" json:"offset,omitempty"`
+	TagIDs *TagsParam   `form:"tagIDs,omitempty" json:"tagIDs,omitempty"`
 }
 
 // CreateBasicTaskJSONBody defines parameters for CreateBasicTask.
@@ -97,8 +119,12 @@ type CreateBasicTaskJSONBody struct {
 	Description        string              `json:"description"`
 	Done               *bool               `json:"done,omitempty"`
 	NotificationParams *NotificationParams `json:"notificationParams,omitempty"`
-	SendTime           time.Time           `json:"sendTime"`
-	Text               string              `json:"text"`
+
+	// Notify Shoud this task be notified
+	Notify   bool      `json:"notify"`
+	SendTime time.Time `json:"sendTime"`
+	Tags     []Tag     `json:"tags"`
+	Text     string    `json:"text"`
 }
 
 // UpdateBasicTaskJSONBody defines parameters for UpdateBasicTask.
@@ -106,8 +132,12 @@ type UpdateBasicTaskJSONBody struct {
 	Description        string              `json:"description"`
 	Done               *bool               `json:"done,omitempty"`
 	NotificationParams *NotificationParams `json:"notificationParams,omitempty"`
-	SendTime           time.Time           `json:"sendTime"`
-	Text               string              `json:"text"`
+
+	// Notify Shoud this task be notified
+	Notify   bool      `json:"notify"`
+	SendTime time.Time `json:"sendTime"`
+	Tags     []Tag     `json:"tags"`
+	Text     string    `json:"text"`
 }
 
 // ListEventsParams defines parameters for ListEvents.
@@ -120,6 +150,7 @@ type ListEventsParams struct {
 
 	// Offset Offset from which start returned results
 	Offset *OffsetParam `form:"offset,omitempty" json:"offset,omitempty"`
+	TagIDs *TagsParam   `form:"tagIDs,omitempty" json:"tagIDs,omitempty"`
 }
 
 // SetEventDoneStatusJSONBody defines parameters for SetEventDoneStatus.
@@ -140,6 +171,7 @@ type ListPeriodicTasksParams struct {
 
 	// Offset Offset from which start returned results
 	Offset *OffsetParam `form:"offset,omitempty" json:"offset,omitempty"`
+	TagIDs *TagsParam   `form:"tagIDs,omitempty" json:"tagIDs,omitempty"`
 }
 
 // CreatePeriodicTaskJSONBody defines parameters for CreatePeriodicTask.
@@ -149,11 +181,15 @@ type CreatePeriodicTaskJSONBody struct {
 	Description        *string             `json:"description,omitempty"`
 	NotificationParams *NotificationParams `json:"notificationParams,omitempty"`
 
+	// Notify Shoud this task be notified
+	Notify bool `json:"notify"`
+
 	// SmallestPeriod minimum amount of days between events
 	SmallestPeriod int `json:"smallestPeriod"`
 
 	// Start Start time from the beginning of the day
 	Start string `json:"start"`
+	Tags  []Tag  `json:"tags"`
 	Text  string `json:"text"`
 }
 
@@ -164,12 +200,30 @@ type UpdatePeriodicTaskJSONBody struct {
 	Description        *string             `json:"description,omitempty"`
 	NotificationParams *NotificationParams `json:"notificationParams,omitempty"`
 
+	// Notify Shoud this task be notified
+	Notify bool `json:"notify"`
+
 	// SmallestPeriod minimum amount of days between events
 	SmallestPeriod int `json:"smallestPeriod"`
 
 	// Start Start time from the beginning of the day
 	Start string `json:"start"`
+	Tags  []Tag  `json:"tags"`
 	Text  string `json:"text"`
+}
+
+// ListTagsParams defines parameters for ListTags.
+type ListTagsParams struct {
+	// Limit Limits the number of returned results
+	Limit *LimitParam `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Offset from which start returned results
+	Offset *OffsetParam `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
+// CreateTagJSONBody defines parameters for CreateTag.
+type CreateTagJSONBody struct {
+	Name string `json:"name"`
 }
 
 // CreateBasicTaskJSONRequestBody defines body for CreateBasicTask for application/json ContentType.
@@ -192,6 +246,12 @@ type CreatePeriodicTaskJSONRequestBody CreatePeriodicTaskJSONBody
 
 // UpdatePeriodicTaskJSONRequestBody defines body for UpdatePeriodicTask for application/json ContentType.
 type UpdatePeriodicTaskJSONRequestBody UpdatePeriodicTaskJSONBody
+
+// CreateTagJSONRequestBody defines body for CreateTag for application/json ContentType.
+type CreateTagJSONRequestBody CreateTagJSONBody
+
+// UpdateTagJSONRequestBody defines body for UpdateTag for application/json ContentType.
+type UpdateTagJSONRequestBody = Tag
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -237,6 +297,18 @@ type ServerInterface interface {
 	// Update periodic task
 	// (PUT /periodic-tasks/{taskID})
 	UpdatePeriodicTask(w http.ResponseWriter, r *http.Request, taskID int)
+	// List tags
+	// (GET /tags)
+	ListTags(w http.ResponseWriter, r *http.Request, params ListTagsParams)
+	// Create tag
+	// (POST /tags)
+	CreateTag(w http.ResponseWriter, r *http.Request)
+	// Get tag
+	// (GET /tags/{tagID})
+	GetTag(w http.ResponseWriter, r *http.Request, tagID int)
+	// Update tag
+	// (PUT /tags/{tagID})
+	UpdateTag(w http.ResponseWriter, r *http.Request, tagID int)
 }
 
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
@@ -327,6 +399,30 @@ func (_ Unimplemented) UpdatePeriodicTask(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// List tags
+// (GET /tags)
+func (_ Unimplemented) ListTags(w http.ResponseWriter, r *http.Request, params ListTagsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create tag
+// (POST /tags)
+func (_ Unimplemented) CreateTag(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get tag
+// (GET /tags/{tagID})
+func (_ Unimplemented) GetTag(w http.ResponseWriter, r *http.Request, tagID int) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update tag
+// (PUT /tags/{tagID})
+func (_ Unimplemented) UpdateTag(w http.ResponseWriter, r *http.Request, tagID int) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // ServerInterfaceWrapper converts contexts to parameters.
 type ServerInterfaceWrapper struct {
 	Handler            ServerInterface
@@ -360,6 +456,14 @@ func (siw *ServerInterfaceWrapper) ListBasicTasks(w http.ResponseWriter, r *http
 	err = runtime.BindQueryParameter("form", true, false, "offset", r.URL.Query(), &params.Offset)
 	if err != nil {
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "tagIDs" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "tagIDs", r.URL.Query(), &params.TagIDs)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tagIDs", Err: err})
 		return
 	}
 
@@ -524,6 +628,14 @@ func (siw *ServerInterfaceWrapper) ListEvents(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	// ------------- Optional query parameter "tagIDs" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "tagIDs", r.URL.Query(), &params.TagIDs)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tagIDs", Err: err})
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListEvents(w, r, params)
 	}))
@@ -646,6 +758,14 @@ func (siw *ServerInterfaceWrapper) ListPeriodicTasks(w http.ResponseWriter, r *h
 		return
 	}
 
+	// ------------- Optional query parameter "tagIDs" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "tagIDs", r.URL.Query(), &params.TagIDs)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tagIDs", Err: err})
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListPeriodicTasks(w, r, params)
 	}))
@@ -721,6 +841,117 @@ func (siw *ServerInterfaceWrapper) UpdatePeriodicTask(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdatePeriodicTask(w, r, taskID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// ListTags operation middleware
+func (siw *ServerInterfaceWrapper) ListTags(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListTagsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "limit", r.URL.Query(), &params.Limit)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "offset", r.URL.Query(), &params.Offset)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListTags(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// CreateTag operation middleware
+func (siw *ServerInterfaceWrapper) CreateTag(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateTag(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// GetTag operation middleware
+func (siw *ServerInterfaceWrapper) GetTag(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "tagID" -------------
+	var tagID int
+
+	err = runtime.BindStyledParameterWithOptions("simple", "tagID", chi.URLParam(r, "tagID"), &tagID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tagID", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTag(w, r, tagID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// UpdateTag operation middleware
+func (siw *ServerInterfaceWrapper) UpdateTag(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "tagID" -------------
+	var tagID int
+
+	err = runtime.BindStyledParameterWithOptions("simple", "tagID", chi.URLParam(r, "tagID"), &tagID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tagID", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateTag(w, r, tagID)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -884,6 +1115,18 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/periodic-tasks/{taskID}", wrapper.UpdatePeriodicTask)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/tags", wrapper.ListTags)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/tags", wrapper.CreateTag)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/tags/{tagID}", wrapper.GetTag)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/tags/{tagID}", wrapper.UpdateTag)
 	})
 
 	return r

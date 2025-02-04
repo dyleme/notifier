@@ -20,20 +20,20 @@ import (
 
 type PeriodicTaskRepository struct {
 	q      *goqueries.Queries
-	db     *pgxpool.Pool
+	pool   *pgxpool.Pool
 	getter *trmpgx.CtxGetter
 }
 
 func NewPeriodicTaskRepository(db *pgxpool.Pool, getter *trmpgx.CtxGetter) *PeriodicTaskRepository {
 	return &PeriodicTaskRepository{
 		q:      goqueries.New(),
-		db:     db,
+		pool:   db,
 		getter: getter,
 	}
 }
 
-func (p *PeriodicTaskRepository) dto(pt goqueries.PeriodicTask) domains.PeriodicTask {
-	return domains.PeriodicTask{
+func (p *PeriodicTaskRepository) dtoWithTags(pt goqueries.PeriodicTask, tags []goqueries.Tag) domains.PeriodicTask {
+	task := domains.PeriodicTask{
 		ID:                 int(pt.ID),
 		Text:               pt.Text,
 		Description:        pgxconv.String(pt.Description),
@@ -42,11 +42,15 @@ func (p *PeriodicTaskRepository) dto(pt goqueries.PeriodicTask) domains.Periodic
 		SmallestPeriod:     time.Duration(pt.SmallestPeriod) * time.Minute,
 		BiggestPeriod:      time.Duration(pt.BiggestPeriod) * time.Minute,
 		NotificationParams: pt.NotificationParams,
+		Tags:               utils.DtoSlice(tags, dtoTag),
+		Notify:             pt.Notify,
 	}
+
+	return task
 }
 
 func (p *PeriodicTaskRepository) Add(ctx context.Context, task domains.PeriodicTask) (domains.PeriodicTask, error) {
-	tx := p.getter.DefaultTrOrDB(ctx, p.db)
+	tx := p.getter.DefaultTrOrDB(ctx, p.pool)
 	pt, err := p.q.AddPeriodicTask(ctx, tx, goqueries.AddPeriodicTaskParams{
 		UserID:             int32(task.UserID),
 		Text:               task.Text,
@@ -60,25 +64,44 @@ func (p *PeriodicTaskRepository) Add(ctx context.Context, task domains.PeriodicT
 		return domains.PeriodicTask{}, fmt.Errorf("add periodic task: %w", serverrors.NewRepositoryError(err))
 	}
 
-	return p.dto(pt), nil
+	_, err = p.q.AddTagsToSmth(ctx, tx, utils.DtoSlice(task.Tags, func(tag domains.Tag) goqueries.AddTagsToSmthParams {
+		return goqueries.AddTagsToSmthParams{
+			SmthID: pt.ID,
+			TagID:  int32(tag.ID),
+			UserID: int32(task.UserID),
+		}
+	}))
+	if err != nil {
+		return domains.PeriodicTask{}, fmt.Errorf("add tags to periodic task: %w", serverrors.NewRepositoryError(err))
+	}
+
+	pr, err := p.Get(ctx, int(pt.ID))
+	if err != nil {
+		return domains.PeriodicTask{}, fmt.Errorf("get periodic task: %w", serverrors.NewRepositoryError(err))
+	}
+
+	return pr, nil
 }
 
 func (p *PeriodicTaskRepository) Get(ctx context.Context, taskID int) (domains.PeriodicTask, error) {
-	op := "PeriodicTaskRepository.Get: %w"
-
-	tx := p.getter.DefaultTrOrDB(ctx, p.db)
-	pt, err := p.q.GetPeriodicTask(ctx, tx, int32(taskID))
+	tx := p.getter.DefaultTrOrDB(ctx, p.pool)
+	task, err := p.q.GetPeriodicTask(ctx, tx, int32(taskID))
 	if err != nil {
-		return domains.PeriodicTask{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
+		return domains.PeriodicTask{}, fmt.Errorf("get periodic task: %w", serverrors.NewRepositoryError(err))
 	}
 
-	return p.dto(pt), nil
+	tags, err := p.q.ListTagsForSmth(ctx, tx, int32(taskID))
+	if err != nil {
+		return domains.PeriodicTask{}, fmt.Errorf("list tags for periodic task: %w", serverrors.NewRepositoryError(err))
+	}
+
+	return p.dtoWithTags(task, tags), nil
 }
 
-func (p *PeriodicTaskRepository) Update(ctx context.Context, task domains.PeriodicTask) (domains.PeriodicTask, error) {
+func (p *PeriodicTaskRepository) Update(ctx context.Context, task domains.PeriodicTask) error {
 	op := "PeriodicTaskRepository.Update: %w"
 
-	tx := p.getter.DefaultTrOrDB(ctx, p.db)
+	tx := p.getter.DefaultTrOrDB(ctx, p.pool)
 	pt, err := p.q.UpdatePeriodicTask(ctx, tx, goqueries.UpdatePeriodicTaskParams{
 		ID:                 int32(task.ID),
 		UserID:             int32(task.UserID),
@@ -90,16 +113,21 @@ func (p *PeriodicTaskRepository) Update(ctx context.Context, task domains.Period
 		BiggestPeriod:      int32(task.BiggestPeriod / time.Minute),
 	})
 	if err != nil {
-		return domains.PeriodicTask{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
+		return fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
-	return p.dto(pt), nil
+	err = syncTags(ctx, tx, p.q, task.UserID, int(pt.ID), task.Tags)
+	if err != nil {
+		return fmt.Errorf("sync tags: %w", err)
+	}
+
+	return nil
 }
 
 func (p *PeriodicTaskRepository) Delete(ctx context.Context, taskID int) error {
 	op := "PeriodicTaskRepository.Delete: %w"
 
-	tx := p.getter.DefaultTrOrDB(ctx, p.db)
+	tx := p.getter.DefaultTrOrDB(ctx, p.pool)
 	evs, err := p.q.DeletePeriodicTask(ctx, tx, int32(taskID))
 	if err != nil {
 		return fmt.Errorf(op, serverrors.NewRepositoryError(err))
@@ -108,16 +136,22 @@ func (p *PeriodicTaskRepository) Delete(ctx context.Context, taskID int) error {
 		return fmt.Errorf(op, serverrors.NewNoDeletionsError("periodic task"))
 	}
 
+	err = p.q.DeleteAllTagsForSmth(ctx, tx, int32(taskID))
+	if err != nil {
+		return fmt.Errorf(op, serverrors.NewRepositoryError(err))
+	}
+
 	return nil
 }
 
-func (p *PeriodicTaskRepository) List(ctx context.Context, userID int, listParams service.ListParams) ([]domains.PeriodicTask, error) {
-	tx := p.getter.DefaultTrOrDB(ctx, p.db)
+func (p *PeriodicTaskRepository) List(ctx context.Context, userID int, params service.ListFilterParams) ([]domains.PeriodicTask, error) {
+	tx := p.getter.DefaultTrOrDB(ctx, p.pool)
 
-	tasks, err := p.q.ListPeriodicTasks(ctx, tx, goqueries.ListPeriodicTasksParams{
+	dbRows, err := p.q.ListPeriodicTasks(ctx, tx, goqueries.ListPeriodicTasksParams{
 		UserID: int32(userID),
-		Off:    int32(listParams.Offset),
-		Lim:    int32(listParams.Limit),
+		Off:    int32(params.ListParams.Offset),
+		Lim:    int32(params.ListParams.Limit),
+		TagIds: utils.DtoSlice(params.TagIDs, func(id int) int32 { return int32(id) }),
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -127,5 +161,25 @@ func (p *PeriodicTaskRepository) List(ctx context.Context, userID int, listParam
 		return nil, fmt.Errorf("list periodic tasks: %w", serverrors.NewRepositoryError(err))
 	}
 
-	return utils.DtoSlice(tasks, p.dto), nil
+	tasksIDs := utils.DtoSlice(dbRows, func(t goqueries.ListPeriodicTasksRow) int32 { return t.PeriodicTask.ID })
+
+	rows, err := p.q.ListTagsForSmths(ctx, tx, tasksIDs)
+	if err != nil {
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("list tags for smths: %w", serverrors.NewRepositoryError(err))
+		}
+	}
+
+	tasks := make([]domains.PeriodicTask, 0, len(dbRows))
+	for _, pt := range dbRows {
+		var tags []goqueries.Tag
+		for _, row := range rows {
+			if row.SmthID == pt.PeriodicTask.ID {
+				tags = append(tags, row.Tag)
+			}
+		}
+		tasks = append(tasks, p.dtoWithTags(pt.PeriodicTask, tags))
+	}
+
+	return tasks, nil
 }

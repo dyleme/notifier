@@ -7,6 +7,7 @@ import (
 	"github.com/Dyleme/Notifier/internal/authorization/authmiddleware"
 	"github.com/Dyleme/Notifier/internal/domains"
 	"github.com/Dyleme/Notifier/internal/service/handler/api"
+	"github.com/Dyleme/Notifier/internal/service/service"
 	"github.com/Dyleme/Notifier/pkg/http/requests"
 	"github.com/Dyleme/Notifier/pkg/http/responses"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
@@ -23,7 +24,10 @@ func (t TaskHandler) ListPeriodicTasks(w http.ResponseWriter, r *http.Request, p
 
 	listParams := parseListParams(params.Offset, params.Limit)
 
-	periodicTasks, err := t.serv.ListPeriodicTasks(r.Context(), userID, listParams)
+	periodicTasks, err := t.serv.ListPeriodicTasks(r.Context(), userID, service.ListFilterParams{
+		ListParams: listParams,
+		TagIDs:     utils.ZeroIfNil(params.TagIDs),
+	})
 	if err != nil {
 		responses.KnownError(w, err)
 
@@ -51,7 +55,7 @@ func (t TaskHandler) CreatePeriodicTask(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	notifParams, err := mapPtrDomainNotificationParams(body.NotificationParams)
+	notifParams, err := mapDomainNotificationParams(body.NotificationParams)
 	if err != nil {
 		responses.KnownError(w, err)
 
@@ -73,6 +77,8 @@ func (t TaskHandler) CreatePeriodicTask(w http.ResponseWriter, r *http.Request) 
 		SmallestPeriod:     24 * time.Hour * time.Duration(body.SmallestPeriod),
 		BiggestPeriod:      24 * time.Hour * time.Duration(body.BiggestPeriod),
 		NotificationParams: notifParams,
+		Tags:               mapDomainTags(body.Tags, userID),
+		Notify:             body.Notify,
 	}
 
 	createdTask, err := t.serv.CreatePeriodicTask(r.Context(), basicTask, userID)
@@ -122,7 +128,7 @@ func (t TaskHandler) UpdatePeriodicTask(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	notifParams, err := mapPtrDomainNotificationParams(body.NotificationParams)
+	notifParams, err := mapDomainNotificationParams(body.NotificationParams)
 	if err != nil {
 		responses.KnownError(w, err)
 
@@ -145,6 +151,8 @@ func (t TaskHandler) UpdatePeriodicTask(w http.ResponseWriter, r *http.Request, 
 		SmallestPeriod:     time.Duration(body.SmallestPeriod) * 24 * time.Hour,
 		BiggestPeriod:      time.Duration(body.BiggestPeriod) * 24 * time.Hour,
 		NotificationParams: notifParams,
+		Tags:               mapDomainTags(body.Tags, userID),
+		Notify:             body.Notify,
 	}, userID)
 	if err != nil {
 		responses.KnownError(w, err)
@@ -157,12 +165,14 @@ func (t TaskHandler) UpdatePeriodicTask(w http.ResponseWriter, r *http.Request, 
 
 func mapAPIPeriodicTask(pt domains.PeriodicTask) api.PeriodicTask {
 	return api.PeriodicTask{
-		Id:                 pt.ID,
-		Description:        &pt.Description,
-		NotificationParams: mapPtrAPINotificationParams(pt.NotificationParams),
 		BiggestPeriod:      int(pt.BiggestPeriod / timeDay),
+		Description:        &pt.Description,
+		Id:                 pt.ID,
+		NotificationParams: utils.Ptr(mapAPINotificationParams(pt.NotificationParams)),
+		Notify:             pt.Notify,
 		SmallestPeriod:     int(pt.SmallestPeriod / timeDay),
 		Start:              pt.Start.String(),
+		Tags:               mapAPITags(pt.Tags),
 		Text:               pt.Text,
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/Dyleme/Notifier/internal/authorization/authmiddleware"
 	"github.com/Dyleme/Notifier/internal/domains"
 	"github.com/Dyleme/Notifier/internal/service/handler/api"
+	"github.com/Dyleme/Notifier/internal/service/service"
 	"github.com/Dyleme/Notifier/pkg/http/requests"
 	"github.com/Dyleme/Notifier/pkg/http/responses"
 	"github.com/Dyleme/Notifier/pkg/utils"
@@ -19,9 +20,10 @@ func (t TaskHandler) ListBasicTasks(w http.ResponseWriter, r *http.Request, para
 		return
 	}
 
-	listParams := parseListParams(params.Offset, params.Limit)
-
-	basicTasks, err := t.serv.ListBasicTasks(r.Context(), userID, listParams)
+	basicTasks, err := t.serv.ListBasicTasks(r.Context(), userID, service.ListFilterParams{
+		ListParams: parseListParams(params.Offset, params.Limit),
+		TagIDs:     utils.ZeroIfNil(params.TagIDs),
+	})
 	if err != nil {
 		responses.KnownError(w, err)
 
@@ -49,7 +51,7 @@ func (t TaskHandler) CreateBasicTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	notifParams, err := mapPtrDomainNotificationParams(body.NotificationParams)
+	notifParams, err := mapDomainNotificationParams(body.NotificationParams)
 	if err != nil {
 		responses.KnownError(w, err)
 
@@ -63,6 +65,8 @@ func (t TaskHandler) CreateBasicTask(w http.ResponseWriter, r *http.Request) {
 		Description:        body.Description,
 		Start:              body.SendTime,
 		NotificationParams: notifParams,
+		Tags:               mapDomainTags(body.Tags, userID),
+		Notify:             body.Notify,
 	}
 
 	createdTask, err := t.serv.CreateBasicTask(r.Context(), basicTask)
@@ -113,7 +117,7 @@ func (t TaskHandler) UpdateBasicTask(w http.ResponseWriter, r *http.Request, tas
 		return
 	}
 
-	notifParams, err := mapPtrDomainNotificationParams(body.NotificationParams)
+	notifParams, err := mapDomainNotificationParams(body.NotificationParams)
 	if err != nil {
 		responses.KnownError(w, err)
 
@@ -127,6 +131,8 @@ func (t TaskHandler) UpdateBasicTask(w http.ResponseWriter, r *http.Request, tas
 		Description:        body.Description,
 		Start:              body.SendTime,
 		NotificationParams: notifParams,
+		Tags:               mapDomainTags(body.Tags, userID),
+		Notify:             body.Notify,
 	}, userID)
 	if err != nil {
 		responses.KnownError(w, err)
@@ -143,8 +149,10 @@ func mapAPIBasicTask(basicTask domains.BasicTask) api.BasicTask {
 	return api.BasicTask{
 		Description:        &basicTask.Description,
 		Id:                 basicTask.ID,
-		NotificationParams: mapPtrAPINotificationParams(basicTask.NotificationParams),
+		NotificationParams: utils.Ptr(mapAPINotificationParams(basicTask.NotificationParams)),
 		SendTime:           basicTask.Start,
 		Text:               basicTask.Text,
+		Tags:               mapAPITags(basicTask.Tags),
+		Notify:             basicTask.Notify,
 	}
 }

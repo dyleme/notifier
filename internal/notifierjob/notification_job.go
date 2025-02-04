@@ -114,7 +114,7 @@ func (nj *NotifierJob) nearestCheckTime(ctx context.Context) time.Time {
 		return nextPeriodicInvocationTime
 	}
 
-	return utils.MinTime(nextPeriodicInvocationTime, event.NextSendTime)
+	return utils.MinTime(nextPeriodicInvocationTime, event.NextSend)
 }
 
 func (nj *NotifierJob) notify(ctx context.Context) {

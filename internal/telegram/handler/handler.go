@@ -71,6 +71,7 @@ type WaitingActionsStore interface {
 type UserRepo interface {
 	GetUserInfo(ctx context.Context, tgID int) (userinfo.User, error)
 	UpdateUserTime(ctx context.Context, tgID int, timezoneOffset int, isDST bool) error
+	CreateUser(ctx context.Context, tgID int, nickname string) (userinfo.User, error)
 }
 
 type KVRepo interface {

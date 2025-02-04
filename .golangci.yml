@@ -29,7 +29,7 @@ linters-settings:
     sections:
       - standard
       - default
-      - prefix(github.com/Dyleme/Notifier)
+      - localmodule
       - blank
       - dot
   gosec:
@@ -42,7 +42,6 @@ issues:
     - path: _test.go
       linters:
         - funlen
-        - exhaustruct
   exclude-dirs:
     - cmd/playground
 
@@ -66,7 +65,6 @@ linters:
     - errname # Checks that sentinel errors are prefixed with the `Err` and error types are suffixed with the `Error`. [fast: false, auto-fix: false]
     - errorlint # errorlint is a linter for that can be used to find code that will cause problems with the error wrapping scheme introduced in Go 1.13. [fast: false, auto-fix: false]
     - exhaustive # check exhaustiveness of enum switch statements [fast: false, auto-fix: false]
-    - exhaustruct # Checks if all structure fields are initialized [fast: false, auto-fix: false]
     - fatcontext # detects nested contexts in loops and function literals [fast: false, auto-fix: false]
     - forbidigo # Forbids identifiers [fast: false, auto-fix: false]
     - forcetypeassert # finds forced type assertions [fast: true, auto-fix: false]
@@ -142,7 +140,6 @@ linters:
     - usestdlibvars # A linter that detect the possibility to use variables/constants from the Go standard library. [fast: true, auto-fix: false]
     - wastedassign # Finds wasted assignment statements [fast: false, auto-fix: false]
     - whitespace # Whitespace is a linter that checks for unnecessary newlines at the start and end of functions, if, for, etc. [fast: true, auto-fix: true]
-    - wrapcheck # Checks that errors returned from external packages are wrapped [fast: false, auto-fix: false]
     - zerologlint # Detects the wrong usage of `zerolog` that a user forgets to dispatch with `Send` or `Msg` [fast: false, auto-fix: false]
   disable:
     - varnamelen # short variable names is normal for go # checks that the length of a variable's name matches its scope [fast: false, auto-fix: false]
@@ -154,8 +151,6 @@ linters:
     - dupl # some code is boilerplate # Tool for code clone detection [fast: true, auto-fix: false]
     - ireturn # Accept Interfaces, Return Concrete Types [fast: false, auto-fix: false]
     - err113 # Go linter to check the errors handling expressions [fast: false, auto-fix: false]
-    - gomnd #[deprecated] # An analyzer to detect magic numbers. [fast: true, auto-fix: false]
-    - execinquery # [deprecated] # execinquery is a linter about query string checker in Query function which reads your Go src files and warning it finds [fast: false, auto-fix: false]
     - exportloopref #[deprecated] checks for pointers to enclosing loop variables [fast: false, auto-fix: false]
 run:
   issues-exit-code: 1
