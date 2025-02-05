@@ -53,12 +53,12 @@ type telegramConfig struct {
 	Token string `env:"TELEGRAM_TOKEN" env-required:"true"`
 }
 
-func Load() Config {
+func Load() (Config, error) {
 	var collectConfigs compositeConfig
 	filename := ".env"
 	folderPath, err := os.Getwd()
 	if err != nil {
-		panic(fmt.Errorf("can't get working dir: %w", err))
+		return Config{}, fmt.Errorf("can't get working dir: %w", err)
 	}
 
 	var pathToFile string
@@ -69,6 +69,9 @@ func Load() Config {
 			break
 		}
 		idx := strings.LastIndex(folderPath, "/")
+		if idx == -1 {
+			break
+		}
 		folderPath = folderPath[:idx]
 	}
 
@@ -76,9 +79,9 @@ func Load() Config {
 	if err != nil {
 		err = cleanenv.ReadEnv(&collectConfigs)
 		if err != nil {
-			panic(fmt.Errorf("can't read env: %w", err))
+			return Config{}, fmt.Errorf("can't read env: %w", err)
 		}
 	}
 
-	return mapConfig(&collectConfigs)
+	return mapConfig(&collectConfigs), nil
 }
