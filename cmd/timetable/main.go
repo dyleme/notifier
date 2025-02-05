@@ -37,7 +37,10 @@ import (
 )
 
 func main() { //nolint:funlen // main can be long
-	cfg := config.Load()
+	cfg, err := config.Load()
+	if err != nil {
+		panic(err)
+	}
 	logger := setupLogger(cfg.Env)
 	ctx := log.InCtx(context.Background(), logger)
 	ctx = cancelOnInterruption(ctx)
