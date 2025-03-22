@@ -14,7 +14,7 @@ type EventCreator interface {
 func CreateEvent(eventCreator EventCreator, defaultParams NotificationParams) (Event, error) {
 	event, err := eventCreator.newEvent(time.Now())
 	if err != nil {
-		return Event{}, fmt.Errorf("failed to create event: %w", err)
+		return Event{}, fmt.Errorf("new event: %w", err)
 	}
 
 	if event.Notify {

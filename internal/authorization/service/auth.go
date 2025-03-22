@@ -57,7 +57,7 @@ type BindingAttempt struct {
 // UserRepo is an interface which provides methods to implement with repository.
 type UserRepo interface {
 	Create(ctx context.Context, input CreateUserInput) (user domains.User, err error)
-	Get(ctx context.Context, tgNickname string, tgID int) (domains.User, error)
+	Find(ctx context.Context, tgNickname string, tgID int) (domains.User, error)
 	Update(ctx context.Context, user domains.User) error
 	AddBindingAttempt(ctx context.Context, input BindingAttempt) error
 	GetLatestBindingAttempt(ctx context.Context, tgID int) (BindingAttempt, error)
@@ -111,7 +111,7 @@ func (s *AuthService) StartUserBinding(ctx context.Context, input StartUserBindi
 	code := s.codeGenerator.GenereateCode()
 	passwordHash := s.hashGen.GeneratePasswordHash(input.Password)
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
-		user, err := s.repo.Get(ctx, input.TGNickname, 0)
+		user, err := s.repo.Find(ctx, input.TGNickname, 0)
 		if err != nil {
 			return fmt.Errorf("get user: %w", err)
 		}
@@ -147,7 +147,7 @@ type BindUserInput struct {
 
 func (s *AuthService) BindUser(ctx context.Context, input BindUserInput) error {
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
-		user, err := s.repo.Get(ctx, input.TGNickname, 0)
+		user, err := s.repo.Find(ctx, input.TGNickname, 0)
 		if err != nil {
 			return fmt.Errorf("get user: %w", err)
 		}
@@ -193,7 +193,7 @@ var (
 // and create token with the help jwtGen.CreateToken.
 func (s *AuthService) AuthUser(ctx context.Context, input ValidateUserInput) (string, error) {
 	op := "AuthService.AuthUser: %w"
-	user, err := s.repo.Get(ctx, input.AuthName, 0)
+	user, err := s.repo.Find(ctx, input.AuthName, 0)
 	if err != nil {
 		return "", fmt.Errorf(op, err)
 	}
@@ -212,7 +212,7 @@ func (s *AuthService) AuthUser(ctx context.Context, input ValidateUserInput) (st
 
 func (s *AuthService) GetTGUserInfo(ctx context.Context, tgID int) (domains.User, error) {
 	op := "AuthService.GetTGUserInfo: %w"
-	user, err := s.repo.Get(ctx, "", tgID)
+	user, err := s.repo.Find(ctx, "", tgID)
 	if err != nil {
 		return domains.User{}, fmt.Errorf(op, err)
 	}
@@ -254,7 +254,7 @@ func (s *AuthService) UpdateUserTime(ctx context.Context, id int, tzOffset domai
 	}
 
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
-		user, err := s.repo.Get(ctx, "", id)
+		user, err := s.repo.Find(ctx, "", id)
 		if err != nil {
 			return fmt.Errorf("get user: %w", err)
 		}

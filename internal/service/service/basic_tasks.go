@@ -19,14 +19,13 @@ type BasicTaskRepository interface {
 }
 
 func (s *Service) CreateBasicTask(ctx context.Context, task domains.BasicTask) (domains.BasicTask, error) {
-	op := "Service.CreateTask: %w"
+	log.Ctx(ctx).Debug("adding task", "event", task)
 	var createdTask domains.BasicTask
 	var createdEvent domains.Event
 
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		var err error
 
-		log.Ctx(ctx).Debug("add task", "event", task)
 		createdTask, err = s.repos.basicTasks.Add(ctx, task)
 		if err != nil {
 			return fmt.Errorf("add task: %w", err)
@@ -40,7 +39,7 @@ func (s *Service) CreateBasicTask(ctx context.Context, task domains.BasicTask) (
 		return nil
 	})
 	if err != nil {
-		err = fmt.Errorf(op, err)
+		err = fmt.Errorf("tr: %w", err)
 		logError(ctx, err)
 
 		return domains.BasicTask{}, err
@@ -52,10 +51,9 @@ func (s *Service) CreateBasicTask(ctx context.Context, task domains.BasicTask) (
 }
 
 func (s *Service) GetBasicTask(ctx context.Context, userID, taskID int) (domains.BasicTask, error) {
-	op := "Service.GetTask: %w"
 	tt, err := s.repos.basicTasks.Get(ctx, taskID)
 	if err != nil {
-		err = fmt.Errorf(op, err)
+		err = fmt.Errorf("get basic task userID[%v], taskID[%v]: %w", userID, taskID, err)
 		logError(ctx, err)
 
 		return domains.BasicTask{}, err
@@ -69,10 +67,9 @@ func (s *Service) GetBasicTask(ctx context.Context, userID, taskID int) (domains
 }
 
 func (s *Service) ListBasicTasks(ctx context.Context, userID int, params ListFilterParams) ([]domains.BasicTask, error) {
-	op := "Service.ListTasks: %w"
 	tts, err := s.repos.basicTasks.List(ctx, userID, params)
 	if err != nil {
-		err = fmt.Errorf(op, err)
+		err = fmt.Errorf("list tasks userID[%v]: %w", userID, err)
 		logError(ctx, err)
 
 		return nil, err
@@ -82,6 +79,7 @@ func (s *Service) ListBasicTasks(ctx context.Context, userID int, params ListFil
 }
 
 func (s *Service) UpdateBasicTask(ctx context.Context, params domains.BasicTask, userID int) (domains.BasicTask, error) {
+	log.Ctx(ctx).Debug("updating basic task", "task", params, "userID", userID)
 	var task domains.BasicTask
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		t, err := s.repos.basicTasks.Get(ctx, params.ID)
@@ -132,6 +130,7 @@ func (s *Service) UpdateBasicTask(ctx context.Context, params domains.BasicTask,
 }
 
 func (s *Service) DeleteBasicTask(ctx context.Context, userID, taskID int) error {
+	log.Ctx(ctx).Debug("delete basic task", "userID", userID, "taskID", taskID)
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		task, err := s.repos.basicTasks.Get(ctx, taskID)
 		if err != nil {

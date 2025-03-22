@@ -59,11 +59,11 @@ func uniqueError(err error) (string, bool) {
 	return "", false
 }
 
-func (r *Repository) Get(ctx context.Context, email string, tgID int) (domains.User, error) {
-	op := "Repository.Get: %w"
+func (r *Repository) Find(ctx context.Context, nickname string, tgID int) (domains.User, error) {
+	op := "Repository.Find: %w"
 	tx := r.getter.DefaultTrOrDB(ctx, r.db)
 	out, err := r.q.FindUser(ctx, tx, goqueries.FindUserParams{
-		TgNickname: email,
+		TgNickname: nickname,
 		TgID:       int32(tgID),
 	})
 	if err != nil {

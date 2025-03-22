@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/Dyleme/Notifier/internal/domains"
+	"github.com/Dyleme/Notifier/pkg/log"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
 )
 
@@ -17,6 +18,7 @@ type TagsRepository interface {
 }
 
 func (s *Service) AddTag(ctx context.Context, tag string, userID int) (domains.Tag, error) {
+	log.Ctx(ctx).Debug("adding tag", "tag", tag, "userID", userID)
 	var createdTag domains.Tag
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		var err error
@@ -38,6 +40,7 @@ func (s *Service) AddTag(ctx context.Context, tag string, userID int) (domains.T
 }
 
 func (s *Service) GetTag(ctx context.Context, tagID, userID int) (domains.Tag, error) {
+	log.Ctx(ctx).Debug("getting tag", "tagID", tagID, "userID", userID)
 	var tag domains.Tag
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		var err error
@@ -63,6 +66,7 @@ func (s *Service) GetTag(ctx context.Context, tagID, userID int) (domains.Tag, e
 }
 
 func (s *Service) ListTags(ctx context.Context, userID int, listParams ListParams) ([]domains.Tag, error) {
+	log.Ctx(ctx).Debug("list tags", "userID", userID, "listparams", listParams)
 	var tags []domains.Tag
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		var err error
@@ -84,6 +88,7 @@ func (s *Service) ListTags(ctx context.Context, userID int, listParams ListParam
 }
 
 func (s *Service) DeleteTag(ctx context.Context, tagID, userID int) error {
+	log.Ctx(ctx).Debug("delete tag", "userID", userID, "tagID", tagID)
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		tag, err := s.repos.tags.Get(ctx, tagID)
 		if err != nil {
@@ -112,6 +117,7 @@ func (s *Service) DeleteTag(ctx context.Context, tagID, userID int) error {
 }
 
 func (s *Service) UpdateTag(ctx context.Context, tagID int, name string, userID int) error {
+	log.Ctx(ctx).Debug("update tags", "tagID", tagID, "name", name, "userID", userID)
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		tag, err := s.repos.tags.Get(ctx, tagID)
 		if err != nil {

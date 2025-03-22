@@ -166,6 +166,7 @@ func (s *Service) ReschedulEventToTime(ctx context.Context, eventID, userID int,
 }
 
 func (s *Service) SetEventDoneStatus(ctx context.Context, eventID, userID int, done bool) error {
+	log.Ctx(ctx).Debug("setting event status", "eventID", eventID, "userID", userID, "status", done)
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		event, err := s.repos.events.Get(ctx, eventID)
 		if err != nil {
@@ -204,6 +205,7 @@ func (s *Service) SetEventDoneStatus(ctx context.Context, eventID, userID int, d
 }
 
 func (s *Service) createAndAddEvent(ctx context.Context, task domains.EventCreator, userID int) error {
+	log.Ctx(ctx).Debug("adding new event", "task", task, "userID", userID)
 	defParams, err := s.repos.defaultNotificationParams.Get(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("get default params: %w", err)

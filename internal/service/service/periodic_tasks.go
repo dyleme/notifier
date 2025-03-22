@@ -3,9 +3,11 @@ package service
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/Dyleme/Notifier/internal/domains"
+	"github.com/Dyleme/Notifier/pkg/log"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
 )
 
@@ -19,6 +21,7 @@ type PeriodicTasksRepository interface {
 }
 
 func (s *Service) CreatePeriodicTask(ctx context.Context, perTask domains.PeriodicTask, userID int) (domains.PeriodicTask, error) {
+	log.Ctx(ctx).Debug("creating periodic task", slog.Any("task", perTask), slog.Int("userID", userID))
 	if err := perTask.BelongsTo(userID); err != nil {
 		return domains.PeriodicTask{}, fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
 	}
@@ -45,6 +48,7 @@ func (s *Service) CreatePeriodicTask(ctx context.Context, perTask domains.Period
 }
 
 func (s *Service) GetPeriodicTask(ctx context.Context, taskID, userID int) (domains.PeriodicTask, error) {
+	log.Ctx(ctx).Debug("getting periodic task", "taskID", taskID, "userID", userID)
 	var pt domains.PeriodicTask
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		var err error
@@ -78,6 +82,7 @@ type UpdatePeriodicTaskParams struct {
 }
 
 func (s *Service) UpdatePeriodicTask(ctx context.Context, perTask domains.PeriodicTask, userID int) error {
+	log.Ctx(ctx).Debug("updating periodic task", "task", perTask, "userID", userID)
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		var oldTask domains.PeriodicTask
 		oldTask, err := s.repos.periodicTasks.Get(ctx, perTask.ID)
@@ -131,8 +136,7 @@ func (s *Service) UpdatePeriodicTask(ctx context.Context, perTask domains.Period
 }
 
 func (s *Service) DeletePeriodicTask(ctx context.Context, taskID, userID int) error {
-	op := "Service.DeletePeriodicTask: %w"
-
+	log.Ctx(ctx).Debug("deleting periodic task", "taskID", taskID, "userID", userID)
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		task, err := s.repos.periodicTasks.Get(ctx, taskID)
 		if err != nil {
@@ -161,13 +165,14 @@ func (s *Service) DeletePeriodicTask(ctx context.Context, taskID, userID int) er
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf(op, err)
+		return fmt.Errorf("tr: %w", err)
 	}
 
 	return nil
 }
 
 func (s *Service) ListPeriodicTasks(ctx context.Context, userID int, params ListFilterParams) ([]domains.PeriodicTask, error) {
+	log.Ctx(ctx).Debug("list periodic tasks", "userID", userID, "listparams", params)
 	var tasks []domains.PeriodicTask
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		var err error

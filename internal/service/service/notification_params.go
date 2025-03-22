@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/Dyleme/Notifier/internal/domains"
+	"github.com/Dyleme/Notifier/pkg/log"
 )
 
 //go:generate mockgen -destination=mocks/notification_params_mocks.go -package=mocks . DefaultNotificationParamsRepository
@@ -26,6 +27,7 @@ func (s *Service) SetDefaultNotificationParams(ctx context.Context, params domai
 }
 
 func (s *Service) GetDefaultNotificationParams(ctx context.Context, userID int) (domains.NotificationParams, error) {
+	log.Ctx(ctx).Debug("getting notification params", "userID", userID)
 	defParams, err := s.repos.defaultNotificationParams.Get(ctx, userID)
 	if err != nil {
 		err = fmt.Errorf("get deafault event params: %w", err)

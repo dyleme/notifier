@@ -69,7 +69,7 @@ func (th *TelegramHandler) UserMiddleware(next bot.HandlerFunc) bot.HandlerFunc 
 				return
 			}
 
-			userInfo, err = th.userRepo.CreateUser(ctx, int(tgUserID), nickname)
+			userInfo, err = th.userRepo.AddUser(ctx, int(tgUserID), nickname)
 			if err != nil {
 				handleError(ctx, b, chatID, err)
 

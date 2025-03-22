@@ -434,10 +434,9 @@ func computeStartTime(start time.Time, loc *time.Location) time.Duration {
 }
 
 func (pt *PeriodicTask) CreateInline(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
-	op := "SingleTask.CreateInline: %w"
 	user, err := UserFromCtx(ctx)
 	if err != nil {
-		return fmt.Errorf(op, err)
+		return fmt.Errorf("user from ctx: %w", err)
 	}
 
 	task := domains.PeriodicTask{ //nolint:exhaustruct //no need to fill
@@ -452,12 +451,12 @@ func (pt *PeriodicTask) CreateInline(ctx context.Context, b *bot.Bot, msg *model
 
 	_, err = pt.th.serv.CreatePeriodicTask(ctx, task, user.ID)
 	if err != nil {
-		return fmt.Errorf(op, err)
+		return fmt.Errorf("create periodic task userID[%v]: %w", user.ID, err)
 	}
 
 	err = pt.th.MainMenuWithText(ctx, b, msg, "Service successfully created:\n"+pt.String())
 	if err != nil {
-		return fmt.Errorf(op, err)
+		return fmt.Errorf("main menu: %w", err)
 	}
 
 	return nil

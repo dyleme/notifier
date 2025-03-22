@@ -67,7 +67,7 @@ func (u *UserRepoCache) GetUserInfo(ctx context.Context, tgID int) (User, error)
 	return userID, nil
 }
 
-func (u *UserRepoCache) CreateUser(ctx context.Context, tgID int, nickname string) (User, error) {
+func (u *UserRepoCache) AddUser(ctx context.Context, tgID int, nickname string) (User, error) {
 	domainUser, err := u.userRepo.CreateUser(ctx, service.CreateUserInput{
 		TGNickname: nickname,
 		TGID:       tgID,
