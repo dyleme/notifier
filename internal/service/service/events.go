@@ -7,8 +7,8 @@ import (
 
 	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/pkg/log"
+	"github.com/Dyleme/Notifier/pkg/model"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
-	"github.com/Dyleme/Notifier/pkg/utils/timeborders"
 )
 
 //go:generate mockgen -destination=mocks/events_mocks.go -package=mocks . EventsRepository
@@ -22,7 +22,7 @@ type EventsRepository interface {
 }
 
 type ListEventsFilterParams struct {
-	TimeBorders timeborders.TimeBorders
+	TimeBorders model.TimeBorders
 	ListParams  ListParams
 	Tags        []int
 }

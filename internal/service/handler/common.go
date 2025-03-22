@@ -6,9 +6,10 @@ import (
 	domain "github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/internal/service/handler/api"
 	"github.com/Dyleme/Notifier/internal/service/service"
+	"github.com/Dyleme/Notifier/pkg/model"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
-	"github.com/Dyleme/Notifier/pkg/utils"
-	"github.com/Dyleme/Notifier/pkg/utils/timeborders"
+	"github.com/Dyleme/Notifier/pkg/utils/ptr"
+	"github.com/Dyleme/Notifier/pkg/utils/slice"
 )
 
 const timeDay = 24 * time.Hour
@@ -31,26 +32,26 @@ func parseListParams(offsetParam *api.OffsetParam, limitParam *api.LimitParam) s
 	}
 }
 
-func parseTimeParams(from, to *time.Time) timeborders.TimeBorders {
+func parseTimeParams(from, to *time.Time) model.TimeBorders {
 	if from == nil && to == nil {
-		return timeborders.NewInfinite()
+		return model.NewInfinite()
 	}
 	if to != nil && from == nil {
-		return timeborders.NewInfiniteLower(*to)
+		return model.NewInfiniteLower(*to)
 	}
 	if from != nil && to == nil {
-		return timeborders.NewInfiniteUpper(*from)
+		return model.NewInfiniteUpper(*from)
 	}
 
-	return timeborders.New(*from, *to)
+	return model.New(*from, *to)
 }
 
 func mapAPINotificationParams(params domain.NotificationParams) api.NotificationParams {
 	return api.NotificationParams{
 		NotificationChannel: api.NotificationChannel{
-			Cmd:      utils.NilIfZero(params.Params.Cmd),
-			Telegram: utils.NilIfZero(params.Params.Telegram),
-			Webhook:  utils.NilIfZero(params.Params.Webhook),
+			Cmd:      ptr.NilIfZero(params.Params.Cmd),
+			Telegram: ptr.NilIfZero(params.Params.Telegram),
+			Webhook:  ptr.NilIfZero(params.Params.Webhook),
 		},
 		Period: params.Period.String(),
 	}
@@ -68,15 +69,15 @@ func mapDomainNotificationParams(np *api.NotificationParams) (domain.Notificatio
 	return domain.NotificationParams{
 		Period: period,
 		Params: domain.Params{
-			Telegram: utils.ZeroIfNil(np.NotificationChannel.Telegram),
-			Webhook:  utils.ZeroIfNil(np.NotificationChannel.Webhook),
-			Cmd:      utils.ZeroIfNil(np.NotificationChannel.Cmd),
+			Telegram: ptr.ZeroIfNil(np.NotificationChannel.Telegram),
+			Webhook:  ptr.ZeroIfNil(np.NotificationChannel.Webhook),
+			Cmd:      ptr.ZeroIfNil(np.NotificationChannel.Cmd),
 		},
 	}, nil
 }
 
 func mapDomainTags(ts []api.Tag, userID int) []domain.Tag {
-	return utils.DtoSlice(ts, func(t api.Tag) domain.Tag {
+	return slice.DtoSlice(ts, func(t api.Tag) domain.Tag {
 		return domain.Tag{
 			ID:     t.Id,
 			UserID: userID,
@@ -86,7 +87,7 @@ func mapDomainTags(ts []api.Tag, userID int) []domain.Tag {
 }
 
 func mapAPITags(ts []domain.Tag) []api.Tag {
-	return utils.DtoSlice(ts, func(t domain.Tag) api.Tag {
+	return slice.DtoSlice(ts, func(t domain.Tag) api.Tag {
 		return api.Tag{
 			Id:   t.ID,
 			Name: t.Name,

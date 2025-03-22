@@ -14,7 +14,7 @@ import (
 	"github.com/Dyleme/Notifier/internal/service/repository/queries/goqueries"
 	"github.com/Dyleme/Notifier/internal/service/service"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
-	"github.com/Dyleme/Notifier/pkg/utils"
+	"github.com/Dyleme/Notifier/pkg/utils/slice"
 )
 
 type TagsRepository struct {
@@ -54,7 +54,7 @@ func (tr *TagsRepository) List(ctx context.Context, userID int, listParams servi
 		return nil, fmt.Errorf("list tags: %w", serverrors.NewRepositoryError(err))
 	}
 
-	return utils.DtoSlice(tags, dtoTag), nil
+	return slice.DtoSlice(tags, dtoTag), nil
 }
 
 func (tr *TagsRepository) Get(ctx context.Context, tagID int) (domain.Tag, error) {
@@ -114,8 +114,8 @@ func syncTags(ctx context.Context, tx trmpgx.Tr, q *goqueries.Queries, smthID, u
 	var tagIDsToDelete []int
 	var tagsToInsert []domain.Tag
 
-	dbTagIDs := utils.DtoSlice(dbTags, func(t goqueries.Tag) int { return int(t.ID) })
-	tagIDs := utils.DtoSlice(tags, func(t domain.Tag) int { return t.ID })
+	dbTagIDs := slice.DtoSlice(dbTags, func(t goqueries.Tag) int { return int(t.ID) })
+	tagIDs := slice.DtoSlice(tags, func(t domain.Tag) int { return t.ID })
 	for _, dbTagID := range dbTagIDs {
 		if !slices.Contains(tagIDs, dbTagID) {
 			tagIDsToDelete = append(tagIDsToDelete, dbTagID)
@@ -128,7 +128,7 @@ func syncTags(ctx context.Context, tx trmpgx.Tr, q *goqueries.Queries, smthID, u
 		}
 	}
 
-	_, err = q.AddTagsToSmth(ctx, tx, utils.DtoSlice(tagsToInsert, func(t domain.Tag) goqueries.AddTagsToSmthParams {
+	_, err = q.AddTagsToSmth(ctx, tx, slice.DtoSlice(tagsToInsert, func(t domain.Tag) goqueries.AddTagsToSmthParams {
 		return goqueries.AddTagsToSmthParams{
 			SmthID: int32(smthID),
 			TagID:  int32(t.ID),
@@ -141,7 +141,7 @@ func syncTags(ctx context.Context, tx trmpgx.Tr, q *goqueries.Queries, smthID, u
 
 	err = q.DeleteTagsFromSmth(ctx, tx, goqueries.DeleteTagsFromSmthParams{
 		SmthID: int32(smthID),
-		TagIds: utils.DtoSlice(tagIDsToDelete, func(i int) int32 { return int32(i) }),
+		TagIds: slice.DtoSlice(tagIDsToDelete, func(i int) int32 { return int32(i) }),
 	})
 	if err != nil {
 		return fmt.Errorf("delete tags from smth: %w", serverrors.NewRepositoryError(err))

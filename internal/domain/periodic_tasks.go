@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/Dyleme/Notifier/pkg/serverrors"
-	"github.com/Dyleme/Notifier/pkg/utils"
+	utils "github.com/Dyleme/Notifier/pkg/utils/ptr"
 )
 
 const timeDay = 24 * time.Hour

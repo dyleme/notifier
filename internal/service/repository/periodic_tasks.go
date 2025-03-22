@@ -13,9 +13,9 @@ import (
 	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/internal/service/repository/queries/goqueries"
 	"github.com/Dyleme/Notifier/internal/service/service"
+	"github.com/Dyleme/Notifier/pkg/database/pgxconv"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
-	"github.com/Dyleme/Notifier/pkg/sql/pgxconv"
-	"github.com/Dyleme/Notifier/pkg/utils"
+	"github.com/Dyleme/Notifier/pkg/utils/slice"
 )
 
 type PeriodicTaskRepository struct {
@@ -42,7 +42,7 @@ func (p *PeriodicTaskRepository) dtoWithTags(pt goqueries.PeriodicTask, tags []g
 		SmallestPeriod:     time.Duration(pt.SmallestPeriod) * time.Minute,
 		BiggestPeriod:      time.Duration(pt.BiggestPeriod) * time.Minute,
 		NotificationParams: pt.NotificationParams,
-		Tags:               utils.DtoSlice(tags, dtoTag),
+		Tags:               slice.DtoSlice(tags, dtoTag),
 		Notify:             pt.Notify,
 	}
 
@@ -64,7 +64,7 @@ func (p *PeriodicTaskRepository) Add(ctx context.Context, task domain.PeriodicTa
 		return domain.PeriodicTask{}, fmt.Errorf("add periodic task: %w", serverrors.NewRepositoryError(err))
 	}
 
-	_, err = p.q.AddTagsToSmth(ctx, tx, utils.DtoSlice(task.Tags, func(tag domain.Tag) goqueries.AddTagsToSmthParams {
+	_, err = p.q.AddTagsToSmth(ctx, tx, slice.DtoSlice(task.Tags, func(tag domain.Tag) goqueries.AddTagsToSmthParams {
 		return goqueries.AddTagsToSmthParams{
 			SmthID: pt.ID,
 			TagID:  int32(tag.ID),
@@ -151,7 +151,7 @@ func (p *PeriodicTaskRepository) List(ctx context.Context, userID int, params se
 		UserID: int32(userID),
 		Off:    int32(params.ListParams.Offset),
 		Lim:    int32(params.ListParams.Limit),
-		TagIds: utils.DtoSlice(params.TagIDs, func(id int) int32 { return int32(id) }),
+		TagIds: slice.DtoSlice(params.TagIDs, func(id int) int32 { return int32(id) }),
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -161,7 +161,7 @@ func (p *PeriodicTaskRepository) List(ctx context.Context, userID int, params se
 		return nil, fmt.Errorf("list periodic tasks: %w", serverrors.NewRepositoryError(err))
 	}
 
-	tasksIDs := utils.DtoSlice(dbRows, func(t goqueries.ListPeriodicTasksRow) int32 { return t.PeriodicTask.ID })
+	tasksIDs := slice.DtoSlice(dbRows, func(t goqueries.ListPeriodicTasksRow) int32 { return t.PeriodicTask.ID })
 
 	rows, err := p.q.ListTagsForSmths(ctx, tx, tasksIDs)
 	if err != nil {

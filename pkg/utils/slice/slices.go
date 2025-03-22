@@ -1,4 +1,4 @@
-package utils
+package slice
 
 func DtoSlice[T, K any](ts []T, dtoFunc func(t T) K) []K {
 	ks := make([]K, 0, len(ts))

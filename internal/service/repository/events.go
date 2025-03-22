@@ -13,9 +13,9 @@ import (
 	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/internal/service/repository/queries/goqueries"
 	"github.com/Dyleme/Notifier/internal/service/service"
+	"github.com/Dyleme/Notifier/pkg/database/pgxconv"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
-	"github.com/Dyleme/Notifier/pkg/sql/pgxconv"
-	"github.com/Dyleme/Notifier/pkg/utils"
+	"github.com/Dyleme/Notifier/pkg/utils/slice"
 )
 
 type EventsRepository struct {
@@ -97,7 +97,7 @@ func (er *EventsRepository) dtoWithTags(dbEv goqueries.Event, dbTags []goqueries
 		NextSend:           pgxconv.TimeWithZone(dbEv.NextSend),
 		FirstSend:          pgxconv.TimeWithZone(dbEv.FirstSend),
 		Done:               dbEv.Done,
-		Tags:               utils.DtoSlice(dbTags, dtoTag),
+		Tags:               slice.DtoSlice(dbTags, dtoTag),
 		Notify:             dbEv.Notify,
 	}
 
@@ -123,7 +123,7 @@ func (er *EventsRepository) Add(ctx context.Context, event domain.Event) (domain
 		return domain.Event{}, fmt.Errorf("add event: %w", serverrors.NewRepositoryError(err))
 	}
 
-	_, err = er.q.AddTagsToSmth(ctx, tx, utils.DtoSlice(event.Tags, func(t domain.Tag) goqueries.AddTagsToSmthParams {
+	_, err = er.q.AddTagsToSmth(ctx, tx, slice.DtoSlice(event.Tags, func(t domain.Tag) goqueries.AddTagsToSmthParams {
 		return goqueries.AddTagsToSmthParams{
 			SmthID: ev.ID,
 			TagID:  int32(t.ID),
@@ -144,7 +144,7 @@ func (er *EventsRepository) List(ctx context.Context, userID int, params service
 		UserID:   int32(userID),
 		FromTime: pgxconv.Timestamptz(params.TimeBorders.From),
 		ToTime:   pgxconv.Timestamptz(params.TimeBorders.To),
-		TagIds:   utils.DtoSlice(params.Tags, func(tagID int) int32 { return int32(tagID) }),
+		TagIds:   slice.DtoSlice(params.Tags, func(tagID int) int32 { return int32(tagID) }),
 		Off:      int32(params.ListParams.Offset),
 		Lim:      int32(params.ListParams.Limit),
 	})
@@ -156,7 +156,7 @@ func (er *EventsRepository) List(ctx context.Context, userID int, params service
 		return nil, fmt.Errorf("list user events: %w", serverrors.NewRepositoryError(err))
 	}
 
-	tasksIDs := utils.DtoSlice(rowsEvents, func(t goqueries.ListUserEventsRow) int32 { return t.Event.ID })
+	tasksIDs := slice.DtoSlice(rowsEvents, func(t goqueries.ListUserEventsRow) int32 { return t.Event.ID })
 
 	rows, err := er.q.ListTagsForSmths(ctx, tx, tasksIDs)
 	if err != nil {
@@ -271,7 +271,7 @@ func (er *EventsRepository) ListNotSended(ctx context.Context, till time.Time) (
 		return nil, fmt.Errorf("list not sended notifiations: %w", serverrors.NewRepositoryError(err))
 	}
 
-	domainEvents, err := utils.DtoErrorSlice(events, er.dto)
+	domainEvents, err := slice.DtoErrorSlice(events, er.dto)
 	if err != nil {
 		return nil, fmt.Errorf("list not sended notifiations: %w", serverrors.NewRepositoryError(err))
 	}
@@ -304,7 +304,7 @@ func (er *EventsRepository) ListDayEvents(ctx context.Context, userID, timeZoneO
 		return nil, fmt.Errorf("list user daily events: %w", serverrors.NewRepositoryError(err))
 	}
 
-	return utils.DtoErrorSlice(events, er.dto)
+	return slice.DtoErrorSlice(events, er.dto)
 }
 
 func (er *EventsRepository) ListNotDoneEvents(ctx context.Context, userID int) ([]domain.Event, error) {
@@ -314,5 +314,5 @@ func (er *EventsRepository) ListNotDoneEvents(ctx context.Context, userID int) (
 		return nil, fmt.Errorf("list not done events: %w", serverrors.NewRepositoryError(err))
 	}
 
-	return utils.DtoErrorSlice(events, er.dto)
+	return slice.DtoErrorSlice(events, er.dto)
 }

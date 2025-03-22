@@ -12,7 +12,8 @@ import (
 	"github.com/Dyleme/Notifier/pkg/http/responses"
 	"github.com/Dyleme/Notifier/pkg/log"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
-	"github.com/Dyleme/Notifier/pkg/utils"
+	"github.com/Dyleme/Notifier/pkg/utils/ptr"
+	"github.com/Dyleme/Notifier/pkg/utils/slice"
 )
 
 func (t TaskHandler) ListEvents(w http.ResponseWriter, r *http.Request, params api.ListEventsParams) {
@@ -26,7 +27,7 @@ func (t TaskHandler) ListEvents(w http.ResponseWriter, r *http.Request, params a
 	events, err := t.serv.ListEvents(r.Context(), userID, service.ListEventsFilterParams{
 		TimeBorders: parseTimeParams(params.From, params.To),
 		ListParams:  parseListParams(params.Offset, params.Limit),
-		Tags:        utils.ZeroIfNil(params.TagIDs),
+		Tags:        ptr.ZeroIfNil(params.TagIDs),
 	})
 	if err != nil {
 		responses.KnownError(w, err)
@@ -34,7 +35,7 @@ func (t TaskHandler) ListEvents(w http.ResponseWriter, r *http.Request, params a
 		return
 	}
 
-	apiEvents, err := utils.DtoErrorSlice(events, mapAPIEvent)
+	apiEvents, err := slice.DtoErrorSlice(events, mapAPIEvent)
 	if err != nil {
 		responses.KnownError(w, err)
 		log.Ctx(r.Context()).Error("map events error", log.Err(err))

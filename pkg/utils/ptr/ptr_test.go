@@ -1,11 +1,11 @@
-package utils_test
+package ptr_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/Dyleme/Notifier/pkg/utils"
+	"github.com/Dyleme/Notifier/pkg/utils/ptr"
 )
 
 func TestZeroIfNil(t *testing.T) {
@@ -14,9 +14,9 @@ func TestZeroIfNil(t *testing.T) {
 	t.Run("value", func(t *testing.T) {
 		t.Parallel()
 
-		i := utils.Ptr(1)
+		i := ptr.On(1)
 
-		actual := utils.ZeroIfNil(i)
+		actual := ptr.ZeroIfNil(i)
 		assert.Equal(t, 1, actual)
 	})
 
@@ -25,7 +25,7 @@ func TestZeroIfNil(t *testing.T) {
 
 		var i *int
 
-		actual := utils.ZeroIfNil(i)
+		actual := ptr.ZeroIfNil(i)
 		assert.Equal(t, 0, actual)
 	})
 }

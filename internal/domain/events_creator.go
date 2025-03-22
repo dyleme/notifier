@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Dyleme/Notifier/pkg/utils"
+	utils "github.com/Dyleme/Notifier/pkg/utils/ptr"
 )
 
 type EventCreator interface {

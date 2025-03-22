@@ -10,7 +10,7 @@ import (
 
 	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/pkg/log"
-	"github.com/Dyleme/Notifier/pkg/utils"
+	"github.com/Dyleme/Notifier/pkg/utils/slice"
 )
 
 type Notifier interface {
@@ -67,7 +67,7 @@ func (en *EventNotifier) Do(ctx context.Context, now time.Time) {
 		if err != nil {
 			return fmt.Errorf("list not sended events: %w", err)
 		}
-		log.Ctx(ctx).Info("found not sended events", slog.Any("events", utils.DtoSlice(events, func(n domain.Event) int { return n.ID })))
+		log.Ctx(ctx).Info("found not sended events", slog.Any("events", slice.DtoSlice(events, func(n domain.Event) int { return n.ID })))
 
 		for _, ev := range events {
 			notification, err := ev.NewNotification()

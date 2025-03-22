@@ -11,7 +11,8 @@ import (
 	"github.com/Dyleme/Notifier/pkg/http/requests"
 	"github.com/Dyleme/Notifier/pkg/http/responses"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
-	"github.com/Dyleme/Notifier/pkg/utils"
+	"github.com/Dyleme/Notifier/pkg/utils/ptr"
+	"github.com/Dyleme/Notifier/pkg/utils/slice"
 )
 
 func (t TaskHandler) ListPeriodicTasks(w http.ResponseWriter, r *http.Request, params api.ListPeriodicTasksParams) {
@@ -26,7 +27,7 @@ func (t TaskHandler) ListPeriodicTasks(w http.ResponseWriter, r *http.Request, p
 
 	periodicTasks, err := t.serv.ListPeriodicTasks(r.Context(), userID, service.ListFilterParams{
 		ListParams: listParams,
-		TagIDs:     utils.ZeroIfNil(params.TagIDs),
+		TagIDs:     ptr.ZeroIfNil(params.TagIDs),
 	})
 	if err != nil {
 		responses.KnownError(w, err)
@@ -34,7 +35,7 @@ func (t TaskHandler) ListPeriodicTasks(w http.ResponseWriter, r *http.Request, p
 		return
 	}
 
-	apiPeriodicTasks := utils.DtoSlice(periodicTasks, mapAPIPeriodicTask)
+	apiPeriodicTasks := slice.DtoSlice(periodicTasks, mapAPIPeriodicTask)
 
 	responses.JSON(w, http.StatusOK, apiPeriodicTasks)
 }
@@ -71,7 +72,7 @@ func (t TaskHandler) CreatePeriodicTask(w http.ResponseWriter, r *http.Request) 
 	basicTask := domain.PeriodicTask{
 		ID:                 0,
 		Text:               body.Text,
-		Description:        utils.ZeroIfNil(body.Description),
+		Description:        ptr.ZeroIfNil(body.Description),
 		UserID:             userID,
 		Start:              start,
 		SmallestPeriod:     24 * time.Hour * time.Duration(body.SmallestPeriod),
@@ -145,7 +146,7 @@ func (t TaskHandler) UpdatePeriodicTask(w http.ResponseWriter, r *http.Request, 
 	err = t.serv.UpdatePeriodicTask(r.Context(), domain.PeriodicTask{
 		ID:                 taskID,
 		Text:               body.Text,
-		Description:        utils.ZeroIfNil(body.Description),
+		Description:        ptr.ZeroIfNil(body.Description),
 		UserID:             userID,
 		Start:              start,
 		SmallestPeriod:     time.Duration(body.SmallestPeriod) * 24 * time.Hour,
@@ -168,7 +169,7 @@ func mapAPIPeriodicTask(pt domain.PeriodicTask) api.PeriodicTask {
 		BiggestPeriod:      int(pt.BiggestPeriod / timeDay),
 		Description:        &pt.Description,
 		Id:                 pt.ID,
-		NotificationParams: utils.Ptr(mapAPINotificationParams(pt.NotificationParams)),
+		NotificationParams: ptr.On(mapAPINotificationParams(pt.NotificationParams)),
 		Notify:             pt.Notify,
 		SmallestPeriod:     int(pt.SmallestPeriod / timeDay),
 		Start:              pt.Start.String(),

@@ -14,9 +14,9 @@ import (
 	"github.com/Dyleme/Notifier/internal/authorization/repository/queries/goqueries"
 	"github.com/Dyleme/Notifier/internal/authorization/service"
 	"github.com/Dyleme/Notifier/internal/domain"
+	"github.com/Dyleme/Notifier/pkg/database/pgxconv"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
-	"github.com/Dyleme/Notifier/pkg/sql/pgxconv"
-	"github.com/Dyleme/Notifier/pkg/utils"
+	"github.com/Dyleme/Notifier/pkg/utils/slice"
 )
 
 func (r *Repository) Create(ctx context.Context, input service.CreateUserInput) (domain.User, error) {
@@ -168,7 +168,7 @@ func (r *Repository) DailyNotificationsUsers(ctx context.Context, now time.Time)
 		return nil, fmt.Errorf("get daily notifications users: %w", serverrors.NewRepositoryError(err))
 	}
 
-	return utils.DtoSlice(users, func(u goqueries.User) domain.User {
+	return slice.DtoSlice(users, func(u goqueries.User) domain.User {
 		return domain.User{
 			ID:             int(u.ID),
 			TgNickname:     u.TgNickname,

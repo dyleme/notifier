@@ -9,7 +9,8 @@ import (
 	"github.com/Dyleme/Notifier/internal/service/service"
 	"github.com/Dyleme/Notifier/pkg/http/requests"
 	"github.com/Dyleme/Notifier/pkg/http/responses"
-	"github.com/Dyleme/Notifier/pkg/utils"
+	"github.com/Dyleme/Notifier/pkg/utils/ptr"
+	"github.com/Dyleme/Notifier/pkg/utils/slice"
 )
 
 func (t TaskHandler) ListBasicTasks(w http.ResponseWriter, r *http.Request, params api.ListBasicTasksParams) {
@@ -22,7 +23,7 @@ func (t TaskHandler) ListBasicTasks(w http.ResponseWriter, r *http.Request, para
 
 	basicTasks, err := t.serv.ListBasicTasks(r.Context(), userID, service.ListFilterParams{
 		ListParams: parseListParams(params.Offset, params.Limit),
-		TagIDs:     utils.ZeroIfNil(params.TagIDs),
+		TagIDs:     ptr.ZeroIfNil(params.TagIDs),
 	})
 	if err != nil {
 		responses.KnownError(w, err)
@@ -30,7 +31,7 @@ func (t TaskHandler) ListBasicTasks(w http.ResponseWriter, r *http.Request, para
 		return
 	}
 
-	apiBasicTasks := utils.DtoSlice(basicTasks, mapAPIBasicTask)
+	apiBasicTasks := slice.DtoSlice(basicTasks, mapAPIBasicTask)
 
 	responses.JSON(w, http.StatusOK, apiBasicTasks)
 }
@@ -149,7 +150,7 @@ func mapAPIBasicTask(basicTask domain.BasicTask) api.BasicTask {
 	return api.BasicTask{
 		Description:        &basicTask.Description,
 		Id:                 basicTask.ID,
-		NotificationParams: utils.Ptr(mapAPINotificationParams(basicTask.NotificationParams)),
+		NotificationParams: ptr.On(mapAPINotificationParams(basicTask.NotificationParams)),
 		SendTime:           basicTask.Start,
 		Text:               basicTask.Text,
 		Tags:               mapAPITags(basicTask.Tags),
