@@ -11,7 +11,7 @@ import (
 	"github.com/avito-tech/go-transaction-manager/trm"
 	"github.com/benbjohnson/clock"
 
-	"github.com/Dyleme/Notifier/internal/domains"
+	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/pkg/log"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
 	"github.com/Dyleme/Notifier/pkg/utils"
@@ -19,14 +19,14 @@ import (
 
 //go:generate mockgen -destination=mocks/notifier_mocks.go -package=mocks . Repository
 type Notifier interface {
-	Notify(ctx context.Context, notif domains.SendingEvent) error
+	Notify(ctx context.Context, notif domain.SendingEvent) error
 }
 
 //go:generate mockgen -destination=mocks/repository_mocks.go -package=mocks . Notifier
 type Repository interface {
-	Update(ctx context.Context, event domains.Event) error
-	ListNotSended(ctx context.Context, till time.Time) ([]domains.Event, error)
-	GetNearest(ctx context.Context) (domains.Event, error)
+	Update(ctx context.Context, event domain.Event) error
+	ListNotSended(ctx context.Context, till time.Time) ([]domain.Event, error)
+	GetNearest(ctx context.Context) (domain.Event, error)
 }
 
 type NotifierJob struct {
@@ -123,10 +123,10 @@ func (nj *NotifierJob) notify(ctx context.Context) {
 		if err != nil {
 			return fmt.Errorf("list not sended events: %w", err)
 		}
-		log.Ctx(ctx).Info("found not sended events", slog.Any("events", utils.DtoSlice(events, func(n domains.Event) int { return n.ID })))
+		log.Ctx(ctx).Info("found not sended events", slog.Any("events", utils.DtoSlice(events, func(n domain.Event) int { return n.ID })))
 
 		for _, ev := range events {
-			sendingEvent := domains.NewSendingEvent(ev)
+			sendingEvent := domain.NewSendingEvent(ev)
 			err := nj.notifier.Notify(ctx, sendingEvent)
 			if err != nil {
 				log.Ctx(ctx).Error("notifier error", log.Err(err))

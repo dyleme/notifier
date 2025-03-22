@@ -11,7 +11,7 @@ import (
 	"github.com/go-telegram/bot/models"
 	inKbr "github.com/go-telegram/ui/keyboard/inline"
 
-	"github.com/Dyleme/Notifier/internal/domains"
+	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/internal/service/service"
 )
 
@@ -439,14 +439,14 @@ func (pt *PeriodicTask) CreateInline(ctx context.Context, b *bot.Bot, msg *model
 		return fmt.Errorf("user from ctx: %w", err)
 	}
 
-	task := domains.PeriodicTask{ //nolint:exhaustruct //no need to fill
+	task := domain.PeriodicTask{ //nolint:exhaustruct //no need to fill
 		Text:               pt.text,
 		Description:        pt.description,
 		UserID:             user.ID,
 		Start:              computeStartTime(pt.time, user.Location()),
 		SmallestPeriod:     pt.smallestPeriod,
 		BiggestPeriod:      pt.biggestPeriod,
-		NotificationParams: domains.NotificationParams{},
+		NotificationParams: domain.NotificationParams{},
 	}
 
 	_, err = pt.th.serv.CreatePeriodicTask(ctx, task, user.ID)
@@ -469,7 +469,7 @@ func (pt *PeriodicTask) UpdateInline(ctx context.Context, b *bot.Bot, msg *model
 		return fmt.Errorf(op, err)
 	}
 
-	params := domains.PeriodicTask{
+	params := domain.PeriodicTask{
 		ID:                 pt.id,
 		Text:               pt.text,
 		Description:        pt.description,
@@ -478,7 +478,7 @@ func (pt *PeriodicTask) UpdateInline(ctx context.Context, b *bot.Bot, msg *model
 		SmallestPeriod:     pt.smallestPeriod,
 		BiggestPeriod:      pt.biggestPeriod,
 		Tags:               nil,
-		NotificationParams: domains.NotificationParams{},
+		NotificationParams: domain.NotificationParams{},
 		Notify:             true,
 	}
 

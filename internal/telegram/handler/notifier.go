@@ -11,7 +11,7 @@ import (
 	"github.com/go-telegram/bot/models"
 	inKbr "github.com/go-telegram/ui/keyboard/inline"
 
-	"github.com/Dyleme/Notifier/internal/domains"
+	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/internal/telegram/userinfo"
 	"github.com/Dyleme/Notifier/pkg/log"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
@@ -53,7 +53,7 @@ func (n *Notification) deleteOldNotificationMsg(ctx context.Context, eventID, ch
 	return nil
 }
 
-func (th *TelegramHandler) Notify(ctx context.Context, event domains.Notification) error {
+func (th *TelegramHandler) Notify(ctx context.Context, event domain.Notification) error {
 	user, err := th.userRepo.GetUserInfo(ctx, event.Params.Params.Telegram)
 	if err != nil {
 		return fmt.Errorf("get user info[tgID=%v]: %w", event.Params.Params.Telegram, err)

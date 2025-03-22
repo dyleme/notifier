@@ -1,4 +1,4 @@
-package domains
+package domain
 
 import (
 	"fmt"
@@ -19,8 +19,8 @@ func CreateEvent(eventCreator EventCreator, defaultParams NotificationParams) (E
 
 	if event.Notify {
 		if utils.IsZero(event.NotificationParams) {
-			event.NotificationParams = defaultParams
 		}
+		event.NotificationParams = defaultParams
 	}
 
 	if err := event.Validate(); err != nil {

@@ -8,18 +8,18 @@ import (
 
 	"github.com/avito-tech/go-transaction-manager/trm"
 
-	"github.com/Dyleme/Notifier/internal/domains"
+	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/pkg/log"
 	"github.com/Dyleme/Notifier/pkg/utils"
 )
 
 type Notifier interface {
-	Notify(ctx context.Context, notif domains.Notification) error
+	Notify(ctx context.Context, notif domain.Notification) error
 }
 
 type Repository interface {
-	Update(ctx context.Context, event domains.Event) error
-	ListNotSended(ctx context.Context, till time.Time) ([]domains.Event, error)
+	Update(ctx context.Context, event domain.Event) error
+	ListNotSended(ctx context.Context, till time.Time) ([]domain.Event, error)
 	GetNearest(ctx context.Context) (time.Time, error)
 }
 
@@ -67,7 +67,7 @@ func (en *EventNotifier) Do(ctx context.Context, now time.Time) {
 		if err != nil {
 			return fmt.Errorf("list not sended events: %w", err)
 		}
-		log.Ctx(ctx).Info("found not sended events", slog.Any("events", utils.DtoSlice(events, func(n domains.Event) int { return n.ID })))
+		log.Ctx(ctx).Info("found not sended events", slog.Any("events", utils.DtoSlice(events, func(n domain.Event) int { return n.ID })))
 
 		for _, ev := range events {
 			notification, err := ev.NewNotification()

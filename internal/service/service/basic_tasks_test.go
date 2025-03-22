@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/Dyleme/Notifier/internal/domains"
+	"github.com/Dyleme/Notifier/internal/domain"
 )
 
 func TestService_CreateBasicTask(t *testing.T) {
@@ -16,13 +16,13 @@ func TestService_CreateBasicTask(t *testing.T) {
 	}
 	type args struct {
 		ctx  context.Context
-		task domains.BasicTask
+		task domain.BasicTask
 	}
 	tests := []struct {
 		name    string
 		fields  fields
 		args    args
-		want    domains.BasicTask
+		want    domain.BasicTask
 		wantErr bool
 	}{
 		// TODO: Add test cases.
@@ -61,7 +61,7 @@ func TestService_GetBasicTask(t *testing.T) {
 		name    string
 		fields  fields
 		args    args
-		want    domains.BasicTask
+		want    domain.BasicTask
 		wantErr bool
 	}{
 		// TODO: Add test cases.
@@ -100,7 +100,7 @@ func TestService_ListBasicTasks(t *testing.T) {
 		name    string
 		fields  fields
 		args    args
-		want    []domains.BasicTask
+		want    []domain.BasicTask
 		wantErr bool
 	}{
 		// TODO: Add test cases.
@@ -132,14 +132,14 @@ func TestService_UpdateBasicTask(t *testing.T) {
 	}
 	type args struct {
 		ctx    context.Context
-		params domains.BasicTask
+		params domain.BasicTask
 		userID int
 	}
 	tests := []struct {
 		name    string
 		fields  fields
 		args    args
-		want    domains.BasicTask
+		want    domain.BasicTask
 		wantErr bool
 	}{
 		// TODO: Add test cases.

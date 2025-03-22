@@ -10,7 +10,7 @@ import (
 	"github.com/go-telegram/bot/models"
 	inKbr "github.com/go-telegram/ui/keyboard/inline"
 
-	"github.com/Dyleme/Notifier/internal/domains"
+	"github.com/Dyleme/Notifier/internal/domain"
 )
 
 func (th *TelegramHandler) SettingsInline(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
@@ -261,9 +261,9 @@ func (en *EnableEvents) EnableInline(ctx context.Context, b *bot.Bot, msg *model
 		return fmt.Errorf(op, err)
 	}
 
-	_, err = en.th.serv.SetDefaultNotificationParams(ctx, domains.NotificationParams{
+	_, err = en.th.serv.SetDefaultNotificationParams(ctx, domain.NotificationParams{
 		Period: defaultEventPeriod,
-		Params: domains.Params{
+		Params: domain.Params{
 			Telegram: int(msg.Chat.ID),
 			Webhook:  "",
 			Cmd:      "",

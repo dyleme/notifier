@@ -14,7 +14,7 @@ import (
 	reflect "reflect"
 	time "time"
 
-	domains "github.com/Dyleme/Notifier/internal/domains"
+	domain "github.com/Dyleme/Notifier/internal/domain"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -43,10 +43,10 @@ func (m *MockRepository) EXPECT() *MockRepositoryMockRecorder {
 }
 
 // GetNearest mocks base method.
-func (m *MockRepository) GetNearest(ctx context.Context) (domains.Event, error) {
+func (m *MockRepository) GetNearest(ctx context.Context) (domain.Event, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetNearest", ctx)
-	ret0, _ := ret[0].(domains.Event)
+	ret0, _ := ret[0].(domain.Event)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -58,10 +58,10 @@ func (mr *MockRepositoryMockRecorder) GetNearest(ctx any) *gomock.Call {
 }
 
 // ListNotSended mocks base method.
-func (m *MockRepository) ListNotSended(ctx context.Context, till time.Time) ([]domains.Event, error) {
+func (m *MockRepository) ListNotSended(ctx context.Context, till time.Time) ([]domain.Event, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListNotSended", ctx, till)
-	ret0, _ := ret[0].([]domains.Event)
+	ret0, _ := ret[0].([]domain.Event)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -73,7 +73,7 @@ func (mr *MockRepositoryMockRecorder) ListNotSended(ctx, till any) *gomock.Call 
 }
 
 // Update mocks base method.
-func (m *MockRepository) Update(ctx context.Context, event domains.Event) error {
+func (m *MockRepository) Update(ctx context.Context, event domain.Event) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Update", ctx, event)
 	ret0, _ := ret[0].(error)

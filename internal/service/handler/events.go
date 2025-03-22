@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Dyleme/Notifier/internal/authorization/authmiddleware"
-	"github.com/Dyleme/Notifier/internal/domains"
+	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/internal/service/handler/api"
 	"github.com/Dyleme/Notifier/internal/service/service"
 	"github.com/Dyleme/Notifier/pkg/http/requests"
@@ -49,7 +49,7 @@ func (t TaskHandler) PostTaskSetTaskID(w http.ResponseWriter, _ *http.Request, t
 	responses.JSON(w, http.StatusOK, taskID)
 }
 
-func mapAPIEvent(event domains.Event) (api.Event, error) {
+func mapAPIEvent(event domain.Event) (api.Event, error) {
 	apiTaskType, err := mapAPITaskType(event.TaskType)
 	if err != nil {
 		return api.Event{}, err
@@ -71,11 +71,11 @@ func mapAPIEvent(event domains.Event) (api.Event, error) {
 	}, nil
 }
 
-func mapAPITaskType(taskType domains.TaskType) (api.TaskType, error) {
+func mapAPITaskType(taskType domain.TaskType) (api.TaskType, error) {
 	switch taskType {
-	case domains.PeriodicTaskType:
+	case domain.PeriodicTaskType:
 		return api.Periodic, nil
-	case domains.BasicTaskType:
+	case domain.BasicTaskType:
 		return api.Basic, nil
 	default:
 		return "", serverrors.NewServiceError(fmt.Errorf("unknown task type: %s", taskType))

@@ -12,7 +12,7 @@ import (
 	"github.com/go-telegram/bot/models"
 	inKbr "github.com/go-telegram/ui/keyboard/inline"
 
-	"github.com/Dyleme/Notifier/internal/domains"
+	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/internal/service/service"
 )
 
@@ -427,12 +427,12 @@ func (bt *BasicTask) CreateInline(ctx context.Context, b *bot.Bot, msg *models.M
 		return fmt.Errorf(op, ErrTimeInPast)
 	}
 
-	task := domains.BasicTask{ //nolint:exhaustruct // don't know id on creation
+	task := domain.BasicTask{ //nolint:exhaustruct // don't know id on creation
 		UserID:             user.ID,
 		Text:               bt.text,
 		Description:        bt.description,
 		Start:              t,
-		NotificationParams: domains.NotificationParams{},
+		NotificationParams: domain.NotificationParams{},
 	}
 
 	_, err = bt.th.serv.CreateBasicTask(ctx, task)
@@ -457,13 +457,13 @@ func (bt *BasicTask) UpdateInline(ctx context.Context, b *bot.Bot, msg *models.M
 
 	t := bt.date.Add(bt.time.Sub(bt.time.Truncate(timeDay)))
 
-	_, err = bt.th.serv.UpdateBasicTask(ctx, domains.BasicTask{
+	_, err = bt.th.serv.UpdateBasicTask(ctx, domain.BasicTask{
 		ID:                 bt.id,
 		Text:               bt.text,
 		UserID:             user.ID,
 		Description:        bt.description,
 		Start:              t,
-		NotificationParams: domains.NotificationParams{},
+		NotificationParams: domain.NotificationParams{},
 		Tags:               nil,
 		Notify:             true,
 	}, user.ID)

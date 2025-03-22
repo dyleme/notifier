@@ -13,7 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	domains "github.com/Dyleme/Notifier/internal/domains"
+	domain "github.com/Dyleme/Notifier/internal/domain"
 	service "github.com/Dyleme/Notifier/internal/service/service"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -43,10 +43,10 @@ func (m *MockBasicTaskRepository) EXPECT() *MockBasicTaskRepositoryMockRecorder 
 }
 
 // Add mocks base method.
-func (m *MockBasicTaskRepository) Add(ctx context.Context, task domains.BasicTask) (domains.BasicTask, error) {
+func (m *MockBasicTaskRepository) Add(ctx context.Context, task domain.BasicTask) (domain.BasicTask, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Add", ctx, task)
-	ret0, _ := ret[0].(domains.BasicTask)
+	ret0, _ := ret[0].(domain.BasicTask)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -72,10 +72,10 @@ func (mr *MockBasicTaskRepositoryMockRecorder) Delete(ctx, taskID any) *gomock.C
 }
 
 // Get mocks base method.
-func (m *MockBasicTaskRepository) Get(ctx context.Context, taskID int) (domains.BasicTask, error) {
+func (m *MockBasicTaskRepository) Get(ctx context.Context, taskID int) (domain.BasicTask, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", ctx, taskID)
-	ret0, _ := ret[0].(domains.BasicTask)
+	ret0, _ := ret[0].(domain.BasicTask)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -87,10 +87,10 @@ func (mr *MockBasicTaskRepositoryMockRecorder) Get(ctx, taskID any) *gomock.Call
 }
 
 // List mocks base method.
-func (m *MockBasicTaskRepository) List(ctx context.Context, userID int, params service.ListFilterParams) ([]domains.BasicTask, error) {
+func (m *MockBasicTaskRepository) List(ctx context.Context, userID int, params service.ListFilterParams) ([]domain.BasicTask, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List", ctx, userID, params)
-	ret0, _ := ret[0].([]domains.BasicTask)
+	ret0, _ := ret[0].([]domain.BasicTask)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -102,7 +102,7 @@ func (mr *MockBasicTaskRepositoryMockRecorder) List(ctx, userID, params any) *go
 }
 
 // Update mocks base method.
-func (m *MockBasicTaskRepository) Update(ctx context.Context, task domains.BasicTask) error {
+func (m *MockBasicTaskRepository) Update(ctx context.Context, task domain.BasicTask) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Update", ctx, task)
 	ret0, _ := ret[0].(error)

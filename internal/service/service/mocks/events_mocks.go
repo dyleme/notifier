@@ -13,7 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	domains "github.com/Dyleme/Notifier/internal/domains"
+	domain "github.com/Dyleme/Notifier/internal/domain"
 	service "github.com/Dyleme/Notifier/internal/service/service"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -43,10 +43,10 @@ func (m *MockEventsRepository) EXPECT() *MockEventsRepositoryMockRecorder {
 }
 
 // Add mocks base method.
-func (m *MockEventsRepository) Add(ctx context.Context, event domains.Event) (domains.Event, error) {
+func (m *MockEventsRepository) Add(ctx context.Context, event domain.Event) (domain.Event, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Add", ctx, event)
-	ret0, _ := ret[0].(domains.Event)
+	ret0, _ := ret[0].(domain.Event)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -72,10 +72,10 @@ func (mr *MockEventsRepositoryMockRecorder) Delete(ctx, id any) *gomock.Call {
 }
 
 // Get mocks base method.
-func (m *MockEventsRepository) Get(ctx context.Context, id int) (domains.Event, error) {
+func (m *MockEventsRepository) Get(ctx context.Context, id int) (domain.Event, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", ctx, id)
-	ret0, _ := ret[0].(domains.Event)
+	ret0, _ := ret[0].(domain.Event)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -87,10 +87,10 @@ func (mr *MockEventsRepositoryMockRecorder) Get(ctx, id any) *gomock.Call {
 }
 
 // GetLatest mocks base method.
-func (m *MockEventsRepository) GetLatest(ctx context.Context, taskdID int, taskType domains.TaskType) (domains.Event, error) {
+func (m *MockEventsRepository) GetLatest(ctx context.Context, taskdID int, taskType domain.TaskType) (domain.Event, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetLatest", ctx, taskdID, taskType)
-	ret0, _ := ret[0].(domains.Event)
+	ret0, _ := ret[0].(domain.Event)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -102,10 +102,10 @@ func (mr *MockEventsRepositoryMockRecorder) GetLatest(ctx, taskdID, taskType any
 }
 
 // List mocks base method.
-func (m *MockEventsRepository) List(ctx context.Context, userID int, params service.ListEventsFilterParams) ([]domains.Event, error) {
+func (m *MockEventsRepository) List(ctx context.Context, userID int, params service.ListEventsFilterParams) ([]domain.Event, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List", ctx, userID, params)
-	ret0, _ := ret[0].([]domains.Event)
+	ret0, _ := ret[0].([]domain.Event)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -117,7 +117,7 @@ func (mr *MockEventsRepositoryMockRecorder) List(ctx, userID, params any) *gomoc
 }
 
 // Update mocks base method.
-func (m *MockEventsRepository) Update(ctx context.Context, event domains.Event) error {
+func (m *MockEventsRepository) Update(ctx context.Context, event domain.Event) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Update", ctx, event)
 	ret0, _ := ret[0].(error)

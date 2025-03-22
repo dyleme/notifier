@@ -3,7 +3,7 @@ package handler
 import (
 	"time"
 
-	"github.com/Dyleme/Notifier/internal/domains"
+	domain "github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/internal/service/handler/api"
 	"github.com/Dyleme/Notifier/internal/service/service"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
@@ -45,7 +45,7 @@ func parseTimeParams(from, to *time.Time) timeborders.TimeBorders {
 	return timeborders.New(*from, *to)
 }
 
-func mapAPINotificationParams(params domains.NotificationParams) api.NotificationParams {
+func mapAPINotificationParams(params domain.NotificationParams) api.NotificationParams {
 	return api.NotificationParams{
 		NotificationChannel: api.NotificationChannel{
 			Cmd:      utils.NilIfZero(params.Params.Cmd),
@@ -56,18 +56,18 @@ func mapAPINotificationParams(params domains.NotificationParams) api.Notificatio
 	}
 }
 
-func mapDomainNotificationParams(np *api.NotificationParams) (domains.NotificationParams, error) {
+func mapDomainNotificationParams(np *api.NotificationParams) (domain.NotificationParams, error) {
 	if np == nil {
-		return domains.NotificationParams{}, nil
+		return domain.NotificationParams{}, nil
 	}
 	period, err := time.ParseDuration(np.Period)
 	if err != nil {
-		return domains.NotificationParams{}, serverrors.NewMappingError(err, "notificationParams.period") //nolint:wrapcheck // standart package error
+		return domain.NotificationParams{}, serverrors.NewMappingError(err, "notificationParams.period") //nolint:wrapcheck // standart package error
 	}
 
-	return domains.NotificationParams{
+	return domain.NotificationParams{
 		Period: period,
-		Params: domains.Params{
+		Params: domain.Params{
 			Telegram: utils.ZeroIfNil(np.NotificationChannel.Telegram),
 			Webhook:  utils.ZeroIfNil(np.NotificationChannel.Webhook),
 			Cmd:      utils.ZeroIfNil(np.NotificationChannel.Cmd),
@@ -75,9 +75,9 @@ func mapDomainNotificationParams(np *api.NotificationParams) (domains.Notificati
 	}, nil
 }
 
-func mapDomainTags(ts []api.Tag, userID int) []domains.Tag {
-	return utils.DtoSlice(ts, func(t api.Tag) domains.Tag {
-		return domains.Tag{
+func mapDomainTags(ts []api.Tag, userID int) []domain.Tag {
+	return utils.DtoSlice(ts, func(t api.Tag) domain.Tag {
+		return domain.Tag{
 			ID:     t.Id,
 			UserID: userID,
 			Name:   t.Name,
@@ -85,8 +85,8 @@ func mapDomainTags(ts []api.Tag, userID int) []domains.Tag {
 	})
 }
 
-func mapAPITags(ts []domains.Tag) []api.Tag {
-	return utils.DtoSlice(ts, func(t domains.Tag) api.Tag {
+func mapAPITags(ts []domain.Tag) []api.Tag {
+	return utils.DtoSlice(ts, func(t domain.Tag) api.Tag {
 		return api.Tag{
 			Id:   t.ID,
 			Name: t.Name,

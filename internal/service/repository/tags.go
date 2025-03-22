@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/Dyleme/Notifier/internal/domains"
+	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/internal/service/repository/queries/goqueries"
 	"github.com/Dyleme/Notifier/internal/service/service"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
@@ -31,15 +31,15 @@ func NewTagsRepository(db *pgxpool.Pool, getter *trmpgx.CtxGetter) *TagsReposito
 	}
 }
 
-func dtoTag(t goqueries.Tag) domains.Tag {
-	return domains.Tag{
+func dtoTag(t goqueries.Tag) domain.Tag {
+	return domain.Tag{
 		ID:     int(t.ID),
 		Name:   t.Name,
 		UserID: int(t.UserID),
 	}
 }
 
-func (tr *TagsRepository) List(ctx context.Context, userID int, listParams service.ListParams) ([]domains.Tag, error) {
+func (tr *TagsRepository) List(ctx context.Context, userID int, listParams service.ListParams) ([]domain.Tag, error) {
 	tx := tr.getter.DefaultTrOrDB(ctx, tr.db)
 	tags, err := tr.q.ListTags(ctx, tx, goqueries.ListTagsParams{
 		UserID: int32(userID),
@@ -48,7 +48,7 @@ func (tr *TagsRepository) List(ctx context.Context, userID int, listParams servi
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return []domains.Tag{}, nil
+			return []domain.Tag{}, nil
 		}
 
 		return nil, fmt.Errorf("list tags: %w", serverrors.NewRepositoryError(err))
@@ -57,24 +57,24 @@ func (tr *TagsRepository) List(ctx context.Context, userID int, listParams servi
 	return utils.DtoSlice(tags, dtoTag), nil
 }
 
-func (tr *TagsRepository) Get(ctx context.Context, tagID int) (domains.Tag, error) {
+func (tr *TagsRepository) Get(ctx context.Context, tagID int) (domain.Tag, error) {
 	tx := tr.getter.DefaultTrOrDB(ctx, tr.db)
 	tag, err := tr.q.GetTag(ctx, tx, int32(tagID))
 	if err != nil {
-		return domains.Tag{}, fmt.Errorf("get tag[tagID=%v]: %w", tagID, serverrors.NewRepositoryError(err))
+		return domain.Tag{}, fmt.Errorf("get tag[tagID=%v]: %w", tagID, serverrors.NewRepositoryError(err))
 	}
 
 	return dtoTag(tag), nil
 }
 
-func (tr *TagsRepository) Add(ctx context.Context, name string, userID int) (domains.Tag, error) {
+func (tr *TagsRepository) Add(ctx context.Context, name string, userID int) (domain.Tag, error) {
 	tx := tr.getter.DefaultTrOrDB(ctx, tr.db)
 	createdTag, err := tr.q.AddTag(ctx, tx, goqueries.AddTagParams{
 		Name:   name,
 		UserID: int32(userID),
 	})
 	if err != nil {
-		return domains.Tag{}, fmt.Errorf("add tag: %w", serverrors.NewRepositoryError(err))
+		return domain.Tag{}, fmt.Errorf("add tag: %w", serverrors.NewRepositoryError(err))
 	}
 
 	return dtoTag(createdTag), nil
@@ -104,7 +104,7 @@ func (tr *TagsRepository) Update(ctx context.Context, tagID int, name string) er
 	return nil
 }
 
-func syncTags(ctx context.Context, tx trmpgx.Tr, q *goqueries.Queries, smthID, userID int, tags []domains.Tag) error {
+func syncTags(ctx context.Context, tx trmpgx.Tr, q *goqueries.Queries, smthID, userID int, tags []domain.Tag) error {
 	dbTags, err := q.ListTagsForSmth(ctx, tx, int32(smthID))
 	if err != nil {
 		if !errors.Is(err, pgx.ErrNoRows) {
@@ -112,10 +112,10 @@ func syncTags(ctx context.Context, tx trmpgx.Tr, q *goqueries.Queries, smthID, u
 		}
 	}
 	var tagIDsToDelete []int
-	var tagsToInsert []domains.Tag
+	var tagsToInsert []domain.Tag
 
 	dbTagIDs := utils.DtoSlice(dbTags, func(t goqueries.Tag) int { return int(t.ID) })
-	tagIDs := utils.DtoSlice(tags, func(t domains.Tag) int { return t.ID })
+	tagIDs := utils.DtoSlice(tags, func(t domain.Tag) int { return t.ID })
 	for _, dbTagID := range dbTagIDs {
 		if !slices.Contains(tagIDs, dbTagID) {
 			tagIDsToDelete = append(tagIDsToDelete, dbTagID)
@@ -128,7 +128,7 @@ func syncTags(ctx context.Context, tx trmpgx.Tr, q *goqueries.Queries, smthID, u
 		}
 	}
 
-	_, err = q.AddTagsToSmth(ctx, tx, utils.DtoSlice(tagsToInsert, func(t domains.Tag) goqueries.AddTagsToSmthParams {
+	_, err = q.AddTagsToSmth(ctx, tx, utils.DtoSlice(tagsToInsert, func(t domain.Tag) goqueries.AddTagsToSmthParams {
 		return goqueries.AddTagsToSmthParams{
 			SmthID: int32(smthID),
 			TagID:  int32(t.ID),

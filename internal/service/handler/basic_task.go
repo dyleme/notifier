@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/Dyleme/Notifier/internal/authorization/authmiddleware"
-	"github.com/Dyleme/Notifier/internal/domains"
+	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/internal/service/handler/api"
 	"github.com/Dyleme/Notifier/internal/service/service"
 	"github.com/Dyleme/Notifier/pkg/http/requests"
@@ -58,7 +58,7 @@ func (t TaskHandler) CreateBasicTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	basicTask := domains.BasicTask{
+	basicTask := domain.BasicTask{
 		ID:                 0,
 		UserID:             userID,
 		Text:               body.Text,
@@ -124,7 +124,7 @@ func (t TaskHandler) UpdateBasicTask(w http.ResponseWriter, r *http.Request, tas
 		return
 	}
 
-	basicTask, err := t.serv.UpdateBasicTask(r.Context(), domains.BasicTask{
+	basicTask, err := t.serv.UpdateBasicTask(r.Context(), domain.BasicTask{
 		ID:                 taskID,
 		UserID:             userID,
 		Text:               body.Text,
@@ -145,7 +145,7 @@ func (t TaskHandler) UpdateBasicTask(w http.ResponseWriter, r *http.Request, tas
 	responses.JSON(w, http.StatusOK, apiBasicTask)
 }
 
-func mapAPIBasicTask(basicTask domains.BasicTask) api.BasicTask {
+func mapAPIBasicTask(basicTask domain.BasicTask) api.BasicTask {
 	return api.BasicTask{
 		Description:        &basicTask.Description,
 		Id:                 basicTask.ID,

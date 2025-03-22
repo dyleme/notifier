@@ -13,7 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	domains "github.com/Dyleme/Notifier/internal/domains"
+	domain "github.com/Dyleme/Notifier/internal/domain"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -42,7 +42,7 @@ func (m *MockNotifier) EXPECT() *MockNotifierMockRecorder {
 }
 
 // Notify mocks base method.
-func (m *MockNotifier) Notify(ctx context.Context, notif domains.SendingEvent) error {
+func (m *MockNotifier) Notify(ctx context.Context, notif domain.SendingEvent) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Notify", ctx, notif)
 	ret0, _ := ret[0].(error)

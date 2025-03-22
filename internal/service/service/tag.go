@@ -4,22 +4,22 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Dyleme/Notifier/internal/domains"
+	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/pkg/log"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
 )
 
 type TagsRepository interface {
-	Add(ctx context.Context, tag string, userID int) (domains.Tag, error)
-	Get(ctx context.Context, tagID int) (domains.Tag, error)
-	List(ctx context.Context, userID int, listParams ListParams) ([]domains.Tag, error)
+	Add(ctx context.Context, tag string, userID int) (domain.Tag, error)
+	Get(ctx context.Context, tagID int) (domain.Tag, error)
+	List(ctx context.Context, userID int, listParams ListParams) ([]domain.Tag, error)
 	Update(ctx context.Context, tagID int, name string) error
 	Delete(ctx context.Context, tagID int) error
 }
 
-func (s *Service) AddTag(ctx context.Context, tag string, userID int) (domains.Tag, error) {
+func (s *Service) AddTag(ctx context.Context, tag string, userID int) (domain.Tag, error) {
 	log.Ctx(ctx).Debug("adding tag", "tag", tag, "userID", userID)
-	var createdTag domains.Tag
+	var createdTag domain.Tag
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		var err error
 		createdTag, err = s.repos.tags.Add(ctx, tag, userID)
@@ -33,15 +33,15 @@ func (s *Service) AddTag(ctx context.Context, tag string, userID int) (domains.T
 		err = fmt.Errorf("tr: %w", err)
 		logError(ctx, err)
 
-		return domains.Tag{}, err
+		return domain.Tag{}, err
 	}
 
 	return createdTag, nil
 }
 
-func (s *Service) GetTag(ctx context.Context, tagID, userID int) (domains.Tag, error) {
+func (s *Service) GetTag(ctx context.Context, tagID, userID int) (domain.Tag, error) {
 	log.Ctx(ctx).Debug("getting tag", "tagID", tagID, "userID", userID)
-	var tag domains.Tag
+	var tag domain.Tag
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		var err error
 		tag, err = s.repos.tags.Get(ctx, tagID)
@@ -59,15 +59,15 @@ func (s *Service) GetTag(ctx context.Context, tagID, userID int) (domains.Tag, e
 		err = fmt.Errorf("tr: %w", err)
 		logError(ctx, err)
 
-		return domains.Tag{}, err
+		return domain.Tag{}, err
 	}
 
 	return tag, nil
 }
 
-func (s *Service) ListTags(ctx context.Context, userID int, listParams ListParams) ([]domains.Tag, error) {
+func (s *Service) ListTags(ctx context.Context, userID int, listParams ListParams) ([]domain.Tag, error) {
 	log.Ctx(ctx).Debug("list tags", "userID", userID, "listparams", listParams)
-	var tags []domains.Tag
+	var tags []domain.Tag
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		var err error
 		tags, err = s.repos.tags.List(ctx, userID, listParams)
