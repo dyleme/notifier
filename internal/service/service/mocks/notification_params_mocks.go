@@ -13,7 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	domains "github.com/Dyleme/Notifier/internal/domains"
+	domain "github.com/Dyleme/Notifier/internal/domain"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -42,10 +42,10 @@ func (m *MockDefaultNotificationParamsRepository) EXPECT() *MockDefaultNotificat
 }
 
 // Get mocks base method.
-func (m *MockDefaultNotificationParamsRepository) Get(ctx context.Context, userID int) (domains.NotificationParams, error) {
+func (m *MockDefaultNotificationParamsRepository) Get(ctx context.Context, userID int) (domain.NotificationParams, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", ctx, userID)
-	ret0, _ := ret[0].(domains.NotificationParams)
+	ret0, _ := ret[0].(domain.NotificationParams)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -57,10 +57,10 @@ func (mr *MockDefaultNotificationParamsRepositoryMockRecorder) Get(ctx, userID a
 }
 
 // Set mocks base method.
-func (m *MockDefaultNotificationParamsRepository) Set(ctx context.Context, userID int, params domains.NotificationParams) (domains.NotificationParams, error) {
+func (m *MockDefaultNotificationParamsRepository) Set(ctx context.Context, userID int, params domain.NotificationParams) (domain.NotificationParams, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Set", ctx, userID, params)
-	ret0, _ := ret[0].(domains.NotificationParams)
+	ret0, _ := ret[0].(domain.NotificationParams)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

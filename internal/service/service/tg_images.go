@@ -4,16 +4,16 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Dyleme/Notifier/internal/domains"
+	"github.com/Dyleme/Notifier/internal/domain"
 )
 
 //go:generate mockgen -destination=mocks/tg_images_mocks.go -package=mocks . TgImagesRepository
 type TgImagesRepository interface {
 	Add(ctx context.Context, filename, tgFileID string) error
-	Get(ctx context.Context, filename string) (domains.TgImage, error)
+	Get(ctx context.Context, filename string) (domain.TgImage, error)
 }
 
-func (s *Service) GetTgImage(ctx context.Context, filename string) (domains.TgImage, error) {
+func (s *Service) GetTgImage(ctx context.Context, filename string) (domain.TgImage, error) {
 	op := "Service.GetTgImage: %w"
 
 	tgImage, err := s.repos.tgImages.Get(ctx, filename)
@@ -21,7 +21,7 @@ func (s *Service) GetTgImage(ctx context.Context, filename string) (domains.TgIm
 		err = fmt.Errorf(op, err)
 		logError(ctx, err)
 
-		return domains.TgImage{}, err
+		return domain.TgImage{}, err
 	}
 
 	return tgImage, nil

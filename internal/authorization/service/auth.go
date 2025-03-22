@@ -8,7 +8,7 @@ import (
 	trManager "github.com/avito-tech/go-transaction-manager/trm/manager"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/Dyleme/Notifier/internal/domains"
+	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
 )
 
@@ -56,9 +56,9 @@ type BindingAttempt struct {
 
 // UserRepo is an interface which provides methods to implement with repository.
 type UserRepo interface {
-	Create(ctx context.Context, input CreateUserInput) (user domains.User, err error)
-	Get(ctx context.Context, tgNickname string, tgID int) (domains.User, error)
-	Update(ctx context.Context, user domains.User) error
+	Create(ctx context.Context, input CreateUserInput) (user domain.User, err error)
+	Find(ctx context.Context, tgNickname string, tgID int) (domain.User, error)
+	Update(ctx context.Context, user domain.User) error
 	AddBindingAttempt(ctx context.Context, input BindingAttempt) error
 	GetLatestBindingAttempt(ctx context.Context, tgID int) (BindingAttempt, error)
 	UpdateBindingAttemptStatus(ctx context.Context, baID int, done bool) error
@@ -111,7 +111,7 @@ func (s *AuthService) StartUserBinding(ctx context.Context, input StartUserBindi
 	code := s.codeGenerator.GenereateCode()
 	passwordHash := s.hashGen.GeneratePasswordHash(input.Password)
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
-		user, err := s.repo.Get(ctx, input.TGNickname, 0)
+		user, err := s.repo.Find(ctx, input.TGNickname, 0)
 		if err != nil {
 			return fmt.Errorf("get user: %w", err)
 		}
@@ -147,7 +147,7 @@ type BindUserInput struct {
 
 func (s *AuthService) BindUser(ctx context.Context, input BindUserInput) error {
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
-		user, err := s.repo.Get(ctx, input.TGNickname, 0)
+		user, err := s.repo.Find(ctx, input.TGNickname, 0)
 		if err != nil {
 			return fmt.Errorf("get user: %w", err)
 		}
@@ -193,7 +193,7 @@ var (
 // and create token with the help jwtGen.CreateToken.
 func (s *AuthService) AuthUser(ctx context.Context, input ValidateUserInput) (string, error) {
 	op := "AuthService.AuthUser: %w"
-	user, err := s.repo.Get(ctx, input.AuthName, 0)
+	user, err := s.repo.Find(ctx, input.AuthName, 0)
 	if err != nil {
 		return "", fmt.Errorf(op, err)
 	}
@@ -210,11 +210,11 @@ func (s *AuthService) AuthUser(ctx context.Context, input ValidateUserInput) (st
 	return token, nil
 }
 
-func (s *AuthService) GetTGUserInfo(ctx context.Context, tgID int) (domains.User, error) {
+func (s *AuthService) GetTGUserInfo(ctx context.Context, tgID int) (domain.User, error) {
 	op := "AuthService.GetTGUserInfo: %w"
-	user, err := s.repo.Get(ctx, "", tgID)
+	user, err := s.repo.Find(ctx, "", tgID)
 	if err != nil {
-		return domains.User{}, fmt.Errorf(op, err)
+		return domain.User{}, fmt.Errorf(op, err)
 	}
 
 	return user, nil
@@ -225,8 +225,8 @@ type CreateUserInput struct {
 	TGID       int
 }
 
-func (s *AuthService) CreateUser(ctx context.Context, input CreateUserInput) (domains.User, error) {
-	var user domains.User
+func (s *AuthService) CreateUser(ctx context.Context, input CreateUserInput) (domain.User, error) {
+	var user domain.User
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		var err error
 		user, err = s.repo.Create(ctx, CreateUserInput{
@@ -240,7 +240,7 @@ func (s *AuthService) CreateUser(ctx context.Context, input CreateUserInput) (do
 		return nil
 	})
 	if err != nil {
-		return domains.User{}, fmt.Errorf("tr: %w", err)
+		return domain.User{}, fmt.Errorf("tr: %w", err)
 	}
 
 	return user, nil
@@ -248,13 +248,13 @@ func (s *AuthService) CreateUser(ctx context.Context, input CreateUserInput) (do
 
 var ErrInvalidOffset = errors.New("invalid offset")
 
-func (s *AuthService) UpdateUserTime(ctx context.Context, id int, tzOffset domains.TimeZoneOffset, isDst bool) error {
+func (s *AuthService) UpdateUserTime(ctx context.Context, id int, tzOffset domain.TimeZoneOffset, isDst bool) error {
 	if !tzOffset.IsValid() {
 		return fmt.Errorf("invalid offset: %w", serverrors.NewBusinessLogicError("invalid offset"))
 	}
 
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
-		user, err := s.repo.Get(ctx, "", id)
+		user, err := s.repo.Find(ctx, "", id)
 		if err != nil {
 			return fmt.Errorf("get user: %w", err)
 		}

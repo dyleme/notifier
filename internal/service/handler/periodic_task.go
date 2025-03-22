@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/Dyleme/Notifier/internal/authorization/authmiddleware"
-	"github.com/Dyleme/Notifier/internal/domains"
+	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/internal/service/handler/api"
 	"github.com/Dyleme/Notifier/internal/service/service"
 	"github.com/Dyleme/Notifier/pkg/http/requests"
@@ -68,7 +68,7 @@ func (t TaskHandler) CreatePeriodicTask(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	basicTask := domains.PeriodicTask{
+	basicTask := domain.PeriodicTask{
 		ID:                 0,
 		Text:               body.Text,
 		Description:        utils.ZeroIfNil(body.Description),
@@ -142,7 +142,7 @@ func (t TaskHandler) UpdatePeriodicTask(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	err = t.serv.UpdatePeriodicTask(r.Context(), domains.PeriodicTask{
+	err = t.serv.UpdatePeriodicTask(r.Context(), domain.PeriodicTask{
 		ID:                 taskID,
 		Text:               body.Text,
 		Description:        utils.ZeroIfNil(body.Description),
@@ -163,7 +163,7 @@ func (t TaskHandler) UpdatePeriodicTask(w http.ResponseWriter, r *http.Request, 
 	responses.Status(w, http.StatusOK)
 }
 
-func mapAPIPeriodicTask(pt domains.PeriodicTask) api.PeriodicTask {
+func mapAPIPeriodicTask(pt domain.PeriodicTask) api.PeriodicTask {
 	return api.PeriodicTask{
 		BiggestPeriod:      int(pt.BiggestPeriod / timeDay),
 		Description:        &pt.Description,

@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/Dyleme/Notifier/internal/domains"
+	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/internal/service/repository/queries/goqueries"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
 )
@@ -83,7 +83,7 @@ func uniqueError(err error, columnNames []string) (string, bool) {
 	return "", false
 }
 
-func (t TgImagesRepository) Get(ctx context.Context, filename string) (domains.TgImage, error) {
+func (t TgImagesRepository) Get(ctx context.Context, filename string) (domain.TgImage, error) {
 	op := "TgImagesRepository.Get: %w"
 
 	var tgImage goqueries.TgImage
@@ -95,21 +95,21 @@ func (t TgImagesRepository) Get(ctx context.Context, filename string) (domains.T
 	tgImage, err := t.q.GetTgImage(ctx, tx, filename)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return domains.TgImage{}, fmt.Errorf(op, serverrors.NewNotFoundError(err, "tg image"))
+			return domain.TgImage{}, fmt.Errorf(op, serverrors.NewNotFoundError(err, "tg image"))
 		}
 
-		return domains.TgImage{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
+		return domain.TgImage{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
-	return domains.TgImage{
+	return domain.TgImage{
 		ID:       int(tgImage.ID),
 		Filename: tgImage.Filename,
 		TgFileID: tgImage.TgFileID,
 	}, nil
 }
 
-func dtoTgImage(tgImage goqueries.TgImage) domains.TgImage {
-	return domains.TgImage{
+func dtoTgImage(tgImage goqueries.TgImage) domain.TgImage {
+	return domain.TgImage{
 		ID:       int(tgImage.ID),
 		Filename: tgImage.Filename,
 		TgFileID: tgImage.TgFileID,

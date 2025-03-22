@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Dyleme/Notifier/internal/domains"
+	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/pkg/log"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
 	"github.com/Dyleme/Notifier/pkg/utils/timeborders"
@@ -13,11 +13,11 @@ import (
 
 //go:generate mockgen -destination=mocks/events_mocks.go -package=mocks . EventsRepository
 type EventsRepository interface {
-	Add(ctx context.Context, event domains.Event) (domains.Event, error)
-	List(ctx context.Context, userID int, params ListEventsFilterParams) ([]domains.Event, error)
-	Get(ctx context.Context, id int) (domains.Event, error)
-	GetLatest(ctx context.Context, taskdID int, taskType domains.TaskType) (domains.Event, error)
-	Update(ctx context.Context, event domains.Event) error
+	Add(ctx context.Context, event domain.Event) (domain.Event, error)
+	List(ctx context.Context, userID int, params ListEventsFilterParams) ([]domain.Event, error)
+	Get(ctx context.Context, id int) (domain.Event, error)
+	GetLatest(ctx context.Context, taskdID int, taskType domain.TaskType) (domain.Event, error)
+	Update(ctx context.Context, event domain.Event) error
 	Delete(ctx context.Context, id int) error
 }
 
@@ -27,8 +27,8 @@ type ListEventsFilterParams struct {
 	Tags        []int
 }
 
-func (s *Service) ListEvents(ctx context.Context, userID int, params ListEventsFilterParams) ([]domains.Event, error) {
-	var events []domains.Event
+func (s *Service) ListEvents(ctx context.Context, userID int, params ListEventsFilterParams) ([]domain.Event, error) {
+	var events []domain.Event
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		var err error
 		events, err = s.repos.events.List(ctx, userID, params)
@@ -47,8 +47,8 @@ func (s *Service) ListEvents(ctx context.Context, userID int, params ListEventsF
 	return events, nil
 }
 
-func (s *Service) GetEvent(ctx context.Context, eventID, userID int) (domains.Event, error) {
-	var event domains.Event
+func (s *Service) GetEvent(ctx context.Context, eventID, userID int) (domain.Event, error) {
+	var event domain.Event
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		var err error
 		event, err = s.repos.events.Get(ctx, eventID)
@@ -66,7 +66,7 @@ func (s *Service) GetEvent(ctx context.Context, eventID, userID int) (domains.Ev
 		err = fmt.Errorf("tr: %w", err)
 		logError(ctx, err)
 
-		return domains.Event{}, err
+		return domain.Event{}, err
 	}
 
 	return event, nil
@@ -166,6 +166,7 @@ func (s *Service) ReschedulEventToTime(ctx context.Context, eventID, userID int,
 }
 
 func (s *Service) SetEventDoneStatus(ctx context.Context, eventID, userID int, done bool) error {
+	log.Ctx(ctx).Debug("setting event status", "eventID", eventID, "userID", userID, "status", done)
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		event, err := s.repos.events.Get(ctx, eventID)
 		if err != nil {
@@ -184,8 +185,8 @@ func (s *Service) SetEventDoneStatus(ctx context.Context, eventID, userID int, d
 		}
 
 		switch event.TaskType {
-		case domains.BasicTaskType:
-		case domains.PeriodicTaskType:
+		case domain.BasicTaskType:
+		case domain.PeriodicTaskType:
 			err := s.createNewEventForPeriodicTask(ctx, event.TaskID, userID)
 			if err != nil {
 				return fmt.Errorf("setTaskDoneStatusPeriodicTask: %w", err)
@@ -203,13 +204,14 @@ func (s *Service) SetEventDoneStatus(ctx context.Context, eventID, userID int, d
 	return nil
 }
 
-func (s *Service) createAndAddEvent(ctx context.Context, task domains.EventCreator, userID int) error {
+func (s *Service) createAndAddEvent(ctx context.Context, task domain.EventCreator, userID int) error {
+	log.Ctx(ctx).Debug("adding new event", "task", task, "userID", userID)
 	defParams, err := s.repos.defaultNotificationParams.Get(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("get default params: %w", err)
 	}
 
-	event, err := domains.CreateEvent(task, defParams)
+	event, err := domain.CreateEvent(task, defParams)
 	if err != nil {
 		return fmt.Errorf("create event: %w", err)
 	}

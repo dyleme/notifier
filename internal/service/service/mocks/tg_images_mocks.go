@@ -13,7 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	domains "github.com/Dyleme/Notifier/internal/domains"
+	domain "github.com/Dyleme/Notifier/internal/domain"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -56,10 +56,10 @@ func (mr *MockTgImagesRepositoryMockRecorder) Add(ctx, filename, tgFileID any) *
 }
 
 // Get mocks base method.
-func (m *MockTgImagesRepository) Get(ctx context.Context, filename string) (domains.TgImage, error) {
+func (m *MockTgImagesRepository) Get(ctx context.Context, filename string) (domain.TgImage, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", ctx, filename)
-	ret0, _ := ret[0].(domains.TgImage)
+	ret0, _ := ret[0].(domain.TgImage)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

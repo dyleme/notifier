@@ -13,7 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	domains "github.com/Dyleme/Notifier/internal/domains"
+	domain "github.com/Dyleme/Notifier/internal/domain"
 	service "github.com/Dyleme/Notifier/internal/service/service"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -43,10 +43,10 @@ func (m *MockPeriodicTasksRepository) EXPECT() *MockPeriodicTasksRepositoryMockR
 }
 
 // Add mocks base method.
-func (m *MockPeriodicTasksRepository) Add(ctx context.Context, task domains.PeriodicTask) (domains.PeriodicTask, error) {
+func (m *MockPeriodicTasksRepository) Add(ctx context.Context, task domain.PeriodicTask) (domain.PeriodicTask, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Add", ctx, task)
-	ret0, _ := ret[0].(domains.PeriodicTask)
+	ret0, _ := ret[0].(domain.PeriodicTask)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -72,10 +72,10 @@ func (mr *MockPeriodicTasksRepositoryMockRecorder) Delete(ctx, taskID any) *gomo
 }
 
 // Get mocks base method.
-func (m *MockPeriodicTasksRepository) Get(ctx context.Context, taskID int) (domains.PeriodicTask, error) {
+func (m *MockPeriodicTasksRepository) Get(ctx context.Context, taskID int) (domain.PeriodicTask, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", ctx, taskID)
-	ret0, _ := ret[0].(domains.PeriodicTask)
+	ret0, _ := ret[0].(domain.PeriodicTask)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -87,10 +87,10 @@ func (mr *MockPeriodicTasksRepositoryMockRecorder) Get(ctx, taskID any) *gomock.
 }
 
 // List mocks base method.
-func (m *MockPeriodicTasksRepository) List(ctx context.Context, userID int, params service.ListFilterParams) ([]domains.PeriodicTask, error) {
+func (m *MockPeriodicTasksRepository) List(ctx context.Context, userID int, params service.ListFilterParams) ([]domain.PeriodicTask, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List", ctx, userID, params)
-	ret0, _ := ret[0].([]domains.PeriodicTask)
+	ret0, _ := ret[0].([]domain.PeriodicTask)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -102,7 +102,7 @@ func (mr *MockPeriodicTasksRepositoryMockRecorder) List(ctx, userID, params any)
 }
 
 // Update mocks base method.
-func (m *MockPeriodicTasksRepository) Update(ctx context.Context, task domains.PeriodicTask) error {
+func (m *MockPeriodicTasksRepository) Update(ctx context.Context, task domain.PeriodicTask) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Update", ctx, task)
 	ret0, _ := ret[0].(error)

@@ -1,4 +1,4 @@
-package domains
+package domain
 
 type Tag struct {
 	ID     int

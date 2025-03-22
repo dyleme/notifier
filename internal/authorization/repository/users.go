@@ -13,13 +13,13 @@ import (
 
 	"github.com/Dyleme/Notifier/internal/authorization/repository/queries/goqueries"
 	"github.com/Dyleme/Notifier/internal/authorization/service"
-	"github.com/Dyleme/Notifier/internal/domains"
+	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/pkg/serverrors"
 	"github.com/Dyleme/Notifier/pkg/sql/pgxconv"
 	"github.com/Dyleme/Notifier/pkg/utils"
 )
 
-func (r *Repository) Create(ctx context.Context, input service.CreateUserInput) (domains.User, error) {
+func (r *Repository) Create(ctx context.Context, input service.CreateUserInput) (domain.User, error) {
 	tx := r.getter.DefaultTrOrDB(ctx, r.db)
 	op := "Repository.Create: %w"
 	user, err := r.q.AddUser(ctx, tx, goqueries.AddUserParams{
@@ -28,13 +28,13 @@ func (r *Repository) Create(ctx context.Context, input service.CreateUserInput) 
 	})
 	if err != nil {
 		if intersection, isUnique := uniqueError(err); isUnique {
-			return domains.User{}, fmt.Errorf(op, serverrors.NewUniqueError(intersection, input.TGNickname))
+			return domain.User{}, fmt.Errorf(op, serverrors.NewUniqueError(intersection, input.TGNickname))
 		}
 
-		return domains.User{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
+		return domain.User{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
-	return domains.User{
+	return domain.User{
 		ID:             int(user.ID),
 		TgNickname:     user.TgNickname,
 		PasswordHash:   pgxconv.ByteSlice(user.PasswordHash),
@@ -59,22 +59,22 @@ func uniqueError(err error) (string, bool) {
 	return "", false
 }
 
-func (r *Repository) Get(ctx context.Context, email string, tgID int) (domains.User, error) {
-	op := "Repository.Get: %w"
+func (r *Repository) Find(ctx context.Context, nickname string, tgID int) (domain.User, error) {
+	op := "Repository.Find: %w"
 	tx := r.getter.DefaultTrOrDB(ctx, r.db)
 	out, err := r.q.FindUser(ctx, tx, goqueries.FindUserParams{
-		TgNickname: email,
+		TgNickname: nickname,
 		TgID:       int32(tgID),
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return domains.User{}, fmt.Errorf(op, serverrors.NewNotFoundError(err, "user"))
+			return domain.User{}, fmt.Errorf(op, serverrors.NewNotFoundError(err, "user"))
 		}
 
-		return domains.User{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
+		return domain.User{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
 	}
 
-	return domains.User{
+	return domain.User{
 		ID:             int(out.ID),
 		TgNickname:     out.TgNickname,
 		PasswordHash:   pgxconv.ByteSlice(out.PasswordHash),
@@ -84,7 +84,7 @@ func (r *Repository) Get(ctx context.Context, email string, tgID int) (domains.U
 	}, nil
 }
 
-func (r *Repository) Update(ctx context.Context, user domains.User) error {
+func (r *Repository) Update(ctx context.Context, user domain.User) error {
 	tx := r.getter.DefaultTrOrDB(ctx, r.db)
 	err := r.q.UpdateUser(ctx, tx, goqueries.UpdateUserParams{
 		TgNickname:     user.TgNickname,
@@ -161,15 +161,15 @@ func (r *Repository) GetNextTime(ctx context.Context) (time.Time, error) {
 	return pgxconv.OnlyTime(ts)
 }
 
-func (r *Repository) DailyNotificationsUsers(ctx context.Context, now time.Time) ([]domains.User, error) {
+func (r *Repository) DailyNotificationsUsers(ctx context.Context, now time.Time) ([]domain.User, error) {
 	tx := r.getter.DefaultTrOrDB(ctx, r.db)
 	users, err := r.q.ListUsersToNotfiy(ctx, tx, pgxconv.PgOnlyTime(now))
 	if err != nil {
 		return nil, fmt.Errorf("get daily notifications users: %w", serverrors.NewRepositoryError(err))
 	}
 
-	return utils.DtoSlice(users, func(u goqueries.User) domains.User {
-		return domains.User{
+	return utils.DtoSlice(users, func(u goqueries.User) domain.User {
+		return domain.User{
 			ID:             int(u.ID),
 			TgNickname:     u.TgNickname,
 			PasswordHash:   pgxconv.ByteSlice(u.PasswordHash),
