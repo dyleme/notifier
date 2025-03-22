@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Dyleme/Notifier/internal/domain/apperr"
 	"github.com/Dyleme/Notifier/pkg/log"
-	"github.com/Dyleme/Notifier/pkg/serverrors"
 )
 
 type errorResponse struct {
@@ -27,13 +27,13 @@ func KnownError(w http.ResponseWriter, err error) {
 		unwrappedErr = err
 	}
 
-	if _, ok := unwrappedErr.(serverrors.InternalError); ok { //nolint:errorlint //error is already unwrapped
+	if _, ok := unwrappedErr.(apperr.InternalError); ok { //nolint:errorlint //error is already unwrapped
 		Error(w, http.StatusInternalServerError, errServer)
 
 		return
 	}
 
-	if mappingError, ok := unwrappedErr.(serverrors.MappingError); ok { //nolint:errorlint //error is already unwrapped
+	if mappingError, ok := unwrappedErr.(apperr.MappingError); ok { //nolint:errorlint //error is already unwrapped
 		MapError(w, BadBodyResponse{
 			Field: mappingError.Field,
 			Error: mappingError.Error(),
@@ -43,15 +43,15 @@ func KnownError(w http.ResponseWriter, err error) {
 	}
 
 	switch unwrappedErr.(type) { //nolint:errorlint //error is already unwrapped
-	case serverrors.NotFoundError:
+	case apperr.NotFoundError:
 		Error(w, http.StatusNotFound, unwrappedErr)
-	case serverrors.NoDeletionsError:
+	case apperr.NoDeletionsError:
 		Error(w, http.StatusUnprocessableEntity, unwrappedErr)
-	case serverrors.UniqueError:
+	case apperr.UniqueError:
 		Error(w, http.StatusConflict, unwrappedErr)
-	case serverrors.InvalidAuthError:
+	case apperr.InvalidAuthError:
 		Error(w, http.StatusUnauthorized, unwrappedErr)
-	case serverrors.BusinessLogicError:
+	case apperr.BusinessLogicError:
 		Error(w, http.StatusUnprocessableEntity, unwrappedErr)
 	default:
 		Error(w, http.StatusInternalServerError, unwrappedErr)

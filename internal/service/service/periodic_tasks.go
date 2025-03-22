@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/Dyleme/Notifier/internal/domain"
+	serverrors "github.com/Dyleme/Notifier/internal/domain/apperr"
 	"github.com/Dyleme/Notifier/pkg/log"
-	"github.com/Dyleme/Notifier/pkg/serverrors"
 )
 
 //go:generate mockgen -destination=mocks/periodic_tasks_mocks.go -package=mocks . PeriodicTasksRepository

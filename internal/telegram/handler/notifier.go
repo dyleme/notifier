@@ -12,9 +12,9 @@ import (
 	inKbr "github.com/go-telegram/ui/keyboard/inline"
 
 	"github.com/Dyleme/Notifier/internal/domain"
+	serverrors "github.com/Dyleme/Notifier/internal/domain/apperr"
 	"github.com/Dyleme/Notifier/internal/telegram/userinfo"
 	"github.com/Dyleme/Notifier/pkg/log"
-	"github.com/Dyleme/Notifier/pkg/serverrors"
 )
 
 type Notification struct {

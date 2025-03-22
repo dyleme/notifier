@@ -10,8 +10,8 @@ import (
 	"github.com/avito-tech/go-transaction-manager/trm"
 
 	"github.com/Dyleme/Notifier/internal/domain"
+	"github.com/Dyleme/Notifier/internal/domain/apperr"
 	"github.com/Dyleme/Notifier/pkg/log"
-	"github.com/Dyleme/Notifier/pkg/serverrors"
 )
 
 type Notifier interface {
@@ -51,7 +51,7 @@ func (dn *DailyNotifier) SetNotifier(notifier Notifier) {
 func (dn *DailyNotifier) GetNextTime(ctx context.Context) (time.Time, bool) {
 	t, err := dn.repo.GetNextTime(ctx)
 	if err != nil {
-		var notFoundErr serverrors.NotFoundError
+		var notFoundErr apperr.NotFoundError
 		if !errors.As(err, &notFoundErr) {
 			log.Ctx(ctx).Error("get next time error", log.Err(err))
 		}

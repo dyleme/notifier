@@ -6,12 +6,12 @@ import (
 
 	"github.com/Dyleme/Notifier/internal/authorization/authmiddleware"
 	"github.com/Dyleme/Notifier/internal/domain"
+	"github.com/Dyleme/Notifier/internal/domain/apperr"
 	"github.com/Dyleme/Notifier/internal/service/handler/api"
 	"github.com/Dyleme/Notifier/internal/service/service"
 	"github.com/Dyleme/Notifier/pkg/http/requests"
 	"github.com/Dyleme/Notifier/pkg/http/responses"
 	"github.com/Dyleme/Notifier/pkg/log"
-	"github.com/Dyleme/Notifier/pkg/serverrors"
 	"github.com/Dyleme/Notifier/pkg/utils/ptr"
 	"github.com/Dyleme/Notifier/pkg/utils/slice"
 )
@@ -79,7 +79,7 @@ func mapAPITaskType(taskType domain.TaskType) (api.TaskType, error) {
 	case domain.BasicTaskType:
 		return api.Basic, nil
 	default:
-		return "", serverrors.NewServiceError(fmt.Errorf("unknown task type: %s", taskType))
+		return "", apperr.NewServiceError(fmt.Errorf("unknown task type: %s", taskType))
 	}
 }
 

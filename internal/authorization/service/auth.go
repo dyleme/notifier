@@ -9,7 +9,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/Dyleme/Notifier/internal/domain"
-	"github.com/Dyleme/Notifier/pkg/serverrors"
+	"github.com/Dyleme/Notifier/internal/domain/apperr"
 )
 
 // HashGenerator interface providing you the ability to generate password hash
@@ -250,7 +250,7 @@ var ErrInvalidOffset = errors.New("invalid offset")
 
 func (s *AuthService) UpdateUserTime(ctx context.Context, id int, tzOffset domain.TimeZoneOffset, isDst bool) error {
 	if !tzOffset.IsValid() {
-		return fmt.Errorf("invalid offset: %w", serverrors.NewBusinessLogicError("invalid offset"))
+		return fmt.Errorf("invalid offset: %w", apperr.NewBusinessLogicError("invalid offset"))
 	}
 
 	err := s.tr.Do(ctx, func(ctx context.Context) error {

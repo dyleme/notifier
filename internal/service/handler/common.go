@@ -4,10 +4,10 @@ import (
 	"time"
 
 	domain "github.com/Dyleme/Notifier/internal/domain"
+	serverrors "github.com/Dyleme/Notifier/internal/domain/apperr"
 	"github.com/Dyleme/Notifier/internal/service/handler/api"
 	"github.com/Dyleme/Notifier/internal/service/service"
 	"github.com/Dyleme/Notifier/pkg/model"
-	"github.com/Dyleme/Notifier/pkg/serverrors"
 	"github.com/Dyleme/Notifier/pkg/utils/ptr"
 	"github.com/Dyleme/Notifier/pkg/utils/slice"
 )

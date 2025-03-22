@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/Dyleme/Notifier/internal/domain"
+	serverrors "github.com/Dyleme/Notifier/internal/domain/apperr"
 	"github.com/Dyleme/Notifier/pkg/log"
 	"github.com/Dyleme/Notifier/pkg/model"
-	"github.com/Dyleme/Notifier/pkg/serverrors"
 )
 
 //go:generate mockgen -destination=mocks/events_mocks.go -package=mocks . EventsRepository

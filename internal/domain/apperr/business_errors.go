@@ -1,4 +1,4 @@
-package serverrors
+package apperr
 
 import (
 	"fmt"

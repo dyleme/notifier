@@ -10,8 +10,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	serverrors "github.com/Dyleme/Notifier/internal/domain/apperr"
 	"github.com/Dyleme/Notifier/internal/service/repository/queries/goqueries"
-	"github.com/Dyleme/Notifier/pkg/serverrors"
 )
 
 type KeyValueRepository struct {

@@ -3,7 +3,7 @@ package domain
 import (
 	"time"
 
-	"github.com/Dyleme/Notifier/pkg/serverrors"
+	serverrors "github.com/Dyleme/Notifier/internal/domain/apperr"
 	utils "github.com/Dyleme/Notifier/pkg/utils/ptr"
 )
 
