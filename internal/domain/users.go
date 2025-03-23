@@ -1,5 +1,7 @@
 package domain
 
+import "github.com/Dyleme/Notifier/internal/domain/apperr"
+
 type User struct {
 	ID             int
 	TgNickname     string
@@ -11,10 +13,10 @@ type User struct {
 
 type TimeZoneOffset int
 
-func (to TimeZoneOffset) IsValid() bool {
+func (to TimeZoneOffset) Valid() error {
 	if -24 < to && to < 24 {
-		return true
+		return apperr.InvalidOffsetError{Offset: int(to)}
 	}
 
-	return false
+	return nil
 }

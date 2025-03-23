@@ -53,14 +53,14 @@ func (t TgImagesRepository) Add(ctx context.Context, filename, tgFileID string) 
 	})
 	if err != nil {
 		if intersection, isUnique := uniqueError(err, []string{"filename"}); isUnique {
-			return fmt.Errorf(op, apperr.NewUniqueError(intersection, filename))
+			return fmt.Errorf(op, apperr.UniqueError{Name: intersection, Value: filename})
 		}
 
-		return fmt.Errorf(op, apperr.NewRepositoryError(err))
+		return fmt.Errorf(op, err)
 	}
 
 	if err = t.cache.Add(newTgImageKey(filename), tgImage); err != nil {
-		return fmt.Errorf(op, apperr.NewRepositoryError(err))
+		return fmt.Errorf(op, err)
 	}
 
 	return nil
@@ -95,10 +95,10 @@ func (t TgImagesRepository) Get(ctx context.Context, filename string) (domain.Tg
 	tgImage, err := t.q.GetTgImage(ctx, tx, filename)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return domain.TgImage{}, fmt.Errorf(op, apperr.NewNotFoundError(err, "tg image"))
+			return domain.TgImage{}, apperr.ErrNotFound
 		}
 
-		return domain.TgImage{}, fmt.Errorf(op, apperr.NewRepositoryError(err))
+		return domain.TgImage{}, fmt.Errorf(op, err)
 	}
 
 	return domain.TgImage{

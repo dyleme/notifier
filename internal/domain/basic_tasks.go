@@ -3,6 +3,8 @@ package domain
 import (
 	"fmt"
 	"time"
+
+	"github.com/Dyleme/Notifier/internal/domain/apperr"
 )
 
 const BasicTaskType TaskType = "basic task"
@@ -52,5 +54,5 @@ func (bt BasicTask) BelongsTo(userID int) error {
 		return nil
 	}
 
-	return NewNotBelongToUserError("basic task", bt.ID, bt.UserID, userID)
+	return apperr.NewNotBelongToUserError("basic task", bt.ID, bt.UserID, userID)
 }

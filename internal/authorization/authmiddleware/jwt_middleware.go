@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/Dyleme/Notifier/internal/authorization/jwt"
-	"github.com/Dyleme/Notifier/pkg/http/responses"
+	"github.com/Dyleme/Notifier/internal/service/handler/response"
 )
 
 type Key string
@@ -41,14 +41,14 @@ func (am *JWTMiddleware) Handle(next http.Handler) http.Handler {
 
 		authJWT, err := getAuthorizationTokens(r, bearerToken)
 		if err != nil {
-			responses.Error(w, http.StatusUnauthorized, fmt.Errorf("jwt token: %w", err))
+			response.Error(ctx, w, fmt.Errorf("jwt token: %w", err))
 
 			return
 		}
 
 		userID, err := am.gen.ParseToken(authJWT)
 		if err != nil {
-			responses.Error(w, http.StatusUnauthorized, fmt.Errorf("middleware: %w", err))
+			response.Error(ctx, w, fmt.Errorf("middleware: %w", err))
 
 			return
 		}

@@ -18,7 +18,6 @@ func (s *Service) SetDefaultNotificationParams(ctx context.Context, params domai
 	defParams, err := s.repos.defaultNotificationParams.Set(ctx, userID, params)
 	if err != nil {
 		err = fmt.Errorf("set deafault event params: %w", err)
-		logError(ctx, err)
 
 		return domain.NotificationParams{}, err
 	}
@@ -31,7 +30,6 @@ func (s *Service) GetDefaultNotificationParams(ctx context.Context, userID int) 
 	defParams, err := s.repos.defaultNotificationParams.Get(ctx, userID)
 	if err != nil {
 		err = fmt.Errorf("get deafault event params: %w", err)
-		logError(ctx, err)
 
 		return domain.NotificationParams{}, err
 	}

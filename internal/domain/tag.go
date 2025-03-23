@@ -1,5 +1,7 @@
 package domain
 
+import "github.com/Dyleme/Notifier/internal/domain/apperr"
+
 type Tag struct {
 	ID     int
 	UserID int
@@ -11,5 +13,5 @@ func (t Tag) BelongsTo(userID int) error {
 		return nil
 	}
 
-	return NewNotBelongToUserError("tag", t.ID, t.UserID, userID)
+	return apperr.NewNotBelongToUserError("tag", t.ID, t.UserID, userID)
 }

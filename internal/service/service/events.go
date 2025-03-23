@@ -2,11 +2,12 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/Dyleme/Notifier/internal/domain"
-	serverrors "github.com/Dyleme/Notifier/internal/domain/apperr"
+	"github.com/Dyleme/Notifier/internal/domain/apperr"
 	"github.com/Dyleme/Notifier/pkg/log"
 	"github.com/Dyleme/Notifier/pkg/model"
 )
@@ -39,8 +40,6 @@ func (s *Service) ListEvents(ctx context.Context, userID int, params ListEventsF
 		return nil
 	})
 	if err != nil {
-		logError(ctx, err)
-
 		return nil, fmt.Errorf("tr: %w", err)
 	}
 
@@ -57,16 +56,13 @@ func (s *Service) GetEvent(ctx context.Context, eventID, userID int) (domain.Eve
 		}
 
 		if err := event.BelongsTo(userID); err != nil {
-			return fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
+			return fmt.Errorf("belongs to: %w", err)
 		}
 
 		return nil
 	})
 	if err != nil {
-		err = fmt.Errorf("tr: %w", err)
-		logError(ctx, err)
-
-		return domain.Event{}, err
+		return domain.Event{}, fmt.Errorf("tr: %w", err)
 	}
 
 	return event, nil
@@ -74,7 +70,7 @@ func (s *Service) GetEvent(ctx context.Context, eventID, userID int) (domain.Eve
 
 func (s *Service) ChangeEventTime(ctx context.Context, eventID int, newTime time.Time, userID int) error {
 	if newTime.Before(time.Now()) {
-		return fmt.Errorf("time: %w", serverrors.NewBusinessLogicError("time can't be in the past"))
+		return fmt.Errorf("time: %w", apperr.ErrEventPastType)
 	}
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		ev, err := s.repos.events.Get(ctx, eventID)
@@ -83,7 +79,7 @@ func (s *Service) ChangeEventTime(ctx context.Context, eventID int, newTime time
 		}
 
 		if err := ev.BelongsTo(userID); err != nil {
-			return fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
+			return fmt.Errorf("belongs to: %w", err)
 		}
 
 		ev.FirstSend = newTime
@@ -98,10 +94,7 @@ func (s *Service) ChangeEventTime(ctx context.Context, eventID int, newTime time
 		return nil
 	})
 	if err != nil {
-		err = fmt.Errorf("tr: %w", err)
-		logError(ctx, err)
-
-		return err
+		return fmt.Errorf("tr: %w", err)
 	}
 
 	return nil
@@ -115,11 +108,15 @@ func (s *Service) DeleteEvent(ctx context.Context, eventID, userID int) error {
 		}
 
 		if err := ev.BelongsTo(userID); err != nil {
-			return fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
+			return fmt.Errorf("belongs to: %w", err)
 		}
 
 		err = s.repos.events.Delete(ctx, eventID)
 		if err != nil {
+			if errors.Is(err, apperr.ErrNotFound) {
+				return fmt.Errorf("events delete[eventID=%v]: %w", eventID, apperr.NotFoundError{Object: "event"})
+			}
+
 			return fmt.Errorf("events delete[eventID=%v]: %w", eventID, err)
 		}
 
@@ -127,7 +124,6 @@ func (s *Service) DeleteEvent(ctx context.Context, eventID, userID int) error {
 	})
 	if err != nil {
 		err = fmt.Errorf("tr: %w", err)
-		logError(ctx, err)
 
 		return err
 	}
@@ -143,7 +139,7 @@ func (s *Service) ReschedulEventToTime(ctx context.Context, eventID, userID int,
 		}
 
 		if err := ev.BelongsTo(userID); err != nil {
-			return fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
+			return fmt.Errorf("belongs to: %w", err)
 		}
 
 		ev = ev.RescheuleToTime(t)
@@ -156,10 +152,7 @@ func (s *Service) ReschedulEventToTime(ctx context.Context, eventID, userID int,
 		return nil
 	})
 	if err != nil {
-		err = fmt.Errorf("tr: %w", err)
-		logError(ctx, err)
-
-		return err
+		return fmt.Errorf("tr: %w", err)
 	}
 
 	return nil
@@ -174,7 +167,7 @@ func (s *Service) SetEventDoneStatus(ctx context.Context, eventID, userID int, d
 		}
 
 		if err := event.BelongsTo(userID); err != nil {
-			return fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
+			return fmt.Errorf("belongs to: %w", err)
 		}
 
 		event.Done = done

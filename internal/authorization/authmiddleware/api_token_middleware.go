@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/Dyleme/Notifier/pkg/http/responses"
+	"github.com/Dyleme/Notifier/internal/service/handler/response"
 )
 
 type APITokenMiddleware struct {
@@ -21,15 +21,16 @@ var ErrInvalidAuthKey = errors.New("invalid auth key")
 
 func (am *APITokenMiddleware) Handle(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
 		token, err := getAPIKey(r)
 		if err != nil {
-			responses.Error(w, http.StatusUnauthorized, err)
+			response.Error(ctx, w, err)
 
 			return
 		}
 
 		if token != am.apiToken {
-			responses.Error(w, http.StatusUnauthorized, ErrInvalidAuthKey)
+			response.Error(ctx, w, ErrInvalidAuthKey)
 
 			return
 		}

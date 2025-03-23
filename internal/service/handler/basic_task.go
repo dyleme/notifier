@@ -6,17 +6,18 @@ import (
 	"github.com/Dyleme/Notifier/internal/authorization/authmiddleware"
 	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/internal/service/handler/api"
+	"github.com/Dyleme/Notifier/internal/service/handler/request"
+	"github.com/Dyleme/Notifier/internal/service/handler/response"
 	"github.com/Dyleme/Notifier/internal/service/service"
-	"github.com/Dyleme/Notifier/pkg/http/requests"
-	"github.com/Dyleme/Notifier/pkg/http/responses"
 	"github.com/Dyleme/Notifier/pkg/utils/ptr"
 	"github.com/Dyleme/Notifier/pkg/utils/slice"
 )
 
 func (t TaskHandler) ListBasicTasks(w http.ResponseWriter, r *http.Request, params api.ListBasicTasksParams) {
-	userID, err := authmiddleware.UserIDFromCtx(r.Context())
+	ctx := r.Context()
+	userID, err := authmiddleware.UserIDFromCtx(ctx)
 	if err != nil {
-		responses.Error(w, http.StatusInternalServerError, err)
+		response.Error(ctx, w, err)
 
 		return
 	}
@@ -26,35 +27,36 @@ func (t TaskHandler) ListBasicTasks(w http.ResponseWriter, r *http.Request, para
 		TagIDs:     ptr.ZeroIfNil(params.TagIDs),
 	})
 	if err != nil {
-		responses.KnownError(w, err)
+		response.Error(ctx, w, err)
 
 		return
 	}
 
-	apiBasicTasks := slice.DtoSlice(basicTasks, mapAPIBasicTask)
+	apiBasicTasks := slice.Dto(basicTasks, mapAPIBasicTask)
 
-	responses.JSON(w, http.StatusOK, apiBasicTasks)
+	response.JSON(ctx, w, http.StatusOK, apiBasicTasks)
 }
 
 func (t TaskHandler) CreateBasicTask(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	userID, err := authmiddleware.UserIDFromCtx(r.Context())
 	if err != nil {
-		responses.Error(w, http.StatusInternalServerError, err)
+		response.Error(ctx, w, err)
 
 		return
 	}
 
 	var body api.CreateBasicTaskJSONRequestBody
-	err = requests.Bind(r, &body)
+	err = request.Bind(r, &body)
 	if err != nil {
-		responses.KnownError(w, err)
+		response.Error(ctx, w, err)
 
 		return
 	}
 
 	notifParams, err := mapDomainNotificationParams(body.NotificationParams)
 	if err != nil {
-		responses.KnownError(w, err)
+		response.Error(ctx, w, err)
 
 		return
 	}
@@ -72,55 +74,57 @@ func (t TaskHandler) CreateBasicTask(w http.ResponseWriter, r *http.Request) {
 
 	createdTask, err := t.serv.CreateBasicTask(r.Context(), basicTask)
 	if err != nil {
-		responses.Error(w, http.StatusInternalServerError, err)
+		response.Error(ctx, w, err)
 
 		return
 	}
 
 	apiBasicTask := mapAPIBasicTask(createdTask)
 
-	responses.JSON(w, http.StatusCreated, apiBasicTask)
+	response.JSON(ctx, w, http.StatusCreated, apiBasicTask)
 }
 
 func (t TaskHandler) GetBasicTask(w http.ResponseWriter, r *http.Request, taskID int) {
+	ctx := r.Context()
 	userID, err := authmiddleware.UserIDFromCtx(r.Context())
 	if err != nil {
-		responses.Error(w, http.StatusInternalServerError, err)
+		response.Error(ctx, w, err)
 
 		return
 	}
 
 	basicTask, err := t.serv.GetBasicTask(r.Context(), userID, taskID)
 	if err != nil {
-		responses.KnownError(w, err)
+		response.Error(ctx, w, err)
 
 		return
 	}
 
 	apiBasicTask := mapAPIBasicTask(basicTask)
 
-	responses.JSON(w, http.StatusOK, apiBasicTask)
+	response.JSON(ctx, w, http.StatusOK, apiBasicTask)
 }
 
 func (t TaskHandler) UpdateBasicTask(w http.ResponseWriter, r *http.Request, taskID int) {
+	ctx := r.Context()
 	userID, err := authmiddleware.UserIDFromCtx(r.Context())
 	if err != nil {
-		responses.Error(w, http.StatusInternalServerError, err)
+		response.Error(ctx, w, err)
 
 		return
 	}
 
 	var body api.UpdateBasicTaskJSONRequestBody
-	err = requests.Bind(r, &body)
+	err = request.Bind(r, &body)
 	if err != nil {
-		responses.KnownError(w, err)
+		response.Error(ctx, w, err)
 
 		return
 	}
 
 	notifParams, err := mapDomainNotificationParams(body.NotificationParams)
 	if err != nil {
-		responses.KnownError(w, err)
+		response.Error(ctx, w, err)
 
 		return
 	}
@@ -136,14 +140,14 @@ func (t TaskHandler) UpdateBasicTask(w http.ResponseWriter, r *http.Request, tas
 		Notify:             body.Notify,
 	}, userID)
 	if err != nil {
-		responses.KnownError(w, err)
+		response.Error(ctx, w, err)
 
 		return
 	}
 
 	apiBasicTask := mapAPIBasicTask(basicTask)
 
-	responses.JSON(w, http.StatusOK, apiBasicTask)
+	response.JSON(ctx, w, http.StatusOK, apiBasicTask)
 }
 
 func mapAPIBasicTask(basicTask domain.BasicTask) api.BasicTask {

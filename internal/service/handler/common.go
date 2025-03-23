@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"time"
 
 	domain "github.com/Dyleme/Notifier/internal/domain"
@@ -63,7 +64,10 @@ func mapDomainNotificationParams(np *api.NotificationParams) (domain.Notificatio
 	}
 	period, err := time.ParseDuration(np.Period)
 	if err != nil {
-		return domain.NotificationParams{}, serverrors.NewMappingError(err, "notificationParams.period") //nolint:wrapcheck // standart package error
+		return domain.NotificationParams{}, serverrors.ParsingError{
+			Cause: fmt.Errorf("parsing duration: %w", err),
+			Field: "notification_params",
+		}
 	}
 
 	return domain.NotificationParams{
@@ -77,7 +81,7 @@ func mapDomainNotificationParams(np *api.NotificationParams) (domain.Notificatio
 }
 
 func mapDomainTags(ts []api.Tag, userID int) []domain.Tag {
-	return slice.DtoSlice(ts, func(t api.Tag) domain.Tag {
+	return slice.Dto(ts, func(t api.Tag) domain.Tag {
 		return domain.Tag{
 			ID:     t.Id,
 			UserID: userID,
@@ -87,7 +91,7 @@ func mapDomainTags(ts []api.Tag, userID int) []domain.Tag {
 }
 
 func mapAPITags(ts []domain.Tag) []api.Tag {
-	return slice.DtoSlice(ts, func(t domain.Tag) api.Tag {
+	return slice.Dto(ts, func(t domain.Tag) api.Tag {
 		return api.Tag{
 			Id:   t.ID,
 			Name: t.Name,

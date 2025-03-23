@@ -2,9 +2,11 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/Dyleme/Notifier/internal/domain"
+	"github.com/Dyleme/Notifier/internal/domain/apperr"
 )
 
 //go:generate mockgen -destination=mocks/tg_images_mocks.go -package=mocks . TgImagesRepository
@@ -14,12 +16,11 @@ type TgImagesRepository interface {
 }
 
 func (s *Service) GetTgImage(ctx context.Context, filename string) (domain.TgImage, error) {
-	op := "Service.GetTgImage: %w"
-
 	tgImage, err := s.repos.tgImages.Get(ctx, filename)
 	if err != nil {
-		err = fmt.Errorf(op, err)
-		logError(ctx, err)
+		if errors.Is(err, apperr.ErrNotFound) {
+			return domain.TgImage{}, fmt.Errorf("get tg image: %w", apperr.NotFoundError{Object: "tg image"})
+		}
 
 		return domain.TgImage{}, err
 	}
@@ -32,10 +33,7 @@ func (s *Service) AddTgImage(ctx context.Context, filename, tgFileID string) err
 
 	err := s.repos.tgImages.Add(ctx, filename, tgFileID)
 	if err != nil {
-		err = fmt.Errorf(op, err)
-		logError(ctx, err)
-
-		return err
+		return fmt.Errorf(op, err)
 	}
 
 	return nil

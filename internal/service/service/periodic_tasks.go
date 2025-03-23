@@ -2,12 +2,13 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
 
 	"github.com/Dyleme/Notifier/internal/domain"
-	serverrors "github.com/Dyleme/Notifier/internal/domain/apperr"
+	"github.com/Dyleme/Notifier/internal/domain/apperr"
 	"github.com/Dyleme/Notifier/pkg/log"
 )
 
@@ -23,7 +24,7 @@ type PeriodicTasksRepository interface {
 func (s *Service) CreatePeriodicTask(ctx context.Context, perTask domain.PeriodicTask, userID int) (domain.PeriodicTask, error) {
 	log.Ctx(ctx).Debug("creating periodic task", slog.Any("task", perTask), slog.Int("userID", userID))
 	if err := perTask.BelongsTo(userID); err != nil {
-		return domain.PeriodicTask{}, fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
+		return domain.PeriodicTask{}, err
 	}
 
 	var createdPerTask domain.PeriodicTask
@@ -58,7 +59,7 @@ func (s *Service) GetPeriodicTask(ctx context.Context, taskID, userID int) (doma
 		}
 
 		if err := pt.BelongsTo(userID); err != nil {
-			return fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
+			return fmt.Errorf("belongs to: %w", err)
 		}
 
 		return nil
@@ -91,7 +92,7 @@ func (s *Service) UpdatePeriodicTask(ctx context.Context, perTask domain.Periodi
 		}
 
 		if err := oldTask.BelongsTo(userID); err != nil {
-			return fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
+			return fmt.Errorf("belongs to: %w", err)
 		}
 
 		err = s.repos.periodicTasks.Update(ctx, perTask)
@@ -144,7 +145,7 @@ func (s *Service) DeletePeriodicTask(ctx context.Context, taskID, userID int) er
 		}
 
 		if err := task.BelongsTo(userID); err != nil {
-			return fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
+			return fmt.Errorf("belongs to: %w", err)
 		}
 
 		event, err := s.repos.events.GetLatest(ctx, taskID, domain.PeriodicTaskType)
@@ -159,6 +160,10 @@ func (s *Service) DeletePeriodicTask(ctx context.Context, taskID, userID int) er
 
 		err = s.repos.periodicTasks.Delete(ctx, taskID)
 		if err != nil {
+			if errors.Is(err, apperr.ErrNotFound) {
+				return apperr.NotFoundError{Object: "periodic task"}
+			}
+
 			return fmt.Errorf("delete periodic task: %w", err)
 		}
 
@@ -185,7 +190,6 @@ func (s *Service) ListPeriodicTasks(ctx context.Context, userID int, params List
 	})
 	if err != nil {
 		err = fmt.Errorf("tr: %w", err)
-		logError(ctx, err)
 
 		return nil, err
 	}
@@ -201,7 +205,7 @@ func (s *Service) createNewEventForPeriodicTask(ctx context.Context, taskID, use
 		}
 
 		if err := task.BelongsTo(userID); err != nil {
-			return fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
+			return fmt.Errorf("belongs to: %w", err)
 		}
 
 		err = s.createAndAddEvent(ctx, task, userID)
