@@ -21,7 +21,7 @@ func chatID(update *models.Update) int64 {
 		return update.EditedMessage.Chat.ID
 	}
 	if update.CallbackQuery != nil {
-		return update.CallbackQuery.Sender.ID
+		return update.CallbackQuery.From.ID
 	}
 
 	return 0
@@ -55,8 +55,8 @@ func (th *TelegramHandler) UserMiddleware(next bot.HandlerFunc) bot.HandlerFunc 
 			tgUserID = update.Message.From.ID
 			nickname = update.Message.From.Username
 		case update.CallbackQuery != nil:
-			tgUserID = update.CallbackQuery.Sender.ID
-			nickname = update.CallbackQuery.Sender.Username
+			tgUserID = update.CallbackQuery.From.ID
+			nickname = update.CallbackQuery.From.Username
 		}
 
 		var userInfo userinfo.User
@@ -78,6 +78,7 @@ func (th *TelegramHandler) UserMiddleware(next bot.HandlerFunc) bot.HandlerFunc 
 		}
 
 		ctx = context.WithValue(ctx, userCtxKey, userInfo)
+		log.WithCtx(ctx, "userID", userInfo.ID)
 
 		next(ctx, b, update)
 	}

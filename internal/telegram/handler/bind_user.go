@@ -11,7 +11,7 @@ import (
 
 func (th *TelegramHandler) SendBindingMessage(ctx context.Context, tgID int, code string) error {
 	kb := inKbr.New(th.bot).
-		Button("DeleteMessage", nil, func(_ context.Context, _ *bot.Bot, _ *models.Message, _ []byte) {})
+		Button("DeleteMessage", nil, func(_ context.Context, _ *bot.Bot, _ models.MaybeInaccessibleMessage, _ []byte) {})
 	_, err := th.bot.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct // no need to fill
 		ChatID:      tgID,
 		Text:        "Your code: " + code,

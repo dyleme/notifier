@@ -70,20 +70,22 @@ func parseDate(dayString string) (time.Time, error) {
 	return time.Time{}, ErrCantParseMessage
 }
 
-func onSelectErrorHandling(f func(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) error) func(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) {
-	return func(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) {
-		err := f(ctx, b, msg.ID, msg.Chat.ID)
+func onSelectErrorHandling(
+	f func(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) error,
+) func(ctx context.Context, b *bot.Bot, msg models.MaybeInaccessibleMessage, _ []byte) {
+	return func(ctx context.Context, b *bot.Bot, msg models.MaybeInaccessibleMessage, _ []byte) {
+		err := f(ctx, b, msg.Message.ID, msg.Message.Chat.ID)
 		if err != nil {
-			handleError(ctx, b, msg.Chat.ID, err)
+			handleError(ctx, b, msg.Message.Chat.ID, err)
 		}
 	}
 }
 
-func errorHandling(f func(ctx context.Context, b *bot.Bot, msg *models.Message, bts []byte) error) func(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) {
-	return func(ctx context.Context, b *bot.Bot, msg *models.Message, bts []byte) {
-		err := f(ctx, b, msg, bts)
+func errorHandling(f func(ctx context.Context, b *bot.Bot, msg *models.Message, bts []byte) error) func(ctx context.Context, b *bot.Bot, msg models.MaybeInaccessibleMessage, _ []byte) {
+	return func(ctx context.Context, b *bot.Bot, msg models.MaybeInaccessibleMessage, bts []byte) {
+		err := f(ctx, b, msg.Message, bts)
 		if err != nil {
-			handleError(ctx, b, msg.Chat.ID, err)
+			handleError(ctx, b, msg.Message.Chat.ID, err)
 		}
 	}
 }
