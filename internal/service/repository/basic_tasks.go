@@ -9,12 +9,12 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	domains "github.com/Dyleme/Notifier/internal/domain"
+	"github.com/Dyleme/Notifier/internal/domain"
+	"github.com/Dyleme/Notifier/internal/domain/apperr"
 	"github.com/Dyleme/Notifier/internal/service/repository/queries/goqueries"
 	"github.com/Dyleme/Notifier/internal/service/service"
-	"github.com/Dyleme/Notifier/pkg/serverrors"
-	"github.com/Dyleme/Notifier/pkg/sql/pgxconv"
-	"github.com/Dyleme/Notifier/pkg/utils"
+	"github.com/Dyleme/Notifier/pkg/database/pgxconv"
+	"github.com/Dyleme/Notifier/pkg/utils/slice"
 )
 
 type BasicTaskRepository struct {
@@ -31,22 +31,22 @@ func NewBasicTaskRepository(db *pgxpool.Pool, getter *trmpgx.CtxGetter) *BasicTa
 	}
 }
 
-func (er *BasicTaskRepository) dtoWithTags(bt goqueries.BasicTask, dbTags []goqueries.Tag) domains.BasicTask {
-	basicTask := domains.BasicTask{
+func (er *BasicTaskRepository) dtoWithTags(bt goqueries.BasicTask, dbTags []goqueries.Tag) domain.BasicTask {
+	basicTask := domain.BasicTask{
 		ID:                 int(bt.ID),
 		UserID:             int(bt.UserID),
 		Text:               bt.Text,
 		Description:        pgxconv.String(bt.Description),
 		Start:              pgxconv.TimeWithZone(bt.Start),
 		NotificationParams: bt.NotificationParams,
-		Tags:               utils.DtoSlice(dbTags, dtoTag),
+		Tags:               slice.Dto(dbTags, dtoTag),
 		Notify:             bt.Notify,
 	}
 
 	return basicTask
 }
 
-func (er *BasicTaskRepository) Add(ctx context.Context, bt domains.BasicTask) (domains.BasicTask, error) {
+func (er *BasicTaskRepository) Add(ctx context.Context, bt domain.BasicTask) (domain.BasicTask, error) {
 	op := "add timetable task: %w"
 
 	tx := er.getter.DefaultTrOrDB(ctx, er.db)
@@ -58,10 +58,10 @@ func (er *BasicTaskRepository) Add(ctx context.Context, bt domains.BasicTask) (d
 		NotificationParams: bt.NotificationParams,
 	})
 	if err != nil {
-		return domains.BasicTask{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
+		return domain.BasicTask{}, fmt.Errorf(op, err)
 	}
 
-	_, err = er.q.AddTagsToSmth(ctx, tx, utils.DtoSlice(bt.Tags, func(t domains.Tag) goqueries.AddTagsToSmthParams {
+	_, err = er.q.AddTagsToSmth(ctx, tx, slice.Dto(bt.Tags, func(t domain.Tag) goqueries.AddTagsToSmthParams {
 		return goqueries.AddTagsToSmthParams{
 			SmthID: addedTask.ID,
 			TagID:  int32(t.ID),
@@ -69,38 +69,38 @@ func (er *BasicTaskRepository) Add(ctx context.Context, bt domains.BasicTask) (d
 		}
 	}))
 	if err != nil {
-		return domains.BasicTask{}, fmt.Errorf("add tags to smth: %w", serverrors.NewRepositoryError(err))
+		return domain.BasicTask{}, fmt.Errorf("add tags to smth: %w", err)
 	}
 
 	return er.Get(ctx, int(addedTask.ID))
 }
 
-func (er *BasicTaskRepository) List(ctx context.Context, userID int, params service.ListFilterParams) ([]domains.BasicTask, error) {
+func (er *BasicTaskRepository) List(ctx context.Context, userID int, params service.ListFilterParams) ([]domain.BasicTask, error) {
 	tx := er.getter.DefaultTrOrDB(ctx, er.db)
 	dbBasicTasks, err := er.q.ListBasicTasks(ctx, tx, goqueries.ListBasicTasksParams{
 		UserID: int32(userID),
 		Off:    int32(params.ListParams.Offset),
 		Lim:    int32(params.ListParams.Limit),
-		TagIds: utils.DtoSlice(params.TagIDs, func(tagID int) int32 { return int32(tagID) }),
+		TagIds: slice.Dto(params.TagIDs, func(tagID int) int32 { return int32(tagID) }),
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
 
-		return nil, fmt.Errorf("list basic tasks: %w", serverrors.NewRepositoryError(err))
+		return nil, fmt.Errorf("list basic tasks: %w", err)
 	}
 
-	tasksIDs := utils.DtoSlice(dbBasicTasks, func(t goqueries.ListBasicTasksRow) int32 { return t.BasicTask.ID })
+	tasksIDs := slice.Dto(dbBasicTasks, func(t goqueries.ListBasicTasksRow) int32 { return t.BasicTask.ID })
 
 	rows, err := er.q.ListTagsForSmths(ctx, tx, tasksIDs)
 	if err != nil {
 		if !errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("list tags for smths: %w", serverrors.NewRepositoryError(err))
+			return nil, fmt.Errorf("list tags for smths: %w", err)
 		}
 	}
 
-	basicTasks := make([]domains.BasicTask, 0, len(dbBasicTasks))
+	basicTasks := make([]domain.BasicTask, 0, len(dbBasicTasks))
 	for _, bt := range dbBasicTasks {
 		var tags []goqueries.Tag
 		for _, row := range rows {
@@ -118,42 +118,42 @@ func (er *BasicTaskRepository) Delete(ctx context.Context, taskID int) error {
 	tx := er.getter.DefaultTrOrDB(ctx, er.db)
 	deletedTasks, err := er.q.DeleteBasicTask(ctx, tx, int32(taskID))
 	if err != nil {
-		return fmt.Errorf("delete basic task: %w", serverrors.NewRepositoryError(err))
+		return fmt.Errorf("delete basic task: %w", err)
 	}
 	if len(deletedTasks) == 0 {
-		return serverrors.NewNoDeletionsError("tasks")
+		return apperr.ErrNotFound
 	}
 
 	err = er.q.DeleteAllTagsForSmth(ctx, tx, int32(taskID))
 	if err != nil {
-		return fmt.Errorf("delete all tags for smth: %w", serverrors.NewRepositoryError(err))
+		return fmt.Errorf("delete all tags for smth: %w", err)
 	}
 
 	return nil
 }
 
-func (er *BasicTaskRepository) Get(ctx context.Context, taskID int) (domains.BasicTask, error) {
+func (er *BasicTaskRepository) Get(ctx context.Context, taskID int) (domain.BasicTask, error) {
 	tx := er.getter.DefaultTrOrDB(ctx, er.db)
 	dbBasicTask, err := er.q.GetBasicTask(ctx, tx, int32(taskID))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return domains.BasicTask{}, fmt.Errorf("get basic task: %w", serverrors.NewNotFoundError(err, "basic task"))
+			return domain.BasicTask{}, fmt.Errorf("get basic task: %w", apperr.NotFoundError{Object: "basic task"})
 		}
 
-		return domains.BasicTask{}, fmt.Errorf("get basic task: %w", serverrors.NewRepositoryError(err))
+		return domain.BasicTask{}, fmt.Errorf("get basic task: %w", err)
 	}
 
 	tags, err := er.q.ListTagsForSmth(ctx, tx, int32(taskID))
 	if err != nil {
 		if !errors.Is(err, pgx.ErrNoRows) {
-			return domains.BasicTask{}, fmt.Errorf("list tags for smth: %w", serverrors.NewRepositoryError(err))
+			return domain.BasicTask{}, fmt.Errorf("list tags for smth: %w", err)
 		}
 	}
 
 	return er.dtoWithTags(dbBasicTask, tags), nil
 }
 
-func (er *BasicTaskRepository) Update(ctx context.Context, task domains.BasicTask) error {
+func (er *BasicTaskRepository) Update(ctx context.Context, task domain.BasicTask) error {
 	op := "update timetable task: %w"
 	tx := er.getter.DefaultTrOrDB(ctx, er.db)
 	err := er.q.UpdateBasicTask(ctx, tx, goqueries.UpdateBasicTaskParams{
@@ -165,7 +165,7 @@ func (er *BasicTaskRepository) Update(ctx context.Context, task domains.BasicTas
 		UserID:             int32(task.UserID),
 	})
 	if err != nil {
-		return fmt.Errorf(op, serverrors.NewRepositoryError(err))
+		return fmt.Errorf(op, err)
 	}
 
 	err = syncTags(ctx, tx, er.q, task.UserID, task.ID, task.Tags)

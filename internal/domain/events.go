@@ -3,8 +3,8 @@ package domain
 import (
 	"time"
 
-	"github.com/Dyleme/Notifier/pkg/serverrors"
-	"github.com/Dyleme/Notifier/pkg/utils"
+	"github.com/Dyleme/Notifier/internal/domain/apperr"
+	utils "github.com/Dyleme/Notifier/pkg/utils/ptr"
 )
 
 type NotificationParams struct {
@@ -58,7 +58,7 @@ func (ev Event) BelongsTo(userID int) error {
 		return nil
 	}
 
-	return NewNotBelongToUserError("event", ev.ID, ev.UserID, userID)
+	return apperr.NewNotBelongToUserError("event", ev.ID, ev.UserID, userID)
 }
 
 func (ev Event) Rescheule(now time.Time) Event {
@@ -92,11 +92,17 @@ func (ev Event) NewNotification() (Notification, error) {
 
 func (ev Event) Validate() error {
 	if ev.Notify && utils.IsZero(ev.NotificationParams) {
-		return serverrors.NewInvalidBusinessStateError("event", "mark as being notified but notification params are empty")
+		return apperr.UnexpectedStateError{
+			Object: "event",
+			Reason: "mark as being notified but notification params are empty",
+		}
 	}
 
 	if !ev.Notify && !utils.IsZero(ev.NotificationParams) {
-		return serverrors.NewInvalidBusinessStateError("event", "mark as not being notified but notification params exists")
+		return apperr.UnexpectedStateError{
+			Object: "event",
+			Reason: "mark as not being notified but notification params exists",
+		}
 	}
 
 	return nil

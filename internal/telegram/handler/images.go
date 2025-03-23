@@ -9,7 +9,7 @@ import (
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 
-	"github.com/Dyleme/Notifier/pkg/serverrors"
+	serverrors "github.com/Dyleme/Notifier/internal/domain/apperr"
 )
 
 func (th *TelegramHandler) SendImage(ctx context.Context, filename string, image []byte, sendPhotoParams *bot.SendPhotoParams) error {

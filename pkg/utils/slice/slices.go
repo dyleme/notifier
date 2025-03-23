@@ -1,6 +1,6 @@
-package utils
+package slice
 
-func DtoSlice[T, K any](ts []T, dtoFunc func(t T) K) []K {
+func Dto[T, K any](ts []T, dtoFunc func(t T) K) []K {
 	ks := make([]K, 0, len(ts))
 	for _, t := range ts {
 		ks = append(ks, dtoFunc(t))
@@ -9,7 +9,7 @@ func DtoSlice[T, K any](ts []T, dtoFunc func(t T) K) []K {
 	return ks
 }
 
-func DtoErrorSlice[T, K any](ts []T, dtoFunc func(t T) (K, error)) ([]K, error) {
+func DtoError[T, K any](ts []T, dtoFunc func(t T) (K, error)) ([]K, error) {
 	ks := make([]K, 0, len(ts))
 	for _, t := range ts {
 		k, err := dtoFunc(t)

@@ -2,11 +2,12 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/Dyleme/Notifier/internal/domain"
+	"github.com/Dyleme/Notifier/internal/domain/apperr"
 	"github.com/Dyleme/Notifier/pkg/log"
-	"github.com/Dyleme/Notifier/pkg/serverrors"
 )
 
 //go:generate mockgen -destination=mocks/basic_tasks_mocks.go -package=mocks . BasicTaskRepository
@@ -39,10 +40,7 @@ func (s *Service) CreateBasicTask(ctx context.Context, task domain.BasicTask) (d
 		return nil
 	})
 	if err != nil {
-		err = fmt.Errorf("tr: %w", err)
-		logError(ctx, err)
-
-		return domain.BasicTask{}, err
+		return domain.BasicTask{}, fmt.Errorf("tr: %w", err)
 	}
 
 	s.notifierJob.UpdateWithTime(ctx, createdEvent.FirstSend)
@@ -53,14 +51,11 @@ func (s *Service) CreateBasicTask(ctx context.Context, task domain.BasicTask) (d
 func (s *Service) GetBasicTask(ctx context.Context, userID, taskID int) (domain.BasicTask, error) {
 	tt, err := s.repos.basicTasks.Get(ctx, taskID)
 	if err != nil {
-		err = fmt.Errorf("get basic task userID[%v], taskID[%v]: %w", userID, taskID, err)
-		logError(ctx, err)
-
-		return domain.BasicTask{}, err
+		return domain.BasicTask{}, fmt.Errorf("get basic task userID[%v], taskID[%v]: %w", userID, taskID, err)
 	}
 
 	if err := tt.BelongsTo(userID); err != nil {
-		return domain.BasicTask{}, fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
+		return domain.BasicTask{}, fmt.Errorf("belongs to: %w", err)
 	}
 
 	return tt, nil
@@ -69,10 +64,7 @@ func (s *Service) GetBasicTask(ctx context.Context, userID, taskID int) (domain.
 func (s *Service) ListBasicTasks(ctx context.Context, userID int, params ListFilterParams) ([]domain.BasicTask, error) {
 	tts, err := s.repos.basicTasks.List(ctx, userID, params)
 	if err != nil {
-		err = fmt.Errorf("list tasks userID[%v]: %w", userID, err)
-		logError(ctx, err)
-
-		return nil, err
+		return nil, fmt.Errorf("list tasks userID[%v]: %w", userID, err)
 	}
 
 	return tts, nil
@@ -88,7 +80,7 @@ func (s *Service) UpdateBasicTask(ctx context.Context, params domain.BasicTask, 
 		}
 
 		if err := t.BelongsTo(userID); err != nil {
-			return fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
+			return fmt.Errorf("belongs to: %w", err)
 		}
 
 		t.Text = params.Text
@@ -119,7 +111,6 @@ func (s *Service) UpdateBasicTask(ctx context.Context, params domain.BasicTask, 
 	})
 	if err != nil {
 		err = fmt.Errorf("tr: %w", err)
-		logError(ctx, err)
 
 		return domain.BasicTask{}, err
 	}
@@ -138,7 +129,7 @@ func (s *Service) DeleteBasicTask(ctx context.Context, userID, taskID int) error
 		}
 
 		if err := task.BelongsTo(userID); err != nil {
-			return fmt.Errorf("belongs to: %w", serverrors.NewBusinessLogicError(err.Error()))
+			return fmt.Errorf("belongs to: %w", err)
 		}
 
 		event, err := s.repos.events.GetLatest(ctx, taskID, domain.BasicTaskType)
@@ -148,11 +139,19 @@ func (s *Service) DeleteBasicTask(ctx context.Context, userID, taskID int) error
 
 		err = s.repos.events.Delete(ctx, event.ID)
 		if err != nil {
+			if errors.Is(err, apperr.ErrNotFound) {
+				return fmt.Errorf("delete event: %w", apperr.NotFoundError{Object: "event"})
+			}
+
 			return fmt.Errorf("delete event: %w", err)
 		}
 
 		err = s.repos.basicTasks.Delete(ctx, taskID)
 		if err != nil {
+			if errors.Is(err, apperr.ErrNotFound) {
+				return fmt.Errorf("delete basic task: %w", apperr.NotFoundError{Object: "basic task"})
+			}
+
 			return fmt.Errorf("delete basic task: %w", err)
 		}
 

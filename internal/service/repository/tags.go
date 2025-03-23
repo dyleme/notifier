@@ -13,8 +13,7 @@ import (
 	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/internal/service/repository/queries/goqueries"
 	"github.com/Dyleme/Notifier/internal/service/service"
-	"github.com/Dyleme/Notifier/pkg/serverrors"
-	"github.com/Dyleme/Notifier/pkg/utils"
+	"github.com/Dyleme/Notifier/pkg/utils/slice"
 )
 
 type TagsRepository struct {
@@ -51,17 +50,17 @@ func (tr *TagsRepository) List(ctx context.Context, userID int, listParams servi
 			return []domain.Tag{}, nil
 		}
 
-		return nil, fmt.Errorf("list tags: %w", serverrors.NewRepositoryError(err))
+		return nil, fmt.Errorf("list tags: %w", err)
 	}
 
-	return utils.DtoSlice(tags, dtoTag), nil
+	return slice.Dto(tags, dtoTag), nil
 }
 
 func (tr *TagsRepository) Get(ctx context.Context, tagID int) (domain.Tag, error) {
 	tx := tr.getter.DefaultTrOrDB(ctx, tr.db)
 	tag, err := tr.q.GetTag(ctx, tx, int32(tagID))
 	if err != nil {
-		return domain.Tag{}, fmt.Errorf("get tag[tagID=%v]: %w", tagID, serverrors.NewRepositoryError(err))
+		return domain.Tag{}, fmt.Errorf("get tag[tagID=%v]: %w", tagID, err)
 	}
 
 	return dtoTag(tag), nil
@@ -74,7 +73,7 @@ func (tr *TagsRepository) Add(ctx context.Context, name string, userID int) (dom
 		UserID: int32(userID),
 	})
 	if err != nil {
-		return domain.Tag{}, fmt.Errorf("add tag: %w", serverrors.NewRepositoryError(err))
+		return domain.Tag{}, fmt.Errorf("add tag: %w", err)
 	}
 
 	return dtoTag(createdTag), nil
@@ -84,7 +83,7 @@ func (tr *TagsRepository) Delete(ctx context.Context, tagID int) error {
 	tx := tr.getter.DefaultTrOrDB(ctx, tr.db)
 	err := tr.q.DeleteTag(ctx, tx, int32(tagID))
 	if err != nil {
-		return fmt.Errorf("delete tag[tagID=%v]: %w", tagID, serverrors.NewRepositoryError(err))
+		return fmt.Errorf("delete tag[tagID=%v]: %w", tagID, err)
 	}
 
 	return nil
@@ -98,7 +97,7 @@ func (tr *TagsRepository) Update(ctx context.Context, tagID int, name string) er
 		ID:   int32(tagID),
 	})
 	if err != nil {
-		return fmt.Errorf("update tag: %w", serverrors.NewRepositoryError(err))
+		return fmt.Errorf("update tag: %w", err)
 	}
 
 	return nil
@@ -108,14 +107,14 @@ func syncTags(ctx context.Context, tx trmpgx.Tr, q *goqueries.Queries, smthID, u
 	dbTags, err := q.ListTagsForSmth(ctx, tx, int32(smthID))
 	if err != nil {
 		if !errors.Is(err, pgx.ErrNoRows) {
-			return fmt.Errorf("list tags for smth: %w", serverrors.NewRepositoryError(err))
+			return fmt.Errorf("list tags for smth: %w", err)
 		}
 	}
 	var tagIDsToDelete []int
 	var tagsToInsert []domain.Tag
 
-	dbTagIDs := utils.DtoSlice(dbTags, func(t goqueries.Tag) int { return int(t.ID) })
-	tagIDs := utils.DtoSlice(tags, func(t domain.Tag) int { return t.ID })
+	dbTagIDs := slice.Dto(dbTags, func(t goqueries.Tag) int { return int(t.ID) })
+	tagIDs := slice.Dto(tags, func(t domain.Tag) int { return t.ID })
 	for _, dbTagID := range dbTagIDs {
 		if !slices.Contains(tagIDs, dbTagID) {
 			tagIDsToDelete = append(tagIDsToDelete, dbTagID)
@@ -128,7 +127,7 @@ func syncTags(ctx context.Context, tx trmpgx.Tr, q *goqueries.Queries, smthID, u
 		}
 	}
 
-	_, err = q.AddTagsToSmth(ctx, tx, utils.DtoSlice(tagsToInsert, func(t domain.Tag) goqueries.AddTagsToSmthParams {
+	_, err = q.AddTagsToSmth(ctx, tx, slice.Dto(tagsToInsert, func(t domain.Tag) goqueries.AddTagsToSmthParams {
 		return goqueries.AddTagsToSmthParams{
 			SmthID: int32(smthID),
 			TagID:  int32(t.ID),
@@ -136,15 +135,15 @@ func syncTags(ctx context.Context, tx trmpgx.Tr, q *goqueries.Queries, smthID, u
 		}
 	}))
 	if err != nil {
-		return fmt.Errorf("add tags to smth: %w", serverrors.NewRepositoryError(err))
+		return fmt.Errorf("add tags to smth: %w", err)
 	}
 
 	err = q.DeleteTagsFromSmth(ctx, tx, goqueries.DeleteTagsFromSmthParams{
 		SmthID: int32(smthID),
-		TagIds: utils.DtoSlice(tagIDsToDelete, func(i int) int32 { return int32(i) }),
+		TagIds: slice.Dto(tagIDsToDelete, func(i int) int32 { return int32(i) }),
 	})
 	if err != nil {
-		return fmt.Errorf("delete tags from smth: %w", serverrors.NewRepositoryError(err))
+		return fmt.Errorf("delete tags from smth: %w", err)
 	}
 
 	return nil

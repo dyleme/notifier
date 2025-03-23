@@ -9,7 +9,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/Dyleme/Notifier/internal/domain"
-	"github.com/Dyleme/Notifier/pkg/serverrors"
 )
 
 // HashGenerator interface providing you the ability to generate password hash
@@ -249,8 +248,8 @@ func (s *AuthService) CreateUser(ctx context.Context, input CreateUserInput) (do
 var ErrInvalidOffset = errors.New("invalid offset")
 
 func (s *AuthService) UpdateUserTime(ctx context.Context, id int, tzOffset domain.TimeZoneOffset, isDst bool) error {
-	if !tzOffset.IsValid() {
-		return fmt.Errorf("invalid offset: %w", serverrors.NewBusinessLogicError("invalid offset"))
+	if err := tzOffset.Valid(); err != nil {
+		return fmt.Errorf("invalid offset: %w", err)
 	}
 
 	err := s.tr.Do(ctx, func(ctx context.Context) error {

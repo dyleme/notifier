@@ -10,8 +10,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Dyleme/Notifier/internal/domain"
+	"github.com/Dyleme/Notifier/internal/domain/apperr"
 	"github.com/Dyleme/Notifier/internal/service/repository/queries/goqueries"
-	"github.com/Dyleme/Notifier/pkg/serverrors"
 )
 
 type NotificationParamsRepository struct {
@@ -34,10 +34,10 @@ func (nr *NotificationParamsRepository) Get(ctx context.Context, userID int) (do
 	params, err := nr.q.GetDefaultUserNotificationParams(ctx, tx, int32(userID))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return domain.NotificationParams{}, fmt.Errorf(op, serverrors.NewNotFoundError(err, "default event params"))
+			return domain.NotificationParams{}, fmt.Errorf(op, apperr.NotFoundError{Object: "default eveft params"})
 		}
 
-		return domain.NotificationParams{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
+		return domain.NotificationParams{}, fmt.Errorf(op, err)
 	}
 
 	return params.Params, nil
@@ -51,7 +51,7 @@ func (nr *NotificationParamsRepository) Set(ctx context.Context, userID int, par
 		Params: params,
 	})
 	if err != nil {
-		return domain.NotificationParams{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
+		return domain.NotificationParams{}, fmt.Errorf(op, err)
 	}
 
 	return updatedParams.Params, nil

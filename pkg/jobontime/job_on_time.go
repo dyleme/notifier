@@ -6,8 +6,6 @@ import (
 	"time"
 
 	"github.com/benbjohnson/clock"
-
-	"github.com/Dyleme/Notifier/pkg/utils"
 )
 
 type JobInTime struct {
@@ -71,7 +69,21 @@ func (j *JobInTime) nearestCheckTime(ctx context.Context) time.Time {
 		return nextPeriodicInvocationTime
 	}
 
-	return utils.MinTime(nextPeriodicInvocationTime, nextEventTime)
+	return minTime(nextPeriodicInvocationTime, nextEventTime)
+}
+
+func minTime(ts ...time.Time) time.Time {
+	if len(ts) == 0 {
+		return time.Time{}
+	}
+	minTime := ts[0]
+	for _, t := range ts {
+		if t.Before(minTime) {
+			minTime = t
+		}
+	}
+
+	return minTime
 }
 
 func (j *JobInTime) UpdateWithTime(ctx context.Context, t time.Time) {

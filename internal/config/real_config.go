@@ -2,10 +2,10 @@ package config
 
 import (
 	"github.com/Dyleme/Notifier/internal/authorization/jwt"
+	"github.com/Dyleme/Notifier/internal/httpserver"
 	"github.com/Dyleme/Notifier/internal/notifier/eventnotifier"
-	"github.com/Dyleme/Notifier/internal/server"
 	"github.com/Dyleme/Notifier/internal/telegram/handler"
-	"github.com/Dyleme/Notifier/pkg/sqldatabase"
+	"github.com/Dyleme/Notifier/pkg/database/sqldatabase"
 )
 
 type Config struct {
@@ -13,7 +13,7 @@ type Config struct {
 	Database    *sqldatabase.Config
 	JWT         *jwt.Config
 	APIKey      string
-	Server      *server.Config
+	Server      *httpserver.Config
 	NotifierJob eventnotifier.Config
 	Telegram    handler.Config
 }
@@ -34,7 +34,7 @@ func mapConfig(cc *compositeConfig) Config {
 			TTL:       cc.JWT.TokenTTL,
 		},
 		APIKey: cc.APIKey.Key,
-		Server: &server.Config{
+		Server: &httpserver.Config{
 			Port:                    cc.Server.Port,
 			MaxHeaderBytes:          cc.Server.MaxHeaderBytes,
 			ReadTimeout:             cc.Server.ReadTimeout,

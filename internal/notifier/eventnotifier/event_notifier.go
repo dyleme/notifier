@@ -2,6 +2,7 @@ package eventnotifier
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -9,8 +10,9 @@ import (
 	"github.com/avito-tech/go-transaction-manager/trm"
 
 	"github.com/Dyleme/Notifier/internal/domain"
+	"github.com/Dyleme/Notifier/internal/domain/apperr"
 	"github.com/Dyleme/Notifier/pkg/log"
-	"github.com/Dyleme/Notifier/pkg/utils"
+	"github.com/Dyleme/Notifier/pkg/utils/slice"
 )
 
 type Notifier interface {
@@ -53,7 +55,11 @@ func (en *EventNotifier) SetNotifier(notifier Notifier) {
 func (en *EventNotifier) GetNextTime(ctx context.Context) (time.Time, bool) {
 	t, err := en.repo.GetNearest(ctx)
 	if err != nil {
-		log.Ctx(ctx).Error("get nearest event", log.Err(err))
+		if errors.Is(err, apperr.ErrNotFound) {
+			log.Ctx(ctx).Debug("no events found")
+		} else {
+			log.Ctx(ctx).Error("get nearest event", log.Err(err))
+		}
 
 		return time.Time{}, false
 	}
@@ -67,7 +73,7 @@ func (en *EventNotifier) Do(ctx context.Context, now time.Time) {
 		if err != nil {
 			return fmt.Errorf("list not sended events: %w", err)
 		}
-		log.Ctx(ctx).Info("found not sended events", slog.Any("events", utils.DtoSlice(events, func(n domain.Event) int { return n.ID })))
+		log.Ctx(ctx).Info("found not sended events", slog.Any("events", slice.Dto(events, func(n domain.Event) int { return n.ID })))
 
 		for _, ev := range events {
 			notification, err := ev.NewNotification()

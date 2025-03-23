@@ -5,8 +5,8 @@ import (
 
 	"github.com/Dyleme/Notifier/internal/authorization/handler/api"
 	"github.com/Dyleme/Notifier/internal/authorization/service"
-	"github.com/Dyleme/Notifier/pkg/http/requests"
-	"github.com/Dyleme/Notifier/pkg/http/responses"
+	"github.com/Dyleme/Notifier/internal/service/handler/request"
+	"github.com/Dyleme/Notifier/internal/service/handler/response"
 )
 
 type AuthHandler struct {
@@ -18,10 +18,11 @@ func New(serv *service.AuthService) *AuthHandler {
 }
 
 func (ah *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	var body api.LoginJSONBody
-	err := requests.Bind(r, &body)
+	err := request.Bind(r, &body)
 	if err != nil {
-		responses.Error(w, http.StatusBadRequest, err)
+		response.Error(ctx, w, err)
 
 		return
 	}
@@ -33,7 +34,7 @@ func (ah *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		},
 	)
 	if err != nil {
-		responses.KnownError(w, err)
+		response.Error(ctx, w, err)
 
 		return
 	}
@@ -42,14 +43,16 @@ func (ah *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		AccessToken:  &accessKey,
 		RefreshToken: nil,
 	}
-	responses.JSON(w, http.StatusOK, tokens)
+
+	response.JSON(ctx, w, http.StatusOK, tokens)
 }
 
 func (ah *AuthHandler) StartBindingToTG(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	var body api.StartBindingToTGJSONBody
-	err := requests.Bind(r, &body)
+	err := request.Bind(r, &body)
 	if err != nil {
-		responses.Error(w, http.StatusBadRequest, err)
+		response.Error(ctx, w, err)
 
 		return
 	}
@@ -59,19 +62,20 @@ func (ah *AuthHandler) StartBindingToTG(w http.ResponseWriter, r *http.Request) 
 		Password:   body.Password,
 	})
 	if err != nil {
-		responses.KnownError(w, err)
+		response.Error(ctx, w, err)
 
 		return
 	}
 
-	responses.Status(w, http.StatusOK)
+	response.Status(w, http.StatusOK)
 }
 
 func (ah *AuthHandler) BindToTG(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	var body api.BindToTGJSONBody
-	err := requests.Bind(r, &body)
+	err := request.Bind(r, &body)
 	if err != nil {
-		responses.Error(w, http.StatusBadRequest, err)
+		response.Error(ctx, w, err)
 
 		return
 	}
@@ -81,10 +85,10 @@ func (ah *AuthHandler) BindToTG(w http.ResponseWriter, r *http.Request) {
 		TGNickname: body.TgNickname,
 	})
 	if err != nil {
-		responses.KnownError(w, err)
+		response.Error(ctx, w, err)
 
 		return
 	}
 
-	responses.Status(w, http.StatusOK)
+	response.Status(w, http.StatusOK)
 }

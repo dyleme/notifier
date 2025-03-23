@@ -6,8 +6,8 @@ import (
 	"math/rand/v2"
 	"time"
 
-	"github.com/Dyleme/Notifier/pkg/serverrors"
-	"github.com/Dyleme/Notifier/pkg/utils"
+	"github.com/Dyleme/Notifier/internal/domain/apperr"
+	utils "github.com/Dyleme/Notifier/pkg/utils/ptr"
 )
 
 const timeDay = 24 * time.Hour
@@ -76,7 +76,10 @@ func (pt PeriodicTask) Validate() error {
 	}
 
 	if pt.Notify && utils.IsZero(pt.NotificationParams) {
-		return serverrors.NewInvalidBusinessStateError("periodic task", "mark as notified, but notiffication params are empty")
+		return apperr.UnexpectedStateError{
+			Object: "periodic task",
+			Reason: "mark as notified, but notiffication params are empty",
+		}
 	}
 
 	return nil
@@ -87,7 +90,7 @@ func (pt PeriodicTask) BelongsTo(userID int) error {
 		return nil
 	}
 
-	return NewNotBelongToUserError("periodic task", pt.ID, pt.UserID, userID)
+	return apperr.NewNotBelongToUserError("periodic task", pt.ID, pt.UserID, userID)
 }
 
 func (pt PeriodicTask) TimeParamsHasChanged(updT PeriodicTask) bool {

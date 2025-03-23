@@ -1,4 +1,4 @@
-package timeborders
+package model
 
 import "time"
 

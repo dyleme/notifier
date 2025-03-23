@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/Dyleme/Notifier/internal/domain"
+	serverrors "github.com/Dyleme/Notifier/internal/domain/apperr"
 	"github.com/Dyleme/Notifier/pkg/log"
-	"github.com/Dyleme/Notifier/pkg/serverrors"
 )
 
 type TagsRepository interface {
@@ -31,7 +31,6 @@ func (s *Service) AddTag(ctx context.Context, tag string, userID int) (domain.Ta
 	})
 	if err != nil {
 		err = fmt.Errorf("tr: %w", err)
-		logError(ctx, err)
 
 		return domain.Tag{}, err
 	}
@@ -50,14 +49,13 @@ func (s *Service) GetTag(ctx context.Context, tagID, userID int) (domain.Tag, er
 		}
 
 		if tag.BelongsTo(userID) != nil {
-			return fmt.Errorf("get tag: %w", serverrors.NewBusinessLogicError("tag does not belong to user"))
+			return fmt.Errorf("get tag: %w", serverrors.NewNotBelongToUserError("tag", tagID, tag.UserID, userID))
 		}
 
 		return nil
 	})
 	if err != nil {
 		err = fmt.Errorf("tr: %w", err)
-		logError(ctx, err)
 
 		return domain.Tag{}, err
 	}
@@ -79,7 +77,6 @@ func (s *Service) ListTags(ctx context.Context, userID int, listParams ListParam
 	})
 	if err != nil {
 		err = fmt.Errorf("tr: %w", err)
-		logError(ctx, err)
 
 		return nil, err
 	}
@@ -96,7 +93,7 @@ func (s *Service) DeleteTag(ctx context.Context, tagID, userID int) error {
 		}
 
 		if tag.BelongsTo(userID) != nil {
-			return fmt.Errorf("delete tag: %w", serverrors.NewBusinessLogicError("tag does not belong to user"))
+			return fmt.Errorf("delete tag: %w", serverrors.NewNotBelongToUserError("tag", tagID, tag.UserID, userID))
 		}
 
 		err = s.repos.tags.Delete(ctx, tagID)
@@ -108,7 +105,6 @@ func (s *Service) DeleteTag(ctx context.Context, tagID, userID int) error {
 	})
 	if err != nil {
 		err = fmt.Errorf("tr: %w", err)
-		logError(ctx, err)
 
 		return err
 	}
@@ -125,7 +121,7 @@ func (s *Service) UpdateTag(ctx context.Context, tagID int, name string, userID 
 		}
 
 		if tag.BelongsTo(userID) != nil {
-			return fmt.Errorf("update tag: %w", serverrors.NewBusinessLogicError("tag does not belong to user"))
+			return fmt.Errorf("update tag: %w", serverrors.NewNotBelongToUserError("tag", tagID, tag.UserID, userID))
 		}
 
 		err = s.repos.tags.Update(ctx, tagID, name)
@@ -137,7 +133,6 @@ func (s *Service) UpdateTag(ctx context.Context, tagID int, name string, userID 
 	})
 	if err != nil {
 		err = fmt.Errorf("tr: %w", err)
-		logError(ctx, err)
 
 		return err
 	}

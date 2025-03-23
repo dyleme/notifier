@@ -10,8 +10,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/Dyleme/Notifier/internal/domain/apperr"
 	"github.com/Dyleme/Notifier/internal/service/repository/queries/goqueries"
-	"github.com/Dyleme/Notifier/pkg/serverrors"
 )
 
 type KeyValueRepository struct {
@@ -37,16 +37,16 @@ func (r *KeyValueRepository) PutValue(ctx context.Context, key string, value any
 	tx := r.getter.DefaultTrOrDB(ctx, r.db)
 
 	if key == "" {
-		return serverrors.NewServiceError(errEmptyKey)
+		return errEmptyKey
 	}
 
 	bts, err := json.Marshal(value)
 	if err != nil {
-		return serverrors.NewServiceError(fmt.Errorf("failed to marshal value: %w", err))
+		return fmt.Errorf("failed to marshal value: %w", err)
 	}
 
 	if len(bts) == 0 {
-		return serverrors.NewServiceError(errEmptyValue)
+		return errEmptyValue
 	}
 
 	err = r.q.SetValue(ctx, tx, goqueries.SetValueParams{
@@ -54,7 +54,7 @@ func (r *KeyValueRepository) PutValue(ctx context.Context, key string, value any
 		Value: bts,
 	})
 	if err != nil {
-		return fmt.Errorf("put value: %w", serverrors.NewRepositoryError(err))
+		return fmt.Errorf("put value: %w", err)
 	}
 
 	return nil
@@ -66,15 +66,15 @@ func (r *KeyValueRepository) GetValue(ctx context.Context, key string, value any
 	bts, err := r.q.GetValue(ctx, tx, key)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return serverrors.NewNotFoundError(err, "value not found")
+			return apperr.ErrNotFound
 		}
 
-		return fmt.Errorf("get value: %w", serverrors.NewRepositoryError(err))
+		return fmt.Errorf("get value: %w", err)
 	}
 
 	err = json.Unmarshal(bts, value)
 	if err != nil {
-		return serverrors.NewServiceError(fmt.Errorf("failed to marshal value: %w", err))
+		return fmt.Errorf("failed to marshal value: %w", err)
 	}
 
 	return nil
@@ -85,7 +85,7 @@ func (r *KeyValueRepository) DeleteValue(ctx context.Context, key string) error 
 
 	err := r.q.DeleteValue(ctx, tx, key)
 	if err != nil {
-		return fmt.Errorf("delete value: %w", serverrors.NewRepositoryError(err))
+		return fmt.Errorf("delete value: %w", err)
 	}
 
 	return nil

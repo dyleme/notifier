@@ -1,6 +1,6 @@
-package utils
+package ptr
 
-func Ptr[T any](t T) *T {
+func On[T any](t T) *T {
 	return &t
 }
 

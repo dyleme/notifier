@@ -22,18 +22,18 @@ import (
 	authRepository "github.com/Dyleme/Notifier/internal/authorization/repository"
 	authService "github.com/Dyleme/Notifier/internal/authorization/service"
 	"github.com/Dyleme/Notifier/internal/config"
+	"github.com/Dyleme/Notifier/internal/httpserver"
+	custMiddleware "github.com/Dyleme/Notifier/internal/httpserver/middleware"
 	"github.com/Dyleme/Notifier/internal/notifier/eventnotifier"
-	"github.com/Dyleme/Notifier/internal/server"
-	custMiddleware "github.com/Dyleme/Notifier/internal/server/middleware"
 	"github.com/Dyleme/Notifier/internal/service/handler"
 	"github.com/Dyleme/Notifier/internal/service/repository"
 	"github.com/Dyleme/Notifier/internal/service/service"
 	tgHandler "github.com/Dyleme/Notifier/internal/telegram/handler"
 	"github.com/Dyleme/Notifier/internal/telegram/userinfo"
+	"github.com/Dyleme/Notifier/pkg/database/sqldatabase"
 	"github.com/Dyleme/Notifier/pkg/jobontime"
 	"github.com/Dyleme/Notifier/pkg/log"
 	"github.com/Dyleme/Notifier/pkg/log/slogpretty"
-	"github.com/Dyleme/Notifier/pkg/sqldatabase"
 )
 
 func main() { //nolint:funlen // main can be long
@@ -91,7 +91,7 @@ func main() { //nolint:funlen // main can be long
 	)
 	authHndlr := authHandler.New(authSvc)
 
-	router := server.Route(
+	router := httpserver.Route(
 		timeTableHndlr,
 		authHndlr,
 		jwtMiddleware.Handle,
@@ -123,7 +123,7 @@ func main() { //nolint:funlen // main can be long
 
 	go eventsNotifierJob.Run(ctx)
 
-	serv := server.New(router, cfg.Server)
+	serv := httpserver.New(router, cfg.Server)
 
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.Go(func() error {

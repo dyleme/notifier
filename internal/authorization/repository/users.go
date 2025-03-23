@@ -14,9 +14,9 @@ import (
 	"github.com/Dyleme/Notifier/internal/authorization/repository/queries/goqueries"
 	"github.com/Dyleme/Notifier/internal/authorization/service"
 	"github.com/Dyleme/Notifier/internal/domain"
-	"github.com/Dyleme/Notifier/pkg/serverrors"
-	"github.com/Dyleme/Notifier/pkg/sql/pgxconv"
-	"github.com/Dyleme/Notifier/pkg/utils"
+	"github.com/Dyleme/Notifier/internal/domain/apperr"
+	"github.com/Dyleme/Notifier/pkg/database/pgxconv"
+	"github.com/Dyleme/Notifier/pkg/utils/slice"
 )
 
 func (r *Repository) Create(ctx context.Context, input service.CreateUserInput) (domain.User, error) {
@@ -28,10 +28,13 @@ func (r *Repository) Create(ctx context.Context, input service.CreateUserInput) 
 	})
 	if err != nil {
 		if intersection, isUnique := uniqueError(err); isUnique {
-			return domain.User{}, fmt.Errorf(op, serverrors.NewUniqueError(intersection, input.TGNickname))
+			return domain.User{}, apperr.UniqueError{
+				Name:  intersection,
+				Value: input.TGNickname,
+			}
 		}
 
-		return domain.User{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
+		return domain.User{}, fmt.Errorf(op, err)
 	}
 
 	return domain.User{
@@ -68,10 +71,10 @@ func (r *Repository) Find(ctx context.Context, nickname string, tgID int) (domai
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return domain.User{}, fmt.Errorf(op, serverrors.NewNotFoundError(err, "user"))
+			return domain.User{}, fmt.Errorf(op, apperr.ErrNotFound)
 		}
 
-		return domain.User{}, fmt.Errorf(op, serverrors.NewRepositoryError(err))
+		return domain.User{}, fmt.Errorf(op, err)
 	}
 
 	return domain.User{
@@ -95,10 +98,10 @@ func (r *Repository) Update(ctx context.Context, user domain.User) error {
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return serverrors.NewNotFoundError(err, "user")
+			return apperr.NotFoundError{Object: "user"}
 		}
 
-		return fmt.Errorf("find user: %w", serverrors.NewRepositoryError(err))
+		return fmt.Errorf("find user: %w", err)
 	}
 
 	return nil
@@ -112,7 +115,7 @@ func (r *Repository) AddBindingAttempt(ctx context.Context, input service.Bindin
 		PasswordHash: input.PasswordHash,
 	})
 	if err != nil {
-		return fmt.Errorf("add binding attempt: %w", serverrors.NewRepositoryError(err))
+		return fmt.Errorf("add binding attempt: %w", err)
 	}
 
 	return nil
@@ -122,7 +125,7 @@ func (r *Repository) GetLatestBindingAttempt(ctx context.Context, tgID int) (ser
 	tx := r.getter.DefaultTrOrDB(ctx, r.db)
 	ba, err := r.q.GetLatestBindingAttempt(ctx, tx, int32(tgID))
 	if err != nil {
-		return service.BindingAttempt{}, fmt.Errorf("get latest binding attempt: %w", serverrors.NewRepositoryError(err))
+		return service.BindingAttempt{}, fmt.Errorf("get latest binding attempt: %w", err)
 	}
 
 	return service.BindingAttempt{
@@ -141,7 +144,7 @@ func (r *Repository) UpdateBindingAttemptStatus(ctx context.Context, baID int, d
 		Done: done,
 	})
 	if err != nil {
-		return fmt.Errorf("update binding attempt: %w", serverrors.NewRepositoryError(err))
+		return fmt.Errorf("update binding attempt: %w", err)
 	}
 
 	return nil
@@ -152,10 +155,10 @@ func (r *Repository) GetNextTime(ctx context.Context) (time.Time, error) {
 	ts, err := r.q.GetNearestDailyNotificationTime(ctx, tx)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return time.Time{}, fmt.Errorf("get next time: %w", serverrors.NewNotFoundError(err, "time"))
+			return time.Time{}, fmt.Errorf("get next time: %w", apperr.NotFoundError{Object: "time"})
 		}
 
-		return time.Time{}, fmt.Errorf("get next time: %w", serverrors.NewRepositoryError(err))
+		return time.Time{}, fmt.Errorf("get next time: %w", err)
 	}
 
 	return pgxconv.OnlyTime(ts)
@@ -165,10 +168,10 @@ func (r *Repository) DailyNotificationsUsers(ctx context.Context, now time.Time)
 	tx := r.getter.DefaultTrOrDB(ctx, r.db)
 	users, err := r.q.ListUsersToNotfiy(ctx, tx, pgxconv.PgOnlyTime(now))
 	if err != nil {
-		return nil, fmt.Errorf("get daily notifications users: %w", serverrors.NewRepositoryError(err))
+		return nil, fmt.Errorf("get daily notifications users: %w", err)
 	}
 
-	return utils.DtoSlice(users, func(u goqueries.User) domain.User {
+	return slice.Dto(users, func(u goqueries.User) domain.User {
 		return domain.User{
 			ID:             int(u.ID),
 			TgNickname:     u.TgNickname,

@@ -14,7 +14,7 @@ import (
 
 	"github.com/Dyleme/Notifier/internal/service/service"
 	"github.com/Dyleme/Notifier/pkg/log"
-	"github.com/Dyleme/Notifier/pkg/utils/timeborders"
+	model "github.com/Dyleme/Notifier/pkg/model"
 )
 
 func (th *TelegramHandler) EventsMenuInline(ctx context.Context, b *bot.Bot, mes *models.Message, _ []byte) error {
@@ -47,7 +47,7 @@ func (le *ListEvents) listInline(ctx context.Context, b *bot.Bot, mes *models.Me
 	}
 
 	events, err := le.th.serv.ListEvents(ctx, user.ID, service.ListEventsFilterParams{
-		TimeBorders: timeborders.NewInfiniteUpper(time.Now()),
+		TimeBorders: model.NewInfiniteUpper(time.Now()),
 		ListParams:  defaultListParams,
 		Tags:        []int{},
 	})
