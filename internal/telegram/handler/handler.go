@@ -172,8 +172,8 @@ func (th *TelegramHandler) chatID(update *models.Update) (int64, error) {
 	case update.Message != nil:
 		return update.Message.Chat.ID, nil
 	case update.CallbackQuery != nil:
-		if update.CallbackQuery.Message != nil {
-			return update.CallbackQuery.Message.Chat.ID, nil
+		if update.CallbackQuery.Message.Message != nil {
+			return update.CallbackQuery.Message.Message.Chat.ID, nil
 		}
 	}
 
