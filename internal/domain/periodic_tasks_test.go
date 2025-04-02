@@ -18,6 +18,7 @@ func TestPeriodicTask_newEvent(t *testing.T) {
 			UserID:         2,
 			Start:          3 * time.Hour,
 			SmallestPeriod: 24 * time.Hour,
+			Notify:         true,
 			BiggestPeriod:  3 * 24 * time.Hour,
 			NotificationParams: NotificationParams{
 				Period: time.Hour,
@@ -32,7 +33,7 @@ func TestPeriodicTask_newEvent(t *testing.T) {
 			},
 		}
 
-		actual, err := periodicTask.newEvent(time.Now())
+		actual, err := periodicTask.newEvent(time.Now(), NotificationParams{})
 		require.NoError(t, err)
 
 		expected := Event{
@@ -45,7 +46,7 @@ func TestPeriodicTask_newEvent(t *testing.T) {
 			NextSend:           time.Time{},
 			FirstSend:          time.Time{},
 			Done:               false,
-			Notify:             false,
+			Notify:             true,
 			NotificationParams: periodicTask.NotificationParams,
 			Tags: []Tag{
 				{
@@ -78,9 +79,10 @@ func TestPeriodicTask_newEvent(t *testing.T) {
 		{
 			name: "high border lower than low border",
 			pt: PeriodicTask{
-				Start:          time.Hour,
-				SmallestPeriod: 3 * timeDay,
-				BiggestPeriod:  timeDay,
+				NotificationParams: NotificationParams{Period: time.Hour},
+				Start:              time.Hour,
+				SmallestPeriod:     3 * timeDay,
+				BiggestPeriod:      timeDay,
 			},
 			now:     nowTime,
 			isError: true,
@@ -88,9 +90,10 @@ func TestPeriodicTask_newEvent(t *testing.T) {
 		{
 			name: "check time in period",
 			pt: PeriodicTask{
-				Start:          2 * time.Hour,
-				SmallestPeriod: timeDay,
-				BiggestPeriod:  11 * timeDay,
+				NotificationParams: NotificationParams{Period: time.Hour},
+				Start:              2 * time.Hour,
+				SmallestPeriod:     timeDay,
+				BiggestPeriod:      11 * timeDay,
 			},
 			now:        nowTime,
 			lowBorder:  dayBeginning.Add(timeDay),
@@ -99,9 +102,10 @@ func TestPeriodicTask_newEvent(t *testing.T) {
 		{
 			name: "smallest period equal to biggest period",
 			pt: PeriodicTask{
-				Start:          3 * time.Hour,
-				SmallestPeriod: timeDay,
-				BiggestPeriod:  timeDay,
+				NotificationParams: NotificationParams{Period: time.Hour},
+				Start:              3 * time.Hour,
+				SmallestPeriod:     timeDay,
+				BiggestPeriod:      timeDay,
 			},
 			now:        nowTime,
 			lowBorder:  dayBeginning.Add(timeDay),
@@ -113,7 +117,7 @@ func TestPeriodicTask_newEvent(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			for range 10 {
-				actualEvent, err := tc.pt.newEvent(nowTime)
+				actualEvent, err := tc.pt.newEvent(nowTime, NotificationParams{})
 				actual := actualEvent.NextSend
 
 				require.Equalf(t, actualEvent.NextSend, actualEvent.FirstSend,
