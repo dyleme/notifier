@@ -38,7 +38,7 @@ func (i InvalidPeriodTimeError) Error() string {
 	return fmt.Sprintf("invalid period error biggest is before smallest %v < %v", i.biggest, i.smallest)
 }
 
-func (pt PeriodicTask) newEvent(now time.Time) (Event, error) {
+func (pt PeriodicTask) newEvent(now time.Time, defaultNotifParams NotificationParams) (Event, error) {
 	err := pt.Validate()
 	if err != nil {
 		return Event{}, err
@@ -51,6 +51,10 @@ func (pt PeriodicTask) newEvent(now time.Time) (Event, error) {
 	}
 	dayBeginning := now.Add(time.Duration(days) * timeDay).Truncate(timeDay)
 	sendTime := dayBeginning.Add(pt.Start)
+
+	if pt.Notify && utils.IsZero(pt.NotificationParams) {
+		pt.NotificationParams = defaultNotifParams
+	}
 
 	return Event{
 		ID:                 0,
@@ -73,13 +77,6 @@ func (pt PeriodicTask) Validate() error {
 	maxDays := int(pt.BiggestPeriod / timeDay)
 	if maxDays < minDays {
 		return InvalidPeriodTimeError{smallest: pt.SmallestPeriod, biggest: pt.BiggestPeriod}
-	}
-
-	if pt.Notify && utils.IsZero(pt.NotificationParams) {
-		return apperr.UnexpectedStateError{
-			Object: "periodic task",
-			Reason: "mark as notified, but notiffication params are empty",
-		}
 	}
 
 	return nil

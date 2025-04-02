@@ -54,6 +54,7 @@ func New(service *timetableService.Service, userRepo UserRepo, cfg Config, actio
 
 func (th *TelegramHandler) Run(ctx context.Context) {
 	log.Ctx(ctx).Info("start telegram bot")
+	th.bot.DeleteWebhook(ctx, &bot.DeleteWebhookParams{})
 	th.bot.Start(ctx)
 }
 

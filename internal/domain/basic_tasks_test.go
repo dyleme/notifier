@@ -17,6 +17,7 @@ func TestBasicTask_newEvent(t *testing.T) {
 			Text:        "text",
 			Description: "description",
 			Start:       time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+			Notify:      true,
 			NotificationParams: NotificationParams{
 				Period: time.Hour,
 				Params: Params{
@@ -31,7 +32,7 @@ func TestBasicTask_newEvent(t *testing.T) {
 				},
 			},
 		}
-		actual, _ := basicTask.newEvent(time.Time{})
+		actual, _ := basicTask.newEvent(time.Time{}, NotificationParams{})
 
 		expected := Event{
 			ID:                 0,
@@ -43,7 +44,7 @@ func TestBasicTask_newEvent(t *testing.T) {
 			NextSend:           time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
 			FirstSend:          time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
 			Done:               false,
-			Notify:             false,
+			Notify:             true,
 			NotificationParams: basicTask.NotificationParams,
 			Tags: []Tag{
 				{

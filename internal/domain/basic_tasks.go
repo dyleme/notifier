@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Dyleme/Notifier/internal/domain/apperr"
+	utils "github.com/Dyleme/Notifier/pkg/utils/ptr"
 )
 
 const BasicTaskType TaskType = "basic task"
@@ -20,7 +21,11 @@ type BasicTask struct {
 	Tags               []Tag
 }
 
-func (bt BasicTask) newEvent(_ time.Time) (Event, error) { //nolint:unparam //need for interface impolementation
+func (bt BasicTask) newEvent(_ time.Time, defaultNotifParams NotificationParams) (Event, error) { //nolint:unparam //need for interface impolementation
+	if bt.Notify && utils.IsZero(bt.NotificationParams) {
+		bt.NotificationParams = defaultNotifParams
+	}
+
 	return Event{
 		ID:                 0,
 		UserID:             bt.UserID,
@@ -38,7 +43,7 @@ func (bt BasicTask) newEvent(_ time.Time) (Event, error) { //nolint:unparam //ne
 }
 
 func (bt BasicTask) UpdatedEvent(ev Event) (Event, error) {
-	updatedEvent, err := bt.newEvent(time.Now())
+	updatedEvent, err := bt.newEvent(time.Now(), ev.NotificationParams)
 	if err != nil {
 		return Event{}, fmt.Errorf("new event: %w", err)
 	}
