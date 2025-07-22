@@ -29,25 +29,22 @@ func (n *Notification) deleteOldNotificationMsg(ctx context.Context, eventID, ch
 	var oldMsgID int
 	err := n.th.kvRepo.GetValue(ctx, strconv.Itoa(eventID), &oldMsgID)
 	if err != nil {
-		var notFoundErr serverrors.NotFoundError
-		if !errors.As(err, &notFoundErr) {
-			return fmt.Errorf("get message id [eventID=%v]: %w", eventID, err)
+		if errors.Is(err, serverrors.ErrNotFound) {
+			log.Ctx(ctx).Debug("no message id found", "eventID", eventID)
+
+			return nil
 		}
-	} else {
-		log.Ctx(ctx).Info("got msgID", "eventID", eventID, "msgID", oldMsgID)
-		_, err = n.th.bot.DeleteMessage(ctx, &bot.DeleteMessageParams{
-			ChatID:    chatID,
-			MessageID: oldMsgID,
-		})
-		if err != nil {
-			log.Ctx(ctx).Warn("can't delete msg", "msgID", oldMsgID, "chatID", chatID)
-		}
+
+		return fmt.Errorf("get message id [eventID=%v]: %w", eventID, err)
 	}
 
-	log.Ctx(ctx).Info("save msgID", "eventID", eventID, "msgID", newMsgID)
-	err = n.th.kvRepo.PutValue(ctx, strconv.Itoa(eventID), newMsgID)
+	log.Ctx(ctx).Info("got msgID", "eventID", eventID, "msgID", oldMsgID)
+	_, err = n.th.bot.DeleteMessage(ctx, &bot.DeleteMessageParams{
+		ChatID:    chatID,
+		MessageID: oldMsgID,
+	})
 	if err != nil {
-		return fmt.Errorf("put message id [eventID=%v]: %w", eventID, err)
+		return fmt.Errorf("delete message[msgID=%v,chatID=%v]: %w", oldMsgID, chatID, err)
 	}
 
 	return nil
@@ -89,7 +86,13 @@ func (n *Notification) sendMessage(ctx context.Context, chatID int64, user useri
 
 	err = n.deleteOldNotificationMsg(ctx, n.id, int(chatID), msg.ID)
 	if err != nil {
-		log.Ctx(ctx).Error("update stored msg id", log.Err(err))
+		log.Ctx(ctx).Error("delete old notification msg", log.Err(err))
+	}
+
+	log.Ctx(ctx).Info("save msgID", "eventID", n.id, "msgID", msg.ID)
+	err = n.th.kvRepo.PutValue(ctx, strconv.Itoa(n.id), msg.ID)
+	if err != nil {
+		return fmt.Errorf("put message id [eventID=%v]: %w", n.id, err)
 	}
 
 	return nil
