@@ -25,7 +25,7 @@ type Notification struct {
 	notifTime time.Time
 }
 
-func (n *Notification) deleteOldNotificationMsg(ctx context.Context, eventID, chatID, newMsgID int) error {
+func (n *Notification) deleteOldNotificationMsg(ctx context.Context, eventID, chatID int) error {
 	var oldMsgID int
 	err := n.th.kvRepo.GetValue(ctx, strconv.Itoa(eventID), &oldMsgID)
 	if err != nil {
@@ -84,7 +84,7 @@ func (n *Notification) sendMessage(ctx context.Context, chatID int64, user useri
 		return fmt.Errorf("send message [chatID=%v, text=%q]: %w", chatID, text, err)
 	}
 
-	err = n.deleteOldNotificationMsg(ctx, n.id, int(chatID), msg.ID)
+	err = n.deleteOldNotificationMsg(ctx, n.id, int(chatID))
 	if err != nil {
 		log.Ctx(ctx).Error("delete old notification msg", log.Err(err))
 	}
