@@ -2,7 +2,7 @@
 INSERT INTO 
 tags (name, user_id) 
 VALUES (@name, @user_id)
-RETURNING *;
+;
 
 -- name: GetTag :one
 SELECT * FROM tags

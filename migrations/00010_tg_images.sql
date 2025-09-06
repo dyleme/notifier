@@ -1,10 +1,9 @@
+
 -- +goose Up
 -- +goose StatementBegin
-CREATE TABLE tg_images
-(
-    id SERIAL PRIMARY KEY,
-    filename VARCHAR(250) NOT NULL UNIQUE,
-    tg_file_id VARCHAR(250) NOT NULL
+CREATE TABLE tg_images (
+    filename TEXT PRIMARY KEY,
+    tg_file_id BIGINT NOT NULL
 );
 -- +goose StatementEnd
 

@@ -1,6 +1,6 @@
 version: "2"
 sql:
-  - schema: "migrations"
+  - schema: "migrations_sqlite"
     queries: "internal/authorization/repository/queries/sql"
     engine: "sqlite"
     gen:
@@ -17,8 +17,8 @@ sql:
               type: string
               pointer: false
 
-  - schema: "migrations"
-    queries: "internal/service/repository/queries/sql"
+  - schema: "migrations_sqlite"
+    queries: "internal/service/repository/queries/sql_sqlite"
     engine: "sqlite"
     gen:
       go:

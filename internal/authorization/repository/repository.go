@@ -1,22 +1,20 @@
 package repository
 
 import (
-	trmpgx "github.com/avito-tech/go-transaction-manager/pgxv5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Dyleme/Notifier/internal/authorization/repository/queries/goqueries"
+	"github.com/Dyleme/Notifier/pkg/database/txmanager"
 )
 
 type Repository struct {
 	q      *goqueries.Queries
-	db     *pgxpool.Pool
-	getter *trmpgx.CtxGetter
+	getter *txmanager.Getter
 }
 
-func New(pool *pgxpool.Pool, getter *trmpgx.CtxGetter) *Repository {
+func New(pool *pgxpool.Pool, getter *txmanager.Getter) *Repository {
 	return &Repository{
 		q:      &goqueries.Queries{},
-		db:     pool,
 		getter: getter,
 	}
 }

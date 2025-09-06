@@ -5,38 +5,35 @@ import (
 	"errors"
 	"fmt"
 
-	trmpgx "github.com/avito-tech/go-transaction-manager/pgxv5"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/internal/domain/apperr"
 	"github.com/Dyleme/Notifier/internal/service/repository/queries/goqueries"
 	"github.com/Dyleme/Notifier/internal/service/service"
 	"github.com/Dyleme/Notifier/pkg/database/pgxconv"
+	"github.com/Dyleme/Notifier/pkg/database/txmanager"
 	"github.com/Dyleme/Notifier/pkg/utils/slice"
 )
 
 type BasicTaskRepository struct {
 	q      *goqueries.Queries
-	db     *pgxpool.Pool
-	getter *trmpgx.CtxGetter
+	getter *txmanager.Getter
 }
 
-func NewBasicTaskRepository(db *pgxpool.Pool, getter *trmpgx.CtxGetter) *BasicTaskRepository {
+func NewBasicTaskRepository(getter *txmanager.Getter) *BasicTaskRepository {
 	return &BasicTaskRepository{
 		q:      goqueries.New(),
-		db:     db,
 		getter: getter,
 	}
 }
 
-func (er *BasicTaskRepository) dtoWithTags(bt goqueries.BasicTask, dbTags []goqueries.Tag) domain.BasicTask {
+func (er *BasicTaskRepository) dtoWithTags(bt goqueries.SingleTask, dbTags []goqueries.Tag) domain.BasicTask {
 	basicTask := domain.BasicTask{
 		ID:                 int(bt.ID),
 		UserID:             int(bt.UserID),
 		Text:               bt.Text,
-		Description:        pgxconv.String(bt.Description),
+		Description:        bt.Description.String,
 		Start:              pgxconv.TimeWithZone(bt.Start),
 		NotificationParams: bt.NotificationParams,
 		Tags:               slice.Dto(dbTags, dtoTag),

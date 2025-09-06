@@ -5,7 +5,8 @@ LINTER=golangci-lint
 deploy: lint docker-compose.up migrate.up
 	@echo "----- deploy -----"
 
-DB_CONNECTION="host=$(DB_HOST) port=$(DB_PORT) user=$(POSTGRES_USER) password=$(POSTGRES_PASSWORD) dbname=$(POSTGRES_DB) sslmode=$(DB_SSL_MODE)"
+# DB_CONNECTION="host=$(DB_HOST) port=$(DB_PORT) user=$(POSTGRES_USER) password=$(POSTGRES_PASSWORD) dbname=$(POSTGRES_DB) sslmode=$(DB_SSL_MODE)"
+DB_CONNECTION="file:./test.db"
 MIGRATIONS_FOLDER="migrations"
 SQLC_FOLDER="pkg/repository"
 
@@ -29,13 +30,13 @@ redeploy:
 migrate.up:
 	@echo "----- running migrations up -----"
 	@cd $(MIGRATIONS_FOLDER);\
-	goose postgres ${DB_CONNECTION} up
+	goose sqlite3 ${DB_CONNECTION} up
 
 
 .PHONY: migrate.down
 migrate.down:
 	@cd $(MIGRATIONS_FOLDER);\
-	goose postgres ${DB_CONNECTION} down
+	goose sqlite3 ${DB_CONNECTION} down
 
 
 .PHONY: migrate.create
@@ -46,7 +47,12 @@ migrate.create:
 .PHONY: migrate.reset
 migrate.reset:
 	@cd $(MIGRATIONS_FOLDER);\
-	goose postgres ${DB_CONNECTION} reset
+	goose sqlite3 ${DB_CONNECTION} reset
+	
+.PHONY: migrate.version
+migrate.version:
+	@cd $(MIGRATIONS_FOLDER);\
+	goose sqlite3 ${DB_CONNECTION} version
 
 .PHONY: gen
 gen: gen.sqlc gen.api gen.go
@@ -55,6 +61,11 @@ gen: gen.sqlc gen.api gen.go
 gen.sqlc:
 	@echo "----------- Generate sqlc ----------------"
 	@sqlc generate
+
+.PHONY: gen.sqlc.sqlite
+gen.sqlc.sqlite:
+	@echo "----------- Generate sqlc for SQLite ----------------"
+	@sqlc generate -f sqlc_sqlite.yaml
 
 .PHONY: gen.api
 gen.api:

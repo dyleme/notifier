@@ -14,7 +14,7 @@ VALUES (@user_id,
         @biggest_period,
         @description,
         @notification_params)
-RETURNING *;
+;
 
 -- name: GetPeriodicTask :one
 SELECT *
@@ -30,8 +30,8 @@ LEFT JOIN tags as t
   ON s2t.tag_id = t.id
 WHERE pt.user_id = @user_id
   AND (
-    t.id = ANY (@tag_ids::int[]) 
-    OR array_length(@tag_ids::int[], 1) is null
+    @tag_ids IS NULL 
+    OR t.id IN (SELECT value FROM json_each(@tag_ids))
   )
 ORDER BY pt.id DESC
 LIMIT @lim OFFSET @OFF;
@@ -45,16 +45,15 @@ LEFT JOIN tags as t
   ON s2t.tag_id = t.id
 WHERE pt.user_id = @user_id
   AND (
-    t.id = ANY (@tag_ids::int[]) 
-    OR array_length(@tag_ids::int[], 1) is null
+    @tag_ids IS NULL 
+    OR t.id IN (SELECT value FROM json_each(@tag_ids))
   );
-
 
 -- name: DeletePeriodicTask :many
 DELETE
 FROM periodic_tasks
 WHERE id = @id
-RETURNING *;
+;
 
 -- name: UpdatePeriodicTask :one
 UPDATE periodic_tasks
@@ -66,4 +65,4 @@ SET start               = @start,
     biggest_period      = @biggest_period
 WHERE id = @id
   AND user_id = @user_id
-RETURNING *;
+;

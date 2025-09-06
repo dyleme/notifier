@@ -15,7 +15,7 @@ INSERT INTO events (
     @next_send,
     @notification_params,
     @next_send
-) RETURNING *;
+) ;
 
 -- name: GetEvent :one
 SELECT * FROM events
@@ -38,8 +38,8 @@ LEFT JOIN tags as t
 WHERE e.user_id = @user_id
   AND next_send BETWEEN @from_time AND @to_time
   AND (
-    t.id = ANY (@tag_ids::int[]) 
-    OR array_length(@tag_ids::int[], 1) is null
+    @tag_ids IS NULL 
+    OR t.id IN (SELECT value FROM json_each(@tag_ids))
   )
 ORDER BY next_send DESC
 LIMIT @lim OFFSET @off;
@@ -47,7 +47,7 @@ LIMIT @lim OFFSET @off;
 -- name: DeleteEvent :many
 DELETE FROM events
 WHERE id = @id
-RETURNING *;
+;
 
 -- name: UpdateEvent :one
 UPDATE events
@@ -56,30 +56,30 @@ SET text = @text,
     first_send = @first_send,
     done = @done
 WHERE id = @id
-RETURNING *;
+;
 
 -- name: ListNotSendedEvents :many
 SELECT * FROM events
 WHERE next_send <= @till
-  AND done = false
-  AND notify = true;
+  AND done = 0
+  AND notify = 1;
 
 -- name: GetNearestEventTime :one
 SELECT next_send FROM events
-WHERE done = false
-  AND notify = true 
+WHERE done = 0
+  AND notify = 1 
 ORDER BY next_send ASC
 LIMIT 1;
 
 -- name: ListUserDailyEvents :many
 SELECT * FROM events
 WHERE user_id = @user_id
-  AND next_send + @time_offset  BETWEEN CURRENT_DATE AND CURRENT_DATE + 1
+  AND datetime(next_send, @time_offset) BETWEEN date('now') AND date('now', '+1 day')
 ORDER BY next_send ASC;
 
 -- name: ListNotDoneEvents :many
 SELECT * FROM events
 WHERE user_id = @user_id
-  AND done = false
-  AND next_send < NOW()
+  AND done = 0
+  AND next_send < datetime('now')
 ORDER BY next_send ASC;

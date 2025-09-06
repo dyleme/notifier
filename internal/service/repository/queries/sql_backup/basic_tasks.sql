@@ -1,4 +1,4 @@
--- name: AddBasicTask :exec
+-- name: AddBasicTask :one
 INSERT INTO single_tasks (
   user_id,
   text,
@@ -11,7 +11,8 @@ INSERT INTO single_tasks (
   @start,
   @description,
   @notification_params
-);
+)
+;
 
 -- name: GetBasicTask :one
 SELECT *
@@ -46,10 +47,11 @@ WHERE bt.user_id = @user_id
     OR t.id IN (SELECT value FROM json_each(@tag_ids))
   );
 
--- name: DeleteBasicTask :exec
+-- name: DeleteBasicTask :many
 DELETE
 FROM single_tasks
-WHERE id = @id;
+WHERE id = @id
+;
 
 -- name: UpdateBasicTask :exec
 UPDATE single_tasks

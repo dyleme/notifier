@@ -4,8 +4,6 @@ import "github.com/Dyleme/Notifier/internal/domain/apperr"
 
 type User struct {
 	ID             int
-	TgNickname     string
-	PasswordHash   []byte
 	TGID           int
 	TimeZoneOffset int
 	IsTimeZoneDST  bool
