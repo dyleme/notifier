@@ -2,7 +2,7 @@
 INSERT INTO 
 tags (name, user_id) 
 VALUES (@name, @user_id)
-;
+RETURNING *;
 
 -- name: GetTag :one
 SELECT * FROM tags
@@ -19,7 +19,7 @@ DELETE FROM tags
 WHERE id = @id;
 
 
--- name: AddTagsToSmth :copyfrom
+-- name: AddTagsToSmth :exec
 INSERT INTO
 smth2tags (smth_id, tag_id, user_id)
 VALUES (@smth_id, @tag_id, @user_id);
@@ -31,22 +31,22 @@ JOIN tags as t
 ON s2t.tag_id = t.id
 WHERE smth_id = @smth_id;
 
--- name: AmountOfExistedTags :one
-SELECT COUNT(*)
-FROM tags
-WHERE tag_id = ANY(@tag_ids::int[])
-  AND user_id = @user_id;
+-- -- name: AmountOfExistedTags :one
+-- SELECT COUNT(*)
+-- FROM tags
+-- WHERE tag_id IN @tag_ids::int[]
+--   AND user_id = @user_id;
 
--- name: ListTagsForSmths :many
-SELECT s2t.smth_id,sqlc.embed(t) FROM smth2tags as s2t
-JOIN tags as t 
-ON s2t.tag_id = t.id
-WHERE smth_id = ANY(@smth_ids::int[]);
+-- -- name: ListTagsForSmths :many
+-- SELECT s2t.smth_id,sqlc.embed(t) FROM smth2tags as s2t
+-- JOIN tags as t 
+-- ON s2t.tag_id = t.id
+-- WHERE smth_id IN @smth_ids::int[];
 
--- name: DeleteTagsFromSmth :exec
-DELETE FROM smth2tags
-WHERE smth_id = @smth_id 
-AND tag_id = ANY(@tag_ids::int[]);
+-- -- name: DeleteTagsFromSmth :exec
+-- DELETE FROM smth2tags
+-- WHERE smth_id = @smth_id 
+-- AND tag_id IN @tag_ids::int[];
 
 -- name: DeleteAllTagsForSmth :exec
 DELETE FROM smth2tags

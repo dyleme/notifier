@@ -51,14 +51,18 @@ type DBTX interface {
 	PrepareContext(ctx context.Context, query string) (*sql.Stmt, error)
 }
 
+func (tm *TxManager) Do(ctx context.Context, fn func(context.Context) error) error {
+	return tm.DoWithSettings(ctx, nil, fn)
+}
+
 // WithTransaction executes a function within a transaction
-func (tm *TxManager) WithTransaction(ctx context.Context, fn func(context.Context) error) error {
+func (tm *TxManager) DoWithSettings(ctx context.Context, opts *sql.TxOptions, fn func(context.Context) error) error {
 	tx := getTxFromContext(ctx)
 	if tx != nil {
 		return ErrTransactionInProgress
 	}
 
-	tx, err := tm.db.BeginTx(ctx, nil)
+	tx, err := tm.db.BeginTx(ctx, opts)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}

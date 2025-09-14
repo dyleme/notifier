@@ -2,7 +2,7 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE key_value (
-    key VARCHAR(100) NOT NULL UNIQUE,
+    key VARCHAR(100) PRIMARY KEY,
     value JSON NOT NULL
 )
 -- +goose StatementEnd

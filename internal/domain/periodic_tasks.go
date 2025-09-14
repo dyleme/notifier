@@ -12,7 +12,7 @@ import (
 
 const timeDay = 24 * time.Hour
 
-const PeriodicTaskType TaskType = "periodic task"
+const PeriodicTaskType TaskType = "periodic_task"
 
 type PeriodicTask struct {
 	ID                 int

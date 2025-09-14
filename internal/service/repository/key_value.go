@@ -6,38 +6,35 @@ import (
 	"errors"
 	"fmt"
 
-	trmpgx "github.com/avito-tech/go-transaction-manager/pgxv5"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Dyleme/Notifier/internal/domain/apperr"
 	"github.com/Dyleme/Notifier/internal/service/repository/queries/goqueries"
+	"github.com/Dyleme/Notifier/pkg/database/txmanager"
 )
 
 type KeyValueRepository struct {
 	q      *goqueries.Queries
-	db     *pgxpool.Pool
-	getter *trmpgx.CtxGetter
+	getter *txmanager.Getter
 }
 
-func NewKeyValueRepository(db *pgxpool.Pool, getter *trmpgx.CtxGetter) *KeyValueRepository {
+func NewKeyValueRepository(getter *txmanager.Getter) *KeyValueRepository {
 	return &KeyValueRepository{
 		q:      goqueries.New(),
-		db:     db,
 		getter: getter,
 	}
 }
 
 var (
-	errEmptyValue = errors.New("value is empty")
-	errEmptyKey   = errors.New("empty key")
+	ErrEmptyValue = errors.New("value is empty")
+	ErrEmptyKey   = errors.New("empty key")
 )
 
 func (r *KeyValueRepository) PutValue(ctx context.Context, key string, value any) error {
-	tx := r.getter.DefaultTrOrDB(ctx, r.db)
+	tx := r.getter.GetTx(ctx)
 
 	if key == "" {
-		return errEmptyKey
+		return ErrEmptyKey
 	}
 
 	bts, err := json.Marshal(value)
@@ -46,7 +43,7 @@ func (r *KeyValueRepository) PutValue(ctx context.Context, key string, value any
 	}
 
 	if len(bts) == 0 {
-		return errEmptyValue
+		return ErrEmptyValue
 	}
 
 	err = r.q.SetValue(ctx, tx, goqueries.SetValueParams{
@@ -61,7 +58,7 @@ func (r *KeyValueRepository) PutValue(ctx context.Context, key string, value any
 }
 
 func (r *KeyValueRepository) GetValue(ctx context.Context, key string, value any) error {
-	tx := r.getter.DefaultTrOrDB(ctx, r.db)
+	tx := r.getter.GetTx(ctx)
 
 	bts, err := r.q.GetValue(ctx, tx, key)
 	if err != nil {
@@ -81,7 +78,7 @@ func (r *KeyValueRepository) GetValue(ctx context.Context, key string, value any
 }
 
 func (r *KeyValueRepository) DeleteValue(ctx context.Context, key string) error {
-	tx := r.getter.DefaultTrOrDB(ctx, r.db)
+	tx := r.getter.GetTx(ctx)
 
 	err := r.q.DeleteValue(ctx, tx, key)
 	if err != nil {

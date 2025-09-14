@@ -12,23 +12,23 @@ import (
 const deleteValue = `-- name: DeleteValue :exec
 DELETE
 FROM key_value
-WHERE key = $1
+WHERE key = ?1
 `
 
 func (q *Queries) DeleteValue(ctx context.Context, db DBTX, key string) error {
-	_, err := db.Exec(ctx, deleteValue, key)
+	_, err := db.ExecContext(ctx, deleteValue, key)
 	return err
 }
 
 const getValue = `-- name: GetValue :one
 SELECT value
 FROM key_value
-WHERE key = $1
+WHERE key = ?1
 `
 
-func (q *Queries) GetValue(ctx context.Context, db DBTX, key string) ([]byte, error) {
-	row := db.QueryRow(ctx, getValue, key)
-	var value []byte
+func (q *Queries) GetValue(ctx context.Context, db DBTX, key string) (interface{}, error) {
+	row := db.QueryRowContext(ctx, getValue, key)
+	var value interface{}
 	err := row.Scan(&value)
 	return value, err
 }
@@ -36,18 +36,18 @@ func (q *Queries) GetValue(ctx context.Context, db DBTX, key string) ([]byte, er
 const setValue = `-- name: SetValue :exec
 INSERT INTO key_value
 (key, value)
-VALUES ($1, $2)
+VALUES (?1, ?2)
 ON CONFLICT (key)
 DO UPDATE
-SET value = $2
+SET value = @value
 `
 
 type SetValueParams struct {
-	Key   string `db:"key"`
-	Value []byte `db:"value"`
+	Key   string      `db:"key"`
+	Value interface{} `db:"value"`
 }
 
 func (q *Queries) SetValue(ctx context.Context, db DBTX, arg SetValueParams) error {
-	_, err := db.Exec(ctx, setValue, arg.Key, arg.Value)
+	_, err := db.ExecContext(ctx, setValue, arg.Key, arg.Value)
 	return err
 }

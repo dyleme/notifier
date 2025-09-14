@@ -6,26 +6,23 @@ import (
 	"fmt"
 	"slices"
 
-	trmpgx "github.com/avito-tech/go-transaction-manager/pgxv5"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/internal/service/repository/queries/goqueries"
 	"github.com/Dyleme/Notifier/internal/service/service"
+	"github.com/Dyleme/Notifier/pkg/database/txmanager"
 	"github.com/Dyleme/Notifier/pkg/utils/slice"
 )
 
 type TagsRepository struct {
 	q      *goqueries.Queries
-	db     *pgxpool.Pool
-	getter *trmpgx.CtxGetter
+	getter *txmanager.Getter
 }
 
-func NewTagsRepository(db *pgxpool.Pool, getter *trmpgx.CtxGetter) *TagsRepository {
+func NewTagsRepository(getter *txmanager.Getter) *TagsRepository {
 	return &TagsRepository{
 		q:      goqueries.New(),
-		db:     db,
 		getter: getter,
 	}
 }
@@ -39,11 +36,11 @@ func dtoTag(t goqueries.Tag) domain.Tag {
 }
 
 func (tr *TagsRepository) List(ctx context.Context, userID int, listParams service.ListParams) ([]domain.Tag, error) {
-	tx := tr.getter.DefaultTrOrDB(ctx, tr.db)
+	tx := tr.getter.GetTx(ctx)
 	tags, err := tr.q.ListTags(ctx, tx, goqueries.ListTagsParams{
-		UserID: int32(userID),
-		Off:    int32(listParams.Offset),
-		Lim:    int32(listParams.Limit),
+		UserID: int64(userID),
+		Off:    int64(listParams.Offset),
+		Lim:    int64(listParams.Limit),
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -57,8 +54,8 @@ func (tr *TagsRepository) List(ctx context.Context, userID int, listParams servi
 }
 
 func (tr *TagsRepository) Get(ctx context.Context, tagID int) (domain.Tag, error) {
-	tx := tr.getter.DefaultTrOrDB(ctx, tr.db)
-	tag, err := tr.q.GetTag(ctx, tx, int32(tagID))
+	tx := tr.getter.GetTx(ctx)
+	tag, err := tr.q.GetTag(ctx, tx, int64(tagID))
 	if err != nil {
 		return domain.Tag{}, fmt.Errorf("get tag[tagID=%v]: %w", tagID, err)
 	}
@@ -67,10 +64,10 @@ func (tr *TagsRepository) Get(ctx context.Context, tagID int) (domain.Tag, error
 }
 
 func (tr *TagsRepository) Add(ctx context.Context, name string, userID int) (domain.Tag, error) {
-	tx := tr.getter.DefaultTrOrDB(ctx, tr.db)
+	tx := tr.getter.GetTx(ctx)
 	createdTag, err := tr.q.AddTag(ctx, tx, goqueries.AddTagParams{
 		Name:   name,
-		UserID: int32(userID),
+		UserID: int64(userID),
 	})
 	if err != nil {
 		return domain.Tag{}, fmt.Errorf("add tag: %w", err)
@@ -80,8 +77,8 @@ func (tr *TagsRepository) Add(ctx context.Context, name string, userID int) (dom
 }
 
 func (tr *TagsRepository) Delete(ctx context.Context, tagID int) error {
-	tx := tr.getter.DefaultTrOrDB(ctx, tr.db)
-	err := tr.q.DeleteTag(ctx, tx, int32(tagID))
+	tx := tr.getter.GetTx(ctx)
+	err := tr.q.DeleteTag(ctx, tx, int64(tagID))
 	if err != nil {
 		return fmt.Errorf("delete tag[tagID=%v]: %w", tagID, err)
 	}
@@ -90,11 +87,11 @@ func (tr *TagsRepository) Delete(ctx context.Context, tagID int) error {
 }
 
 func (tr *TagsRepository) Update(ctx context.Context, tagID int, name string) error {
-	tx := tr.getter.DefaultTrOrDB(ctx, tr.db)
+	tx := tr.getter.GetTx(ctx)
 
 	err := tr.q.UpdateTag(ctx, tx, goqueries.UpdateTagParams{
 		Name: name,
-		ID:   int32(tagID),
+		ID:   int64(tagID),
 	})
 	if err != nil {
 		return fmt.Errorf("update tag: %w", err)
@@ -103,8 +100,8 @@ func (tr *TagsRepository) Update(ctx context.Context, tagID int, name string) er
 	return nil
 }
 
-func syncTags(ctx context.Context, tx trmpgx.Tr, q *goqueries.Queries, smthID, userID int, tags []domain.Tag) error {
-	dbTags, err := q.ListTagsForSmth(ctx, tx, int32(smthID))
+func syncTags(ctx context.Context, tx txmanager.DBTX, q *goqueries.Queries, smthID, userID int, tags []domain.Tag) error {
+	dbTags, err := q.ListTagsForSmth(ctx, tx, int64(smthID))
 	if err != nil {
 		if !errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("list tags for smth: %w", err)
@@ -127,23 +124,25 @@ func syncTags(ctx context.Context, tx trmpgx.Tr, q *goqueries.Queries, smthID, u
 		}
 	}
 
-	_, err = q.AddTagsToSmth(ctx, tx, slice.Dto(tagsToInsert, func(t domain.Tag) goqueries.AddTagsToSmthParams {
-		return goqueries.AddTagsToSmthParams{
-			SmthID: int32(smthID),
-			TagID:  int32(t.ID),
-			UserID: int32(userID),
+	for _, tag := range tagsToInsert {
+		err = q.AddTagsToSmth(ctx, tx, goqueries.AddTagsToSmthParams{
+			SmthID: int64(smthID),
+			TagID:  int64(tag.ID),
+			UserID: int64(userID),
+		})
+		if err != nil {
+			return fmt.Errorf("add tags to smth: %w", err)
 		}
-	}))
-	if err != nil {
-		return fmt.Errorf("add tags to smth: %w", err)
 	}
 
-	err = q.DeleteTagsFromSmth(ctx, tx, goqueries.DeleteTagsFromSmthParams{
-		SmthID: int32(smthID),
-		TagIds: slice.Dto(tagIDsToDelete, func(i int) int32 { return int32(i) }),
-	})
-	if err != nil {
-		return fmt.Errorf("delete tags from smth: %w", err)
+	if len(tagIDsToDelete) != 0 {
+		err = q.DeleteTagsFromSmth(ctx, tx, goqueries.DeleteTagsFromSmthParams{
+			SmthID: int32(smthID),
+			TagIds: slice.Dto(tagIDsToDelete, func(i int) int32 { return int32(i) }),
+		})
+		if err != nil {
+			return fmt.Errorf("delete tags from smth: %w", err)
+		}
 	}
 
 	return nil

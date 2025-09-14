@@ -22,7 +22,6 @@ import (
 type MockBasicTaskRepository struct {
 	ctrl     *gomock.Controller
 	recorder *MockBasicTaskRepositoryMockRecorder
-	isgomock struct{}
 }
 
 // MockBasicTaskRepositoryMockRecorder is the mock recorder for MockBasicTaskRepository.
@@ -43,74 +42,74 @@ func (m *MockBasicTaskRepository) EXPECT() *MockBasicTaskRepositoryMockRecorder 
 }
 
 // Add mocks base method.
-func (m *MockBasicTaskRepository) Add(ctx context.Context, task domain.BasicTask) (domain.BasicTask, error) {
+func (m *MockBasicTaskRepository) Add(arg0 context.Context, arg1 domain.BasicTask) (domain.BasicTask, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Add", ctx, task)
+	ret := m.ctrl.Call(m, "Add", arg0, arg1)
 	ret0, _ := ret[0].(domain.BasicTask)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Add indicates an expected call of Add.
-func (mr *MockBasicTaskRepositoryMockRecorder) Add(ctx, task any) *gomock.Call {
+func (mr *MockBasicTaskRepositoryMockRecorder) Add(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Add", reflect.TypeOf((*MockBasicTaskRepository)(nil).Add), ctx, task)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Add", reflect.TypeOf((*MockBasicTaskRepository)(nil).Add), arg0, arg1)
 }
 
 // Delete mocks base method.
-func (m *MockBasicTaskRepository) Delete(ctx context.Context, taskID int) error {
+func (m *MockBasicTaskRepository) Delete(arg0 context.Context, arg1 int) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", ctx, taskID)
+	ret := m.ctrl.Call(m, "Delete", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockBasicTaskRepositoryMockRecorder) Delete(ctx, taskID any) *gomock.Call {
+func (mr *MockBasicTaskRepositoryMockRecorder) Delete(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockBasicTaskRepository)(nil).Delete), ctx, taskID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockBasicTaskRepository)(nil).Delete), arg0, arg1)
 }
 
 // Get mocks base method.
-func (m *MockBasicTaskRepository) Get(ctx context.Context, taskID int) (domain.BasicTask, error) {
+func (m *MockBasicTaskRepository) Get(arg0 context.Context, arg1 int) (domain.BasicTask, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", ctx, taskID)
+	ret := m.ctrl.Call(m, "Get", arg0, arg1)
 	ret0, _ := ret[0].(domain.BasicTask)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockBasicTaskRepositoryMockRecorder) Get(ctx, taskID any) *gomock.Call {
+func (mr *MockBasicTaskRepositoryMockRecorder) Get(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockBasicTaskRepository)(nil).Get), ctx, taskID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockBasicTaskRepository)(nil).Get), arg0, arg1)
 }
 
 // List mocks base method.
-func (m *MockBasicTaskRepository) List(ctx context.Context, userID int, params service.ListFilterParams) ([]domain.BasicTask, error) {
+func (m *MockBasicTaskRepository) List(arg0 context.Context, arg1 int, arg2 service.ListFilterParams) ([]domain.BasicTask, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", ctx, userID, params)
+	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2)
 	ret0, _ := ret[0].([]domain.BasicTask)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockBasicTaskRepositoryMockRecorder) List(ctx, userID, params any) *gomock.Call {
+func (mr *MockBasicTaskRepositoryMockRecorder) List(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockBasicTaskRepository)(nil).List), ctx, userID, params)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockBasicTaskRepository)(nil).List), arg0, arg1, arg2)
 }
 
 // Update mocks base method.
-func (m *MockBasicTaskRepository) Update(ctx context.Context, task domain.BasicTask) error {
+func (m *MockBasicTaskRepository) Update(arg0 context.Context, arg1 domain.BasicTask) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Update", ctx, task)
+	ret := m.ctrl.Call(m, "Update", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockBasicTaskRepositoryMockRecorder) Update(ctx, task any) *gomock.Call {
+func (mr *MockBasicTaskRepositoryMockRecorder) Update(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockBasicTaskRepository)(nil).Update), ctx, task)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockBasicTaskRepository)(nil).Update), arg0, arg1)
 }

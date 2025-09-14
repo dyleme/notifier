@@ -14,8 +14,8 @@ INSERT INTO tg_images (
                     filename,
                     tg_file_id
                     )
-VALUES ($1,
-        $2)
+VALUES (?1,
+        ?2)
 RETURNING id, filename, tg_file_id
 `
 
@@ -25,7 +25,7 @@ type AddTgImageParams struct {
 }
 
 func (q *Queries) AddTgImage(ctx context.Context, db DBTX, arg AddTgImageParams) (TgImage, error) {
-	row := db.QueryRow(ctx, addTgImage, arg.Filename, arg.TgFileID)
+	row := db.QueryRowContext(ctx, addTgImage, arg.Filename, arg.TgFileID)
 	var i TgImage
 	err := row.Scan(&i.ID, &i.Filename, &i.TgFileID)
 	return i, err
@@ -34,11 +34,11 @@ func (q *Queries) AddTgImage(ctx context.Context, db DBTX, arg AddTgImageParams)
 const getTgImage = `-- name: GetTgImage :one
 SELECT id, filename, tg_file_id
 FROM tg_images
-WHERE filename = $1
+WHERE filename = ?1
 `
 
 func (q *Queries) GetTgImage(ctx context.Context, db DBTX, filename string) (TgImage, error) {
-	row := db.QueryRow(ctx, getTgImage, filename)
+	row := db.QueryRowContext(ctx, getTgImage, filename)
 	var i TgImage
 	err := row.Scan(&i.ID, &i.Filename, &i.TgFileID)
 	return i, err

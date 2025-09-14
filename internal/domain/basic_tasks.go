@@ -8,7 +8,7 @@ import (
 	utils "github.com/Dyleme/Notifier/pkg/utils/ptr"
 )
 
-const BasicTaskType TaskType = "basic task"
+const BasicTaskType TaskType = "basic_task"
 
 type BasicTask struct {
 	ID                 int

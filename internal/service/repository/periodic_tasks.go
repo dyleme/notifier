@@ -6,28 +6,25 @@ import (
 	"fmt"
 	"time"
 
-	trmpgx "github.com/avito-tech/go-transaction-manager/pgxv5"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/internal/domain/apperr"
 	"github.com/Dyleme/Notifier/internal/service/repository/queries/goqueries"
 	"github.com/Dyleme/Notifier/internal/service/service"
-	"github.com/Dyleme/Notifier/pkg/database/pgxconv"
+	"github.com/Dyleme/Notifier/pkg/database/sqlconv"
+	"github.com/Dyleme/Notifier/pkg/database/txmanager"
 	"github.com/Dyleme/Notifier/pkg/utils/slice"
 )
 
 type PeriodicTaskRepository struct {
 	q      *goqueries.Queries
-	pool   *pgxpool.Pool
-	getter *trmpgx.CtxGetter
+	getter *txmanager.Getter
 }
 
-func NewPeriodicTaskRepository(db *pgxpool.Pool, getter *trmpgx.CtxGetter) *PeriodicTaskRepository {
+func NewPeriodicTaskRepository(getter *txmanager.Getter) *PeriodicTaskRepository {
 	return &PeriodicTaskRepository{
 		q:      goqueries.New(),
-		pool:   db,
 		getter: getter,
 	}
 }
@@ -36,41 +33,40 @@ func (p *PeriodicTaskRepository) dtoWithTags(pt goqueries.PeriodicTask, tags []g
 	task := domain.PeriodicTask{
 		ID:                 int(pt.ID),
 		Text:               pt.Text,
-		Description:        pgxconv.String(pt.Description),
+		Description:        pt.Description.String,
 		UserID:             int(pt.UserID),
-		Start:              pgxconv.TimeWithZone(pt.Start).Sub(time.Time{}),
+		Start:              pt.Start.Sub(time.Time{}),
 		SmallestPeriod:     time.Duration(pt.SmallestPeriod) * time.Minute,
 		BiggestPeriod:      time.Duration(pt.BiggestPeriod) * time.Minute,
 		NotificationParams: pt.NotificationParams,
 		Tags:               slice.Dto(tags, dtoTag),
-		Notify:             pt.Notify,
 	}
 
 	return task
 }
 
 func (p *PeriodicTaskRepository) Add(ctx context.Context, task domain.PeriodicTask) (domain.PeriodicTask, error) {
-	tx := p.getter.DefaultTrOrDB(ctx, p.pool)
+	tx := p.getter.GetTx(ctx)
 	pt, err := p.q.AddPeriodicTask(ctx, tx, goqueries.AddPeriodicTaskParams{
-		UserID:             int32(task.UserID),
+		UserID:             int64(task.UserID),
 		Text:               task.Text,
-		Start:              pgxconv.Timestamptz(time.Time{}.Add(task.Start)),
-		SmallestPeriod:     int32(task.SmallestPeriod / time.Minute),
-		BiggestPeriod:      int32(task.BiggestPeriod / time.Minute),
-		Description:        pgxconv.Text(task.Description),
+		Start:              time.Time{}.Add(task.Start),
+		SmallestPeriod:     int64(task.SmallestPeriod / time.Minute),
+		BiggestPeriod:      int64(task.BiggestPeriod / time.Minute),
+		Description:        sqlconv.NullableString(task.Description),
 		NotificationParams: task.NotificationParams,
 	})
 	if err != nil {
 		return domain.PeriodicTask{}, fmt.Errorf("add periodic task: %w", err)
 	}
 
-	_, err = p.q.AddTagsToSmth(ctx, tx, slice.Dto(task.Tags, func(tag domain.Tag) goqueries.AddTagsToSmthParams {
-		return goqueries.AddTagsToSmthParams{
+	for _, t := range task.Tags {
+		err = p.q.AddTagsToSmth(ctx, tx, goqueries.AddTagsToSmthParams{
 			SmthID: pt.ID,
-			TagID:  int32(tag.ID),
-			UserID: int32(task.UserID),
-		}
-	}))
+			TagID:  int64(t.ID),
+			UserID: int64(t.UserID),
+		})
+	}
 	if err != nil {
 		return domain.PeriodicTask{}, fmt.Errorf("add tags to periodic task: %w", err)
 	}
@@ -84,13 +80,13 @@ func (p *PeriodicTaskRepository) Add(ctx context.Context, task domain.PeriodicTa
 }
 
 func (p *PeriodicTaskRepository) Get(ctx context.Context, taskID int) (domain.PeriodicTask, error) {
-	tx := p.getter.DefaultTrOrDB(ctx, p.pool)
-	task, err := p.q.GetPeriodicTask(ctx, tx, int32(taskID))
+	tx := p.getter.GetTx(ctx)
+	task, err := p.q.GetPeriodicTask(ctx, tx, int64(taskID))
 	if err != nil {
 		return domain.PeriodicTask{}, fmt.Errorf("get periodic task: %w", err)
 	}
 
-	tags, err := p.q.ListTagsForSmth(ctx, tx, int32(taskID))
+	tags, err := p.q.ListTagsForSmth(ctx, tx, int64(taskID))
 	if err != nil {
 		return domain.PeriodicTask{}, fmt.Errorf("list tags for periodic task: %w", err)
 	}
@@ -101,16 +97,16 @@ func (p *PeriodicTaskRepository) Get(ctx context.Context, taskID int) (domain.Pe
 func (p *PeriodicTaskRepository) Update(ctx context.Context, task domain.PeriodicTask) error {
 	op := "PeriodicTaskRepository.Update: %w"
 
-	tx := p.getter.DefaultTrOrDB(ctx, p.pool)
+	tx := p.getter.GetTx(ctx)
 	pt, err := p.q.UpdatePeriodicTask(ctx, tx, goqueries.UpdatePeriodicTaskParams{
-		ID:                 int32(task.ID),
-		UserID:             int32(task.UserID),
-		Start:              pgxconv.Timestamptz(time.Time{}.Add(task.Start)),
+		ID:                 int64(task.ID),
+		UserID:             int64(task.UserID),
+		Start:              time.Time{}.Add(task.Start),
 		Text:               task.Text,
-		Description:        pgxconv.Text(task.Description),
+		Description:        sqlconv.NullableString(task.Description),
 		NotificationParams: task.NotificationParams,
-		SmallestPeriod:     int32(task.SmallestPeriod / time.Minute),
-		BiggestPeriod:      int32(task.BiggestPeriod / time.Minute),
+		SmallestPeriod:     int64(task.SmallestPeriod / time.Minute),
+		BiggestPeriod:      int64(task.BiggestPeriod / time.Minute),
 	})
 	if err != nil {
 		return fmt.Errorf(op, err)
@@ -127,8 +123,8 @@ func (p *PeriodicTaskRepository) Update(ctx context.Context, task domain.Periodi
 func (p *PeriodicTaskRepository) Delete(ctx context.Context, taskID int) error {
 	op := "PeriodicTaskRepository.Delete: %w"
 
-	tx := p.getter.DefaultTrOrDB(ctx, p.pool)
-	evs, err := p.q.DeletePeriodicTask(ctx, tx, int32(taskID))
+	tx := p.getter.GetTx(ctx)
+	evs, err := p.q.DeletePeriodicTask(ctx, tx, int64(taskID))
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}
@@ -136,7 +132,7 @@ func (p *PeriodicTaskRepository) Delete(ctx context.Context, taskID int) error {
 		return fmt.Errorf(op, apperr.ErrNotFound)
 	}
 
-	err = p.q.DeleteAllTagsForSmth(ctx, tx, int32(taskID))
+	err = p.q.DeleteAllTagsForSmth(ctx, tx, int64(taskID))
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}
@@ -145,12 +141,12 @@ func (p *PeriodicTaskRepository) Delete(ctx context.Context, taskID int) error {
 }
 
 func (p *PeriodicTaskRepository) List(ctx context.Context, userID int, params service.ListFilterParams) ([]domain.PeriodicTask, error) {
-	tx := p.getter.DefaultTrOrDB(ctx, p.pool)
+	tx := p.getter.GetTx(ctx)
 
 	dbRows, err := p.q.ListPeriodicTasks(ctx, tx, goqueries.ListPeriodicTasksParams{
-		UserID: int32(userID),
-		Off:    int32(params.ListParams.Offset),
-		Lim:    int32(params.ListParams.Limit),
+		UserID: int64(userID),
+		Off:    int64(params.ListParams.Offset),
+		Lim:    int64(params.ListParams.Limit),
 		TagIds: slice.Dto(params.TagIDs, func(id int) int32 { return int32(id) }),
 	})
 	if err != nil {
@@ -161,7 +157,7 @@ func (p *PeriodicTaskRepository) List(ctx context.Context, userID int, params se
 		return nil, fmt.Errorf("list periodic tasks: %w", err)
 	}
 
-	tasksIDs := slice.Dto(dbRows, func(t goqueries.ListPeriodicTasksRow) int32 { return t.PeriodicTask.ID })
+	tasksIDs := slice.Dto(dbRows, func(t goqueries.ListPeriodicTasksRow) int64 { return t.PeriodicTask.ID })
 
 	rows, err := p.q.ListTagsForSmths(ctx, tx, tasksIDs)
 	if err != nil {

@@ -7,8 +7,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/avito-tech/go-transaction-manager/trm"
-
 	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/internal/domain/apperr"
 	"github.com/Dyleme/Notifier/pkg/log"
@@ -27,7 +25,6 @@ type Repository interface {
 
 type TxManager interface {
 	Do(ctx context.Context, fn func(ctx context.Context) error) (err error)
-	DoWithSettings(ctx context.Context, s trm.Settings, fn func(ctx context.Context) error) (err error)
 }
 
 type Config struct {

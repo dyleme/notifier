@@ -15,7 +15,7 @@ INSERT INTO events (
     @next_send,
     @notification_params,
     @next_send
-) ;
+) RETURNING *;
 
 -- name: GetEvent :one
 SELECT * FROM events
@@ -47,7 +47,7 @@ LIMIT @lim OFFSET @off;
 -- name: DeleteEvent :many
 DELETE FROM events
 WHERE id = @id
-;
+RETURNING *;
 
 -- name: UpdateEvent :one
 UPDATE events
@@ -56,7 +56,7 @@ SET text = @text,
     first_send = @first_send,
     done = @done
 WHERE id = @id
-;
+RETURNING *;
 
 -- name: ListNotSendedEvents :many
 SELECT * FROM events

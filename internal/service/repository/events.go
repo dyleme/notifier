@@ -6,130 +6,92 @@ import (
 	"fmt"
 	"time"
 
-	trmpgx "github.com/avito-tech/go-transaction-manager/pgxv5"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/internal/domain/apperr"
 	"github.com/Dyleme/Notifier/internal/service/repository/queries/goqueries"
 	"github.com/Dyleme/Notifier/internal/service/service"
 	"github.com/Dyleme/Notifier/pkg/database/pgxconv"
+	"github.com/Dyleme/Notifier/pkg/database/sqlconv"
+	"github.com/Dyleme/Notifier/pkg/database/txmanager"
 	"github.com/Dyleme/Notifier/pkg/utils/slice"
 )
 
 type EventsRepository struct {
 	q      *goqueries.Queries
-	db     *pgxpool.Pool
-	getter *trmpgx.CtxGetter
+	getter *txmanager.Getter
 }
 
-func NewEventsRepository(db *pgxpool.Pool, getter *trmpgx.CtxGetter) *EventsRepository {
+func NewEventsRepository(getter *txmanager.Getter) *EventsRepository {
 	return &EventsRepository{
-		q:      goqueries.New(),
-		db:     db,
 		getter: getter,
-	}
-}
-
-const UnkownTaskType = goqueries.TaskType("unknown_type")
-
-func (*EventsRepository) repoTaskType(taskType domain.TaskType) (goqueries.TaskType, error) {
-	switch taskType {
-	case domain.PeriodicTaskType:
-		return goqueries.TaskTypePeriodicTask, nil
-	case domain.BasicTaskType:
-		return goqueries.TaskTypeBasicTask, nil
-	default:
-		return "", fmt.Errorf("%w: %v", apperr.ErrUnexpectedType, taskType)
-	}
-}
-
-func (*EventsRepository) domainTaskType(taskType goqueries.TaskType) (domain.TaskType, error) {
-	switch taskType {
-	case goqueries.TaskTypePeriodicTask:
-		return domain.PeriodicTaskType, nil
-	case goqueries.TaskTypeBasicTask:
-		return domain.BasicTaskType, nil
-	default:
-		return "", fmt.Errorf("%w: %v", apperr.ErrUnexpectedType, taskType)
+		q:      &goqueries.Queries{},
 	}
 }
 
 func (er *EventsRepository) dto(dbEv goqueries.Event) (domain.Event, error) {
-	taskType, err := er.domainTaskType(dbEv.TaskType)
-	if err != nil {
-		return domain.Event{}, fmt.Errorf("domain task type: %w", err)
-	}
-
 	event := domain.Event{
 		ID:                 int(dbEv.ID),
 		UserID:             int(dbEv.UserID),
 		Text:               dbEv.Text,
-		Description:        pgxconv.String(dbEv.Description),
-		TaskType:           taskType,
+		Description:        dbEv.Description.String,
+		TaskType:           domain.TaskType(dbEv.TaskType),
 		TaskID:             int(dbEv.TaskID),
 		NotificationParams: dbEv.NotificationParams,
-		NextSend:           pgxconv.TimeWithZone(dbEv.NextSend),
-		FirstSend:          pgxconv.TimeWithZone(dbEv.FirstSend),
-		Done:               dbEv.Done,
+		NextSend:           dbEv.NextSend,
+		FirstSend:          dbEv.FirstSend,
+		Done:               sqlconv.ToBool(dbEv.Done),
 		Tags:               nil,
-		Notify:             dbEv.Notify,
+		Notify:             sqlconv.ToBool(dbEv.Notify),
 	}
 
 	return event, nil
 }
 
 func (er *EventsRepository) dtoWithTags(dbEv goqueries.Event, dbTags []goqueries.Tag) (domain.Event, error) {
-	taskType, err := er.domainTaskType(dbEv.TaskType)
-	if err != nil {
-		return domain.Event{}, fmt.Errorf("domain task type: %w", err)
-	}
-
 	event := domain.Event{
 		ID:                 int(dbEv.ID),
 		UserID:             int(dbEv.UserID),
 		Text:               dbEv.Text,
-		Description:        pgxconv.String(dbEv.Description),
-		TaskType:           taskType,
+		Description:        dbEv.Description.String,
+		TaskType:           domain.TaskType(dbEv.TaskType),
 		TaskID:             int(dbEv.TaskID),
 		NotificationParams: dbEv.NotificationParams,
-		NextSend:           pgxconv.TimeWithZone(dbEv.NextSend),
-		FirstSend:          pgxconv.TimeWithZone(dbEv.FirstSend),
-		Done:               dbEv.Done,
+		NextSend:           dbEv.NextSend,
+		FirstSend:          dbEv.FirstSend,
+		Done:               sqlconv.ToBool(dbEv.Done),
 		Tags:               slice.Dto(dbTags, dtoTag),
-		Notify:             dbEv.Notify,
+		Notify:             sqlconv.ToBool(dbEv.Notify),
 	}
 
 	return event, nil
 }
 
 func (er *EventsRepository) Add(ctx context.Context, event domain.Event) (domain.Event, error) {
-	tx := er.getter.DefaultTrOrDB(ctx, er.db)
+	tx := er.getter.GetTx(ctx)
 
-	taskType, err := er.repoTaskType(event.TaskType)
-	if err != nil {
-		return domain.Event{}, fmt.Errorf("repo task type: %w", err)
-	}
 	ev, err := er.q.AddEvent(ctx, tx, goqueries.AddEventParams{
-		UserID:             int32(event.UserID),
+		UserID:             int64(event.UserID),
 		Text:               event.Text,
-		TaskID:             int32(event.TaskID),
-		TaskType:           taskType,
-		NextSend:           pgxconv.Timestamptz(event.NextSend),
+		TaskID:             int64(event.TaskID),
+		TaskType:           string(event.TaskType),
+		NextSend:           event.NextSend,
 		NotificationParams: event.NotificationParams,
 	})
 	if err != nil {
 		return domain.Event{}, fmt.Errorf("add event: %w", err)
 	}
 
-	_, err = er.q.AddTagsToSmth(ctx, tx, slice.Dto(event.Tags, func(t domain.Tag) goqueries.AddTagsToSmthParams {
-		return goqueries.AddTagsToSmthParams{
-			SmthID: ev.ID,
-			TagID:  int32(t.ID),
-			UserID: int32(event.UserID),
-		}
-	}))
+	for _, t := range event.Tags {
+		err = er.q.AddTagsToSmth(ctx, tx,
+			goqueries.AddTagsToSmthParams{
+				SmthID: ev.ID,
+				TagID:  int64(t.ID),
+				UserID: int64(event.UserID),
+			},
+		)
+	}
 	if err != nil {
 		return domain.Event{}, fmt.Errorf("add tags to smth: %w", err)
 	}

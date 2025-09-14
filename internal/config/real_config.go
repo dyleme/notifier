@@ -5,30 +5,22 @@ import (
 	"github.com/Dyleme/Notifier/internal/httpserver"
 	"github.com/Dyleme/Notifier/internal/notifier/eventnotifier"
 	"github.com/Dyleme/Notifier/internal/telegram/handler"
-	"github.com/Dyleme/Notifier/pkg/database/sqldatabase"
 )
 
 type Config struct {
-	Env         string
-	Database    *sqldatabase.Config
-	JWT         *jwt.Config
-	APIKey      string
-	Server      *httpserver.Config
-	NotifierJob eventnotifier.Config
-	Telegram    handler.Config
+	Env          string
+	DatabaseFile string
+	JWT          *jwt.Config
+	APIKey       string
+	Server       *httpserver.Config
+	NotifierJob  eventnotifier.Config
+	Telegram     handler.Config
 }
 
 func mapConfig(cc *compositeConfig) Config {
 	return Config{
-		Env: cc.Env,
-		Database: &sqldatabase.Config{
-			Port:     cc.Database.Port,
-			Host:     cc.Database.Host,
-			SSLMode:  cc.Database.SSLMode,
-			User:     cc.Database.User,
-			Database: cc.Database.Database,
-			Password: cc.Database.Password,
-		},
+		Env:          cc.Env,
+		DatabaseFile: cc.DatabaseFile,
 		JWT: &jwt.Config{
 			SignedKey: cc.JWT.SignedKey,
 			TTL:       cc.JWT.TokenTTL,

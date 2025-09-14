@@ -125,7 +125,7 @@ install: install.generators install.mocks install.linter install.tools
 	
 .PHONY: install.generators
 install.generators:
-	go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.26.0 
+	go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.28.0 
 	go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.3.0
 	
 .PHONY: install.tools

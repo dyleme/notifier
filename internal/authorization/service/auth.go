@@ -58,40 +58,23 @@ type UserRepo interface {
 	Create(ctx context.Context, input CreateUserInput) (user domain.User, err error)
 	Find(ctx context.Context, tgNickname string, tgID int) (domain.User, error)
 	Update(ctx context.Context, user domain.User) error
-	AddBindingAttempt(ctx context.Context, input BindingAttempt) error
-	GetLatestBindingAttempt(ctx context.Context, tgID int) (BindingAttempt, error)
-	UpdateBindingAttemptStatus(ctx context.Context, baID int, done bool) error
-}
-
-// JwtGenerator is an interface that provides method to create jwt tokens.
-type JwtGenerator interface {
-	// CreateToken is method which creates jwt token.
-	CreateToken(id int) (string, error)
-}
-
-type CodeGenerator interface {
-	GenereateCode() string
 }
 
 // AuthService struct provides the ability to create user and validate it.
 type AuthService struct {
-	repo          UserRepo
-	codeGenerator CodeGenerator
-	hashGen       HashGenerator
-	jwtGen        JwtGenerator
-	tg            CodeSender
-	tr            *trManager.Manager
+	repo    UserRepo
+	hashGen HashGenerator
+	tg      CodeSender
+	tr      *trManager.Manager
 }
 
 // NewAuth is the constructor to the AuthService.
-func NewAuth(repo UserRepo, hashGen HashGenerator, jwtGen JwtGenerator, tr *trManager.Manager, codeGen CodeGenerator) *AuthService {
+func NewAuth(repo UserRepo, hashGen HashGenerator, tr *trManager.Manager) *AuthService {
 	return &AuthService{
-		repo:          repo,
-		codeGenerator: codeGen,
-		hashGen:       hashGen,
-		jwtGen:        jwtGen,
-		tr:            tr,
-		tg:            nil,
+		repo:    repo,
+		hashGen: hashGen,
+		tr:      tr,
+		tg:      nil,
 	}
 }
 
@@ -102,111 +85,6 @@ func (s *AuthService) SetCodeSender(tg CodeSender) {
 type StartUserBindingInput struct {
 	TGNickname string
 	Password   string
-}
-
-// CreateUser function returns the id of the created user or error if any occures.
-// Function get password hash of the user and creates user and calls CreateUser method of repository.
-func (s *AuthService) StartUserBinding(ctx context.Context, input StartUserBindingInput) error {
-	code := s.codeGenerator.GenereateCode()
-	passwordHash := s.hashGen.GeneratePasswordHash(input.Password)
-	err := s.tr.Do(ctx, func(ctx context.Context) error {
-		user, err := s.repo.Find(ctx, input.TGNickname, 0)
-		if err != nil {
-			return fmt.Errorf("get user: %w", err)
-		}
-		err = s.repo.AddBindingAttempt(ctx, BindingAttempt{
-			ID:           0,
-			TGID:         user.TGID,
-			Code:         code,
-			PasswordHash: passwordHash,
-			Done:         false,
-		})
-		if err != nil {
-			return fmt.Errorf("add binding attempt: %w", err)
-		}
-
-		err = s.tg.SendBindingMessage(ctx, user.TGID, code)
-		if err != nil {
-			return fmt.Errorf("send binding message: %w", err)
-		}
-
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("tr: %w", err)
-	}
-
-	return nil
-}
-
-type BindUserInput struct {
-	Code       string
-	TGNickname string
-}
-
-func (s *AuthService) BindUser(ctx context.Context, input BindUserInput) error {
-	err := s.tr.Do(ctx, func(ctx context.Context) error {
-		user, err := s.repo.Find(ctx, input.TGNickname, 0)
-		if err != nil {
-			return fmt.Errorf("get user: %w", err)
-		}
-
-		ba, err := s.repo.GetLatestBindingAttempt(ctx, user.TGID)
-		if err != nil {
-			return fmt.Errorf("get binding attempt: %w", err)
-		}
-
-		if input.Code != ba.Code {
-			return ErrWrongCode
-		}
-
-		user.PasswordHash = []byte(ba.PasswordHash)
-
-		err = s.repo.Update(ctx, user)
-		if err != nil {
-			return fmt.Errorf("update user: %w", err)
-		}
-
-		err = s.repo.UpdateBindingAttemptStatus(ctx, ba.ID, true)
-		if err != nil {
-			return fmt.Errorf("update binding attempt status: %w", err)
-		}
-
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("tr: %w", err)
-	}
-
-	return nil
-}
-
-var (
-	ErrWrongPassword = errors.New("wrong password")
-	ErrWrongCode     = errors.New("wrong code")
-)
-
-// AuthUser returns the jwt token of the user, if the provided user exists  in repo and password is correct.
-// In any other situation function returns ("", err).
-// Method get password and if calling repo.Get then validates it with the hashGen.IsValidPassword,
-// and create token with the help jwtGen.CreateToken.
-func (s *AuthService) AuthUser(ctx context.Context, input ValidateUserInput) (string, error) {
-	op := "AuthService.AuthUser: %w"
-	user, err := s.repo.Find(ctx, input.AuthName, 0)
-	if err != nil {
-		return "", fmt.Errorf(op, err)
-	}
-
-	if !s.hashGen.IsValidPassword(input.Password, user.PasswordHash) {
-		return "", ErrWrongPassword
-	}
-
-	token, err := s.jwtGen.CreateToken(user.ID)
-	if err != nil {
-		return "", fmt.Errorf(op, err)
-	}
-
-	return token, nil
 }
 
 func (s *AuthService) GetTGUserInfo(ctx context.Context, tgID int) (domain.User, error) {

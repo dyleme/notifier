@@ -12,17 +12,17 @@ import (
 const addTag = `-- name: AddTag :one
 INSERT INTO 
 tags (name, user_id) 
-VALUES ($1, $2)
+VALUES (?1, ?2)
 RETURNING id, created_at, name, user_id
 `
 
 type AddTagParams struct {
 	Name   string `db:"name"`
-	UserID int32  `db:"user_id"`
+	UserID int64  `db:"user_id"`
 }
 
 func (q *Queries) AddTag(ctx context.Context, db DBTX, arg AddTagParams) (Tag, error) {
-	row := db.QueryRow(ctx, addTag, arg.Name, arg.UserID)
+	row := db.QueryRowContext(ctx, addTag, arg.Name, arg.UserID)
 	var i Tag
 	err := row.Scan(
 		&i.ID,
@@ -33,74 +33,69 @@ func (q *Queries) AddTag(ctx context.Context, db DBTX, arg AddTagParams) (Tag, e
 	return i, err
 }
 
-type AddTagsToSmthParams struct {
-	SmthID int32 `db:"smth_id"`
-	TagID  int32 `db:"tag_id"`
-	UserID int32 `db:"user_id"`
-}
-
-const amountOfExistedTags = `-- name: AmountOfExistedTags :one
-SELECT COUNT(*)
-FROM tags
-WHERE tag_id = ANY($1::int[])
-  AND user_id = $2
+const addTagsToSmth = `-- name: AddTagsToSmth :exec
+INSERT INTO
+smth2tags (smth_id, tag_id, user_id)
+VALUES (?1, ?2, ?3)
 `
 
-type AmountOfExistedTagsParams struct {
-	TagIds []int32 `db:"tag_ids"`
-	UserID int32   `db:"user_id"`
+type AddTagsToSmthParams struct {
+	SmthID int64 `db:"smth_id"`
+	TagID  int64 `db:"tag_id"`
+	UserID int64 `db:"user_id"`
 }
 
-func (q *Queries) AmountOfExistedTags(ctx context.Context, db DBTX, arg AmountOfExistedTagsParams) (int64, error) {
-	row := db.QueryRow(ctx, amountOfExistedTags, arg.TagIds, arg.UserID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
+func (q *Queries) AddTagsToSmth(ctx context.Context, db DBTX, arg AddTagsToSmthParams) error {
+	_, err := db.ExecContext(ctx, addTagsToSmth, arg.SmthID, arg.TagID, arg.UserID)
+	return err
 }
 
 const deleteAllTagsForSmth = `-- name: DeleteAllTagsForSmth :exec
+
+
+
 DELETE FROM smth2tags
-WHERE smth_id = $1
+WHERE smth_id = ?1
 `
 
-func (q *Queries) DeleteAllTagsForSmth(ctx context.Context, db DBTX, smthID int32) error {
-	_, err := db.Exec(ctx, deleteAllTagsForSmth, smthID)
+// -- name: AmountOfExistedTags :one
+// SELECT COUNT(*)
+// FROM tags
+// WHERE tag_id IN @tag_ids::int[]
+//
+//	AND user_id = @user_id;
+//
+// -- name: ListTagsForSmths :many
+// SELECT s2t.smth_id,sqlc.embed(t) FROM smth2tags as s2t
+// JOIN tags as t
+// ON s2t.tag_id = t.id
+// WHERE smth_id IN @smth_ids::int[];
+// -- name: DeleteTagsFromSmth :exec
+// DELETE FROM smth2tags
+// WHERE smth_id = @smth_id
+// AND tag_id IN @tag_ids::int[];
+func (q *Queries) DeleteAllTagsForSmth(ctx context.Context, db DBTX, smthID int64) error {
+	_, err := db.ExecContext(ctx, deleteAllTagsForSmth, smthID)
 	return err
 }
 
 const deleteTag = `-- name: DeleteTag :exec
 DELETE FROM tags
-WHERE id = $1
+WHERE id = ?1
 `
 
-func (q *Queries) DeleteTag(ctx context.Context, db DBTX, id int32) error {
-	_, err := db.Exec(ctx, deleteTag, id)
-	return err
-}
-
-const deleteTagsFromSmth = `-- name: DeleteTagsFromSmth :exec
-DELETE FROM smth2tags
-WHERE smth_id = $1 
-AND tag_id = ANY($2::int[])
-`
-
-type DeleteTagsFromSmthParams struct {
-	SmthID int32   `db:"smth_id"`
-	TagIds []int32 `db:"tag_ids"`
-}
-
-func (q *Queries) DeleteTagsFromSmth(ctx context.Context, db DBTX, arg DeleteTagsFromSmthParams) error {
-	_, err := db.Exec(ctx, deleteTagsFromSmth, arg.SmthID, arg.TagIds)
+func (q *Queries) DeleteTag(ctx context.Context, db DBTX, id int64) error {
+	_, err := db.ExecContext(ctx, deleteTag, id)
 	return err
 }
 
 const getTag = `-- name: GetTag :one
 SELECT id, created_at, name, user_id FROM tags
-WHERE id = $1
+WHERE id = ?1
 `
 
-func (q *Queries) GetTag(ctx context.Context, db DBTX, id int32) (Tag, error) {
-	row := db.QueryRow(ctx, getTag, id)
+func (q *Queries) GetTag(ctx context.Context, db DBTX, id int64) (Tag, error) {
+	row := db.QueryRowContext(ctx, getTag, id)
 	var i Tag
 	err := row.Scan(
 		&i.ID,
@@ -113,19 +108,19 @@ func (q *Queries) GetTag(ctx context.Context, db DBTX, id int32) (Tag, error) {
 
 const listTags = `-- name: ListTags :many
 SELECT id, created_at, name, user_id FROM tags
-WHERE user_id = $1
-LIMIT $3 
-OFFSET $2
+WHERE user_id = ?1
+LIMIT ?3 
+OFFSET ?2
 `
 
 type ListTagsParams struct {
-	UserID int32 `db:"user_id"`
-	Off    int32 `db:"off"`
-	Lim    int32 `db:"lim"`
+	UserID int64 `db:"user_id"`
+	Off    int64 `db:"off"`
+	Lim    int64 `db:"lim"`
 }
 
 func (q *Queries) ListTags(ctx context.Context, db DBTX, arg ListTagsParams) ([]Tag, error) {
-	rows, err := db.Query(ctx, listTags, arg.UserID, arg.Off, arg.Lim)
+	rows, err := db.QueryContext(ctx, listTags, arg.UserID, arg.Off, arg.Lim)
 	if err != nil {
 		return nil, err
 	}
@@ -142,6 +137,9 @@ func (q *Queries) ListTags(ctx context.Context, db DBTX, arg ListTagsParams) ([]
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -153,11 +151,11 @@ const listTagsForSmth = `-- name: ListTagsForSmth :many
 SELECT t.id, t.created_at, t.name, t.user_id FROM smth2tags as s2t
 JOIN tags as t 
 ON s2t.tag_id = t.id
-WHERE smth_id = $1
+WHERE smth_id = ?1
 `
 
-func (q *Queries) ListTagsForSmth(ctx context.Context, db DBTX, smthID int32) ([]Tag, error) {
-	rows, err := db.Query(ctx, listTagsForSmth, smthID)
+func (q *Queries) ListTagsForSmth(ctx context.Context, db DBTX, smthID int64) ([]Tag, error) {
+	rows, err := db.QueryContext(ctx, listTagsForSmth, smthID)
 	if err != nil {
 		return nil, err
 	}
@@ -175,43 +173,8 @@ func (q *Queries) ListTagsForSmth(ctx context.Context, db DBTX, smthID int32) ([
 		}
 		items = append(items, i)
 	}
-	if err := rows.Err(); err != nil {
+	if err := rows.Close(); err != nil {
 		return nil, err
-	}
-	return items, nil
-}
-
-const listTagsForSmths = `-- name: ListTagsForSmths :many
-SELECT s2t.smth_id,t.id, t.created_at, t.name, t.user_id FROM smth2tags as s2t
-JOIN tags as t 
-ON s2t.tag_id = t.id
-WHERE smth_id = ANY($1::int[])
-`
-
-type ListTagsForSmthsRow struct {
-	SmthID int32 `db:"smth_id"`
-	Tag    Tag   `db:"tag"`
-}
-
-func (q *Queries) ListTagsForSmths(ctx context.Context, db DBTX, smthIds []int32) ([]ListTagsForSmthsRow, error) {
-	rows, err := db.Query(ctx, listTagsForSmths, smthIds)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListTagsForSmthsRow
-	for rows.Next() {
-		var i ListTagsForSmthsRow
-		if err := rows.Scan(
-			&i.SmthID,
-			&i.Tag.ID,
-			&i.Tag.CreatedAt,
-			&i.Tag.Name,
-			&i.Tag.UserID,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -221,16 +184,16 @@ func (q *Queries) ListTagsForSmths(ctx context.Context, db DBTX, smthIds []int32
 
 const updateTag = `-- name: UpdateTag :exec
 UPDATE tags
-SET name = $1
-WHERE id = $2
+SET name = ?1
+WHERE id = ?2
 `
 
 type UpdateTagParams struct {
 	Name string `db:"name"`
-	ID   int32  `db:"id"`
+	ID   int64  `db:"id"`
 }
 
 func (q *Queries) UpdateTag(ctx context.Context, db DBTX, arg UpdateTagParams) error {
-	_, err := db.Exec(ctx, updateTag, arg.Name, arg.ID)
+	_, err := db.ExecContext(ctx, updateTag, arg.Name, arg.ID)
 	return err
 }

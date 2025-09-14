@@ -14,7 +14,7 @@ VALUES (@user_id,
         @biggest_period,
         @description,
         @notification_params)
-;
+RETURNING *;
 
 -- name: GetPeriodicTask :one
 SELECT *
@@ -34,7 +34,7 @@ WHERE pt.user_id = @user_id
     OR t.id IN (SELECT value FROM json_each(@tag_ids))
   )
 ORDER BY pt.id DESC
-LIMIT @lim OFFSET @OFF;
+LIMIT @lim OFFSET @Off;
 
 -- name: CountListPeriodicTasks :one
 SELECT COUNT(*)
@@ -53,7 +53,7 @@ WHERE pt.user_id = @user_id
 DELETE
 FROM periodic_tasks
 WHERE id = @id
-;
+RETURNING *;
 
 -- name: UpdatePeriodicTask :one
 UPDATE periodic_tasks
@@ -65,4 +65,4 @@ SET start               = @start,
     biggest_period      = @biggest_period
 WHERE id = @id
   AND user_id = @user_id
-;
+RETURNING *;

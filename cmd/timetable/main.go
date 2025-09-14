@@ -9,16 +9,11 @@ import (
 	"os/signal"
 
 	"github.com/Dyleme/timecache"
-	trmpgx "github.com/avito-tech/go-transaction-manager/pgxv5"
-	"github.com/avito-tech/go-transaction-manager/trm/manager"
 	"github.com/benbjohnson/clock"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/Dyleme/Notifier/internal/authorization/authmiddleware"
-	authHandler "github.com/Dyleme/Notifier/internal/authorization/handler"
-	"github.com/Dyleme/Notifier/internal/authorization/jwt"
 	authRepository "github.com/Dyleme/Notifier/internal/authorization/repository"
 	authService "github.com/Dyleme/Notifier/internal/authorization/service"
 	"github.com/Dyleme/Notifier/internal/config"
@@ -31,6 +26,7 @@ import (
 	tgHandler "github.com/Dyleme/Notifier/internal/telegram/handler"
 	"github.com/Dyleme/Notifier/internal/telegram/userinfo"
 	"github.com/Dyleme/Notifier/pkg/database/sqldatabase"
+	"github.com/Dyleme/Notifier/pkg/database/txmanager"
 	"github.com/Dyleme/Notifier/pkg/jobontime"
 	"github.com/Dyleme/Notifier/pkg/log"
 	"github.com/Dyleme/Notifier/pkg/log/slogpretty"
@@ -45,7 +41,7 @@ func main() { //nolint:funlen // main can be long
 	ctx := log.InCtx(context.Background(), logger)
 	ctx = cancelOnInterruption(ctx)
 
-	db, err := sqldatabase.NewPGX(ctx, cfg.Database.ConnectionString())
+	db, err := sqldatabase.NewSQLite(ctx, cfg.DatabaseFile)
 	if err != nil {
 		logger.Error("db init error", log.Err(err))
 
@@ -53,12 +49,12 @@ func main() { //nolint:funlen // main can be long
 	}
 
 	cache := repository.NewUniversalCache()
-	trManager := manager.Must(trmpgx.NewDefaultFactory(db))
-	trCtxGetter := trmpgx.DefaultCtxGetter
+	txManager := txmanager.New(db)
+	txGetter := txmanager.NewGetter(db)
 	nower := clock.New()
 	eventsNotifier := eventnotifier.New(
-		repository.NewEventsRepository(db, trCtxGetter),
-		trManager,
+		repository.NewEventsRepository(txGetter),
+		txManager,
 	)
 	eventsNotifierJob := jobontime.New(
 		nower,
@@ -66,22 +62,18 @@ func main() { //nolint:funlen // main can be long
 		cfg.NotifierJob.CheckTasksPeriod,
 	)
 	svc := service.New(
-		repository.NewPeriodicTaskRepository(db, trCtxGetter),
-		repository.NewBasicTaskRepository(db, trCtxGetter),
-		repository.NewTGImagesRepository(db, trCtxGetter, cache),
-		repository.NewEventsRepository(db, trCtxGetter),
-		repository.NewDefaultNotificationParamsRepository(db, trCtxGetter),
-		repository.NewTagsRepository(db, trCtxGetter),
+		repository.NewPeriodicTaskRepository(txGetter),
+		repository.NewBasicTaskRepository(txGetter),
+		repository.NewTGImagesRepository(txGetter, cache),
+		repository.NewEventsRepository(txGetter),
+		repository.NewDefaultNotificationParamsRepository(txGetter),
+		repository.NewTagsRepository(txGetter),
 		trManager,
 		eventsNotifierJob,
 	)
 	timeTableHndlr := handler.New(svc)
 
-	apiTokenMiddleware := authmiddleware.NewAPIToken(cfg.APIKey)
-	jwtGen := jwt.NewJwtGen(cfg.JWT)
-	codeGen := authService.NewRandomIntSeq()
-	jwtMiddleware := authmiddleware.NewJWT(jwtGen)
-	authRepo := authRepository.New(db, trCtxGetter)
+	authRepo := authRepository.New(db, txGetter)
 	authSvc := authService.NewAuth(
 		authRepo,
 		&authService.HashGen{},
@@ -89,7 +81,6 @@ func main() { //nolint:funlen // main can be long
 		trManager,
 		codeGen,
 	)
-	authHndlr := authHandler.New(authSvc)
 
 	router := httpserver.Route(
 		timeTableHndlr,
@@ -110,7 +101,7 @@ func main() { //nolint:funlen // main can be long
 		userinfo.NewUserRepoCache(authSvc),
 		cfg.Telegram,
 		timecache.New[int64, tgHandler.TextMessageHandler](),
-		repository.NewKeyValueRepository(db, trCtxGetter),
+		repository.NewKeyValueRepository(db, txGetter),
 	)
 	if err != nil {
 		logger.Error("tg init error", log.Err(err))

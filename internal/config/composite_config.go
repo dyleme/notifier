@@ -10,13 +10,13 @@ import (
 )
 
 type compositeConfig struct {
-	Env         string `env:"ENV" env-required:"true"`
-	Database    databaseConfig
-	JWT         jwtConfig
-	APIKey      apiKeyConfig
-	Server      serverConfig
-	NotifierJob notifierJobConfig
-	Telegram    telegramConfig
+	Env          string `env:"ENV" env-required:"true"`
+	DatabaseFile string `env:"DB_FILE" env-required:"true"`
+	JWT          jwtConfig
+	APIKey       apiKeyConfig
+	Server       serverConfig
+	NotifierJob  notifierJobConfig
+	Telegram     telegramConfig
 }
 
 type serverConfig struct {

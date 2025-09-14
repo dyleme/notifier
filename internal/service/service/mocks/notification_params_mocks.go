@@ -21,7 +21,6 @@ import (
 type MockDefaultNotificationParamsRepository struct {
 	ctrl     *gomock.Controller
 	recorder *MockDefaultNotificationParamsRepositoryMockRecorder
-	isgomock struct{}
 }
 
 // MockDefaultNotificationParamsRepositoryMockRecorder is the mock recorder for MockDefaultNotificationParamsRepository.
@@ -42,31 +41,31 @@ func (m *MockDefaultNotificationParamsRepository) EXPECT() *MockDefaultNotificat
 }
 
 // Get mocks base method.
-func (m *MockDefaultNotificationParamsRepository) Get(ctx context.Context, userID int) (domain.NotificationParams, error) {
+func (m *MockDefaultNotificationParamsRepository) Get(arg0 context.Context, arg1 int) (domain.NotificationParams, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", ctx, userID)
+	ret := m.ctrl.Call(m, "Get", arg0, arg1)
 	ret0, _ := ret[0].(domain.NotificationParams)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockDefaultNotificationParamsRepositoryMockRecorder) Get(ctx, userID any) *gomock.Call {
+func (mr *MockDefaultNotificationParamsRepositoryMockRecorder) Get(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockDefaultNotificationParamsRepository)(nil).Get), ctx, userID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockDefaultNotificationParamsRepository)(nil).Get), arg0, arg1)
 }
 
 // Set mocks base method.
-func (m *MockDefaultNotificationParamsRepository) Set(ctx context.Context, userID int, params domain.NotificationParams) (domain.NotificationParams, error) {
+func (m *MockDefaultNotificationParamsRepository) Set(arg0 context.Context, arg1 int, arg2 domain.NotificationParams) (domain.NotificationParams, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Set", ctx, userID, params)
+	ret := m.ctrl.Call(m, "Set", arg0, arg1, arg2)
 	ret0, _ := ret[0].(domain.NotificationParams)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Set indicates an expected call of Set.
-func (mr *MockDefaultNotificationParamsRepositoryMockRecorder) Set(ctx, userID, params any) *gomock.Call {
+func (mr *MockDefaultNotificationParamsRepositoryMockRecorder) Set(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Set", reflect.TypeOf((*MockDefaultNotificationParamsRepository)(nil).Set), ctx, userID, params)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Set", reflect.TypeOf((*MockDefaultNotificationParamsRepository)(nil).Set), arg0, arg1, arg2)
 }

@@ -11,7 +11,7 @@ import (
 	"github.com/Dyleme/Notifier/internal/domain/apperr"
 	"github.com/Dyleme/Notifier/internal/service/repository/queries/goqueries"
 	"github.com/Dyleme/Notifier/internal/service/service"
-	"github.com/Dyleme/Notifier/pkg/database/pgxconv"
+	"github.com/Dyleme/Notifier/pkg/database/sqlconv"
 	"github.com/Dyleme/Notifier/pkg/database/txmanager"
 	"github.com/Dyleme/Notifier/pkg/utils/slice"
 )
@@ -34,10 +34,9 @@ func (er *BasicTaskRepository) dtoWithTags(bt goqueries.SingleTask, dbTags []goq
 		UserID:             int(bt.UserID),
 		Text:               bt.Text,
 		Description:        bt.Description.String,
-		Start:              pgxconv.TimeWithZone(bt.Start),
+		Start:              bt.Start,
 		NotificationParams: bt.NotificationParams,
 		Tags:               slice.Dto(dbTags, dtoTag),
-		Notify:             bt.Notify,
 	}
 
 	return basicTask
@@ -46,25 +45,25 @@ func (er *BasicTaskRepository) dtoWithTags(bt goqueries.SingleTask, dbTags []goq
 func (er *BasicTaskRepository) Add(ctx context.Context, bt domain.BasicTask) (domain.BasicTask, error) {
 	op := "add timetable task: %w"
 
-	tx := er.getter.DefaultTrOrDB(ctx, er.db)
+	tx := er.getter.GetTx(ctx)
 	addedTask, err := er.q.AddBasicTask(ctx, tx, goqueries.AddBasicTaskParams{
-		UserID:             int32(bt.UserID),
+		UserID:             int64(bt.UserID),
 		Text:               bt.Text,
-		Start:              pgxconv.Timestamptz(bt.Start),
-		Description:        pgxconv.Text(bt.Description),
+		Start:              bt.Start,
+		Description:        sqlconv.NullableString(bt.Description),
 		NotificationParams: bt.NotificationParams,
 	})
 	if err != nil {
 		return domain.BasicTask{}, fmt.Errorf(op, err)
 	}
 
-	_, err = er.q.AddTagsToSmth(ctx, tx, slice.Dto(bt.Tags, func(t domain.Tag) goqueries.AddTagsToSmthParams {
-		return goqueries.AddTagsToSmthParams{
+	for _, t := range bt.Tags {
+		err = er.q.AddTagsToSmth(ctx, tx, goqueries.AddTagsToSmthParams{
 			SmthID: addedTask.ID,
-			TagID:  int32(t.ID),
-			UserID: int32(bt.UserID),
-		}
-	}))
+			TagID:  int64(t.ID),
+			UserID: int64(bt.UserID),
+		})
+	}
 	if err != nil {
 		return domain.BasicTask{}, fmt.Errorf("add tags to smth: %w", err)
 	}
@@ -73,11 +72,11 @@ func (er *BasicTaskRepository) Add(ctx context.Context, bt domain.BasicTask) (do
 }
 
 func (er *BasicTaskRepository) List(ctx context.Context, userID int, params service.ListFilterParams) ([]domain.BasicTask, error) {
-	tx := er.getter.DefaultTrOrDB(ctx, er.db)
+	tx := er.getter.GetTx(ctx)
 	dbBasicTasks, err := er.q.ListBasicTasks(ctx, tx, goqueries.ListBasicTasksParams{
-		UserID: int32(userID),
-		Off:    int32(params.ListParams.Offset),
-		Lim:    int32(params.ListParams.Limit),
+		UserID: int64(userID),
+		Off:    int64(params.ListParams.Offset),
+		Lim:    int64(params.ListParams.Limit),
 		TagIds: slice.Dto(params.TagIDs, func(tagID int) int32 { return int32(tagID) }),
 	})
 	if err != nil {
@@ -88,7 +87,7 @@ func (er *BasicTaskRepository) List(ctx context.Context, userID int, params serv
 		return nil, fmt.Errorf("list basic tasks: %w", err)
 	}
 
-	tasksIDs := slice.Dto(dbBasicTasks, func(t goqueries.ListBasicTasksRow) int32 { return t.BasicTask.ID })
+	tasksIDs := slice.Dto(dbBasicTasks, func(t goqueries.ListBasicTasksRow) int64 { return t.SingleTask.ID })
 
 	rows, err := er.q.ListTagsForSmths(ctx, tx, tasksIDs)
 	if err != nil {
@@ -101,19 +100,19 @@ func (er *BasicTaskRepository) List(ctx context.Context, userID int, params serv
 	for _, bt := range dbBasicTasks {
 		var tags []goqueries.Tag
 		for _, row := range rows {
-			if row.SmthID == bt.BasicTask.ID {
+			if row.SmthID == bt.SingleTask.ID {
 				tags = append(tags, row.Tag)
 			}
 		}
-		basicTasks = append(basicTasks, er.dtoWithTags(bt.BasicTask, tags))
+		basicTasks = append(basicTasks, er.dtoWithTags(bt.SingleTask, tags))
 	}
 
 	return basicTasks, nil
 }
 
 func (er *BasicTaskRepository) Delete(ctx context.Context, taskID int) error {
-	tx := er.getter.DefaultTrOrDB(ctx, er.db)
-	deletedTasks, err := er.q.DeleteBasicTask(ctx, tx, int32(taskID))
+	tx := er.getter.GetTx(ctx)
+	deletedTasks, err := er.q.DeleteBasicTask(ctx, tx, int64(taskID))
 	if err != nil {
 		return fmt.Errorf("delete basic task: %w", err)
 	}
@@ -121,7 +120,7 @@ func (er *BasicTaskRepository) Delete(ctx context.Context, taskID int) error {
 		return apperr.ErrNotFound
 	}
 
-	err = er.q.DeleteAllTagsForSmth(ctx, tx, int32(taskID))
+	err = er.q.DeleteAllTagsForSmth(ctx, tx, int64(taskID))
 	if err != nil {
 		return fmt.Errorf("delete all tags for smth: %w", err)
 	}
@@ -130,8 +129,8 @@ func (er *BasicTaskRepository) Delete(ctx context.Context, taskID int) error {
 }
 
 func (er *BasicTaskRepository) Get(ctx context.Context, taskID int) (domain.BasicTask, error) {
-	tx := er.getter.DefaultTrOrDB(ctx, er.db)
-	dbBasicTask, err := er.q.GetBasicTask(ctx, tx, int32(taskID))
+	tx := er.getter.GetTx(ctx)
+	dbBasicTask, err := er.q.GetBasicTask(ctx, tx, int64(taskID))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.BasicTask{}, fmt.Errorf("get basic task: %w", apperr.NotFoundError{Object: "basic task"})
@@ -140,7 +139,7 @@ func (er *BasicTaskRepository) Get(ctx context.Context, taskID int) (domain.Basi
 		return domain.BasicTask{}, fmt.Errorf("get basic task: %w", err)
 	}
 
-	tags, err := er.q.ListTagsForSmth(ctx, tx, int32(taskID))
+	tags, err := er.q.ListTagsForSmth(ctx, tx, int64(taskID))
 	if err != nil {
 		if !errors.Is(err, pgx.ErrNoRows) {
 			return domain.BasicTask{}, fmt.Errorf("list tags for smth: %w", err)
@@ -152,14 +151,14 @@ func (er *BasicTaskRepository) Get(ctx context.Context, taskID int) (domain.Basi
 
 func (er *BasicTaskRepository) Update(ctx context.Context, task domain.BasicTask) error {
 	op := "update timetable task: %w"
-	tx := er.getter.DefaultTrOrDB(ctx, er.db)
+	tx := er.getter.GetTx(ctx)
 	err := er.q.UpdateBasicTask(ctx, tx, goqueries.UpdateBasicTaskParams{
-		Start:              pgxconv.Timestamptz(task.Start),
+		ID:                 int64(task.ID),
+		Start:              task.Start,
 		Text:               task.Text,
-		Description:        pgxconv.Text(task.Description),
+		Description:        sqlconv.NullableString(task.Description),
 		NotificationParams: task.NotificationParams,
-		ID:                 int32(task.ID),
-		UserID:             int32(task.UserID),
+		UserID:             int64(task.UserID),
 	})
 	if err != nil {
 		return fmt.Errorf(op, err)

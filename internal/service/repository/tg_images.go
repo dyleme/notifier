@@ -6,22 +6,20 @@ import (
 	"fmt"
 	"strings"
 
-	trmpgx "github.com/avito-tech/go-transaction-manager/pgxv5"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/internal/domain/apperr"
 	"github.com/Dyleme/Notifier/internal/service/repository/queries/goqueries"
+	"github.com/Dyleme/Notifier/pkg/database/txmanager"
 )
 
 type TgImagesRepository struct {
 	q      *goqueries.Queries
 	cache  Cache
-	getter *trmpgx.CtxGetter
-	db     *pgxpool.Pool
+	getter *txmanager.Getter
 }
 
 type Cache interface {
@@ -30,12 +28,11 @@ type Cache interface {
 	Add(key string, obj any) error
 }
 
-func NewTGImagesRepository(db *pgxpool.Pool, getter *trmpgx.CtxGetter, cache Cache) *TgImagesRepository {
+func NewTGImagesRepository(getter *txmanager.Getter, cache Cache) *TgImagesRepository {
 	return &TgImagesRepository{
 		q:      goqueries.New(),
 		cache:  cache,
 		getter: getter,
-		db:     db,
 	}
 }
 
@@ -46,7 +43,7 @@ func newTgImageKey(filename string) string {
 func (t TgImagesRepository) Add(ctx context.Context, filename, tgFileID string) error {
 	op := "TgImagesRepository.Add: %w"
 
-	tx := t.getter.DefaultTrOrDB(ctx, t.db)
+	tx := t.getter.GetTx(ctx)
 	tgImage, err := t.q.AddTgImage(ctx, tx, goqueries.AddTgImageParams{
 		Filename: filename,
 		TgFileID: tgFileID,
@@ -91,7 +88,7 @@ func (t TgImagesRepository) Get(ctx context.Context, filename string) (domain.Tg
 		return dtoTgImage(tgImage), nil
 	}
 
-	tx := t.getter.DefaultTrOrDB(ctx, t.db)
+	tx := t.getter.GetTx(ctx)
 	tgImage, err := t.q.GetTgImage(ctx, tx, filename)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

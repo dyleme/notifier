@@ -5,7 +5,7 @@ INSERT INTO tg_images (
                     )
 VALUES (@filename,
         @tg_file_id)
-;
+RETURNING *;
 
 -- name: GetTgImage :one
 SELECT *
