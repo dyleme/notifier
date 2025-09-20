@@ -2,11 +2,11 @@
 INSERT INTO default_user_notification_params (user_id,
                                               params
 )
-VALUES (@user_id,
-        @params
+VALUES (?1,
+        ?2
        )
 ON CONFLICT (user_id)
-    DO UPDATE SET params          = @params
+    DO UPDATE SET params          = ?2
 RETURNING *;
 
 -- name: GetDefaultUserNotificationParams :one

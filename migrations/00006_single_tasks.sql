@@ -11,7 +11,7 @@ CREATE TABLE single_tasks
     start DATETIME NOT NULL,
     notification_params JSON,
     FOREIGN KEY (user_id) REFERENCES users(id)
-)
+);
 -- +goose StatementEnd
 
 -- +goose Down

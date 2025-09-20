@@ -20,7 +20,7 @@ CREATE TABLE notifications (
     last_resend_time DATETIME,
     FOREIGN KEY (user_id) REFERENCES users(id),
     UNIQUE (event_id, event_type)
-)
+);
 -- +goose StatementEnd
 
 -- +goose Down

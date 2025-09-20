@@ -31,22 +31,17 @@ JOIN tags as t
 ON s2t.tag_id = t.id
 WHERE smth_id = @smth_id;
 
--- -- name: AmountOfExistedTags :one
--- SELECT COUNT(*)
--- FROM tags
--- WHERE tag_id IN @tag_ids::int[]
---   AND user_id = @user_id;
 
--- -- name: ListTagsForSmths :many
--- SELECT s2t.smth_id,sqlc.embed(t) FROM smth2tags as s2t
--- JOIN tags as t 
--- ON s2t.tag_id = t.id
--- WHERE smth_id IN @smth_ids::int[];
+-- name: ListTagsForSmths :many
+SELECT s2t.smth_id, sqlc.embed(t) FROM smth2tags as s2t
+JOIN tags as t 
+ON s2t.tag_id = t.id
+WHERE smth_id IN sqlc.slice(smth_ids);
 
--- -- name: DeleteTagsFromSmth :exec
--- DELETE FROM smth2tags
--- WHERE smth_id = @smth_id 
--- AND tag_id IN @tag_ids::int[];
+-- name: DeleteTagsFromSmth :exec
+DELETE FROM smth2tags
+WHERE smth_id = @smth_id 
+AND tag_id IN sqlc.slice(tag_ids);
 
 -- name: DeleteAllTagsForSmth :exec
 DELETE FROM smth2tags

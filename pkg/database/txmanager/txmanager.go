@@ -27,14 +27,6 @@ func New(db *sql.DB) *TxManager {
 	return &TxManager{db: db}
 }
 
-// GetExecutor returns either the transaction (if exists) or the database connection
-func (tm *TxManager) GetExecutor(ctx context.Context) DBTX {
-	if tx := getTxFromContext(ctx); tx != nil {
-		return tx
-	}
-	return tm.db
-}
-
 // getTxFromContext retrieves transaction from context
 func getTxFromContext(ctx context.Context) *sql.Tx {
 	if tx, ok := ctx.Value(txKey{}).(*sql.Tx); ok {

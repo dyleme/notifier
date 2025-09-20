@@ -31,22 +31,18 @@ sql:
           - column: single_tasks.notification_params
             nullable: true
             go_type:
-              import: "github.com/Dyleme/Notifier/internal/domain"
-              package: "domain"
-              type: NotificationParams
+              type: "[]byte"
           - column: periodic_tasks.notification_params
             nullable: true
             go_type:
-              import: "github.com/Dyleme/Notifier/internal/domain"
-              package: "domain"
-              type: NotificationParams
+              type: "[]byte"
           - column: default_user_notification_params.params
             go_type:
-              import: "github.com/Dyleme/Notifier/internal/domain"
-              package: "domain"
-              type: NotificationParams
+              type: "[]byte"
           - column: events.notification_params
             go_type:
-              import: "github.com/Dyleme/Notifier/internal/domain"
-              package: "domain"
-              type: NotificationParams
+              type: "[]byte"
+          - column: key_value.value
+            nullable: false
+            go_type:
+              type: "[]byte"

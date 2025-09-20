@@ -2,10 +2,10 @@ package repository
 
 import (
 	"context"
+	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
-
-	"github.com/jackc/pgx/v5"
 
 	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/internal/domain/apperr"
@@ -29,14 +29,14 @@ func (nr *NotificationParamsRepository) Get(ctx context.Context, userID int) (do
 	tx := nr.getter.GetTx(ctx)
 	params, err := nr.q.GetDefaultUserNotificationParams(ctx, tx, int64(userID))
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, sql.ErrNoRows) {
 			return domain.NotificationParams{}, fmt.Errorf(op, apperr.NotFoundError{Object: "default eveft params"})
 		}
 
 		return domain.NotificationParams{}, fmt.Errorf(op, err)
 	}
 
-	return params.Params, nil
+	return parseNotificationParams(params.Params)
 }
 
 func (nr *NotificationParamsRepository) Set(ctx context.Context, userID int, params domain.NotificationParams) (domain.NotificationParams, error) {
@@ -44,11 +44,21 @@ func (nr *NotificationParamsRepository) Set(ctx context.Context, userID int, par
 	tx := nr.getter.GetTx(ctx)
 	updatedParams, err := nr.q.SetDefaultUserNotificationParams(ctx, tx, goqueries.SetDefaultUserNotificationParamsParams{
 		UserID: int64(userID),
-		Params: params,
+		Params: params.JSON(),
 	})
 	if err != nil {
 		return domain.NotificationParams{}, fmt.Errorf(op, err)
 	}
 
-	return updatedParams.Params, nil
+	return parseNotificationParams(updatedParams.Params)
+}
+
+func parseNotificationParams(bts []byte) (domain.NotificationParams, error) {
+	var params domain.NotificationParams
+
+	if err := json.Unmarshal(bts, &params); err != nil {
+		return domain.NotificationParams{}, err
+	}
+
+	return params, nil
 }

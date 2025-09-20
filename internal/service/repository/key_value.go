@@ -2,11 +2,10 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
-
-	"github.com/jackc/pgx/v5"
 
 	"github.com/Dyleme/Notifier/internal/domain/apperr"
 	"github.com/Dyleme/Notifier/internal/service/repository/queries/goqueries"
@@ -62,7 +61,7 @@ func (r *KeyValueRepository) GetValue(ctx context.Context, key string, value any
 
 	bts, err := r.q.GetValue(ctx, tx, key)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, sql.ErrNoRows) {
 			return apperr.ErrNotFound
 		}
 

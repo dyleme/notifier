@@ -2,11 +2,10 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"time"
-
-	"github.com/jackc/pgx/v5"
 
 	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/internal/domain/apperr"
@@ -29,7 +28,11 @@ func NewPeriodicTaskRepository(getter *txmanager.Getter) *PeriodicTaskRepository
 	}
 }
 
-func (p *PeriodicTaskRepository) dtoWithTags(pt goqueries.PeriodicTask, tags []goqueries.Tag) domain.PeriodicTask {
+func (p *PeriodicTaskRepository) dtoWithTags(pt goqueries.PeriodicTask, tags []goqueries.Tag) (domain.PeriodicTask, error) {
+	notifParams, err := parseNotificationParams(pt.NotificationParams)
+	if err != nil {
+		return domain.PeriodicTask{}, fmt.Errorf("parse notification params: %w", err)
+	}
 	task := domain.PeriodicTask{
 		ID:                 int(pt.ID),
 		Text:               pt.Text,
@@ -38,11 +41,11 @@ func (p *PeriodicTaskRepository) dtoWithTags(pt goqueries.PeriodicTask, tags []g
 		Start:              pt.Start.Sub(time.Time{}),
 		SmallestPeriod:     time.Duration(pt.SmallestPeriod) * time.Minute,
 		BiggestPeriod:      time.Duration(pt.BiggestPeriod) * time.Minute,
-		NotificationParams: pt.NotificationParams,
+		NotificationParams: notifParams,
 		Tags:               slice.Dto(tags, dtoTag),
 	}
 
-	return task
+	return task, nil
 }
 
 func (p *PeriodicTaskRepository) Add(ctx context.Context, task domain.PeriodicTask) (domain.PeriodicTask, error) {
@@ -54,7 +57,7 @@ func (p *PeriodicTaskRepository) Add(ctx context.Context, task domain.PeriodicTa
 		SmallestPeriod:     int64(task.SmallestPeriod / time.Minute),
 		BiggestPeriod:      int64(task.BiggestPeriod / time.Minute),
 		Description:        sqlconv.NullableString(task.Description),
-		NotificationParams: task.NotificationParams,
+		NotificationParams: task.NotificationParams.JSON(),
 	})
 	if err != nil {
 		return domain.PeriodicTask{}, fmt.Errorf("add periodic task: %w", err)
@@ -91,7 +94,7 @@ func (p *PeriodicTaskRepository) Get(ctx context.Context, taskID int) (domain.Pe
 		return domain.PeriodicTask{}, fmt.Errorf("list tags for periodic task: %w", err)
 	}
 
-	return p.dtoWithTags(task, tags), nil
+	return p.dtoWithTags(task, tags)
 }
 
 func (p *PeriodicTaskRepository) Update(ctx context.Context, task domain.PeriodicTask) error {
@@ -104,7 +107,7 @@ func (p *PeriodicTaskRepository) Update(ctx context.Context, task domain.Periodi
 		Start:              time.Time{}.Add(task.Start),
 		Text:               task.Text,
 		Description:        sqlconv.NullableString(task.Description),
-		NotificationParams: task.NotificationParams,
+		NotificationParams: task.NotificationParams.JSON(),
 		SmallestPeriod:     int64(task.SmallestPeriod / time.Minute),
 		BiggestPeriod:      int64(task.BiggestPeriod / time.Minute),
 	})
@@ -150,7 +153,7 @@ func (p *PeriodicTaskRepository) List(ctx context.Context, userID int, params se
 		TagIds: slice.Dto(params.TagIDs, func(id int) int32 { return int32(id) }),
 	})
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
 
@@ -159,9 +162,9 @@ func (p *PeriodicTaskRepository) List(ctx context.Context, userID int, params se
 
 	tasksIDs := slice.Dto(dbRows, func(t goqueries.ListPeriodicTasksRow) int64 { return t.PeriodicTask.ID })
 
-	rows, err := p.q.ListTagsForSmths(ctx, tx, tasksIDs)
+	rows, err := listTagsForSmths(ctx, tx, p.q, tasksIDs)
 	if err != nil {
-		if !errors.Is(err, pgx.ErrNoRows) {
+		if !errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("list tags for smths: %w", err)
 		}
 	}
@@ -174,7 +177,11 @@ func (p *PeriodicTaskRepository) List(ctx context.Context, userID int, params se
 				tags = append(tags, row.Tag)
 			}
 		}
-		tasks = append(tasks, p.dtoWithTags(pt.PeriodicTask, tags))
+		task, err := p.dtoWithTags(pt.PeriodicTask, tags)
+		if err != nil {
+			return nil, fmt.Errorf("dto with tags: %w", err)
+		}
+		tasks = append(tasks, task)
 	}
 
 	return tasks, nil

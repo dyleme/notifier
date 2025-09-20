@@ -12,7 +12,7 @@ type User struct {
 type TimeZoneOffset int
 
 func (to TimeZoneOffset) Valid() error {
-	if -24 < to && to < 24 {
+	if to < -24 || to > 24 {
 		return apperr.InvalidOffsetError{Offset: int(to)}
 	}
 

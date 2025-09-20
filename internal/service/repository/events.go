@@ -2,11 +2,10 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"time"
-
-	"github.com/jackc/pgx/v5"
 
 	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/internal/domain/apperr"
@@ -31,6 +30,10 @@ func NewEventsRepository(getter *txmanager.Getter) *EventsRepository {
 }
 
 func (er *EventsRepository) dto(dbEv goqueries.Event) (domain.Event, error) {
+	notifParams, err := parseNotificationParams(dbEv.NotificationParams)
+	if err != nil {
+		return domain.Event{}, fmt.Errorf("parse notification params: %w", err)
+	}
 	event := domain.Event{
 		ID:                 int(dbEv.ID),
 		UserID:             int(dbEv.UserID),
@@ -38,7 +41,7 @@ func (er *EventsRepository) dto(dbEv goqueries.Event) (domain.Event, error) {
 		Description:        dbEv.Description.String,
 		TaskType:           domain.TaskType(dbEv.TaskType),
 		TaskID:             int(dbEv.TaskID),
-		NotificationParams: dbEv.NotificationParams,
+		NotificationParams: notifParams,
 		NextSend:           dbEv.NextSend,
 		FirstSend:          dbEv.FirstSend,
 		Done:               sqlconv.ToBool(dbEv.Done),
@@ -50,6 +53,10 @@ func (er *EventsRepository) dto(dbEv goqueries.Event) (domain.Event, error) {
 }
 
 func (er *EventsRepository) dtoWithTags(dbEv goqueries.Event, dbTags []goqueries.Tag) (domain.Event, error) {
+	notifParams, err := parseNotificationParams(dbEv.NotificationParams)
+	if err != nil {
+		return domain.Event{}, fmt.Errorf("parse notification params: %w", err)
+	}
 	event := domain.Event{
 		ID:                 int(dbEv.ID),
 		UserID:             int(dbEv.UserID),
@@ -57,7 +64,7 @@ func (er *EventsRepository) dtoWithTags(dbEv goqueries.Event, dbTags []goqueries
 		Description:        dbEv.Description.String,
 		TaskType:           domain.TaskType(dbEv.TaskType),
 		TaskID:             int(dbEv.TaskID),
-		NotificationParams: dbEv.NotificationParams,
+		NotificationParams: notifParams,
 		NextSend:           dbEv.NextSend,
 		FirstSend:          dbEv.FirstSend,
 		Done:               sqlconv.ToBool(dbEv.Done),
@@ -77,7 +84,7 @@ func (er *EventsRepository) Add(ctx context.Context, event domain.Event) (domain
 		TaskID:             int64(event.TaskID),
 		TaskType:           string(event.TaskType),
 		NextSend:           event.NextSend,
-		NotificationParams: event.NotificationParams,
+		NotificationParams: event.NotificationParams.JSON(),
 	})
 	if err != nil {
 		return domain.Event{}, fmt.Errorf("add event: %w", err)
@@ -100,29 +107,28 @@ func (er *EventsRepository) Add(ctx context.Context, event domain.Event) (domain
 }
 
 func (er *EventsRepository) List(ctx context.Context, userID int, params service.ListEventsFilterParams) ([]domain.Event, error) {
-	tx := er.getter.DefaultTrOrDB(ctx, er.db)
+	tx := er.getter.GetTx(ctx)
 
 	rowsEvents, err := er.q.ListUserEvents(ctx, tx, goqueries.ListUserEventsParams{
-		UserID:   int32(userID),
-		FromTime: pgxconv.Timestamptz(params.TimeBorders.From),
-		ToTime:   pgxconv.Timestamptz(params.TimeBorders.To),
-		TagIds:   slice.Dto(params.Tags, func(tagID int) int32 { return int32(tagID) }),
-		Off:      int32(params.ListParams.Offset),
-		Lim:      int32(params.ListParams.Limit),
+		UserID:   int64(userID),
+		FromTime: params.TimeBorders.From,
+		ToTime:   params.TimeBorders.To,
+		Offset:   int64(params.ListParams.Offset),
+		Limit:    int64(params.ListParams.Limit),
 	})
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
 
 		return nil, fmt.Errorf("list user events: %w", err)
 	}
 
-	tasksIDs := slice.Dto(rowsEvents, func(t goqueries.ListUserEventsRow) int32 { return t.Event.ID })
+	tasksIDs := slice.Dto(rowsEvents, func(t goqueries.ListUserEventsRow) int64 { return t.Event.ID })
 
-	rows, err := er.q.ListTagsForSmths(ctx, tx, tasksIDs)
+	rows, err := listTagsForSmths(ctx, tx, er.q, tasksIDs)
 	if err != nil {
-		if !errors.Is(err, pgx.ErrNoRows) {
+		if !errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("list tags for smths: %w", err)
 		}
 	}
@@ -146,9 +152,9 @@ func (er *EventsRepository) List(ctx context.Context, userID int, params service
 }
 
 func (er *EventsRepository) Get(ctx context.Context, id int) (domain.Event, error) {
-	tx := er.getter.DefaultTrOrDB(ctx, er.db)
+	tx := er.getter.GetTx(ctx)
 
-	event, err := er.q.GetEvent(ctx, tx, int32(id))
+	event, err := er.q.GetEvent(ctx, tx, int64(id))
 	if err != nil {
 		return domain.Event{}, fmt.Errorf("get event: %w", err)
 	}
@@ -162,15 +168,11 @@ func (er *EventsRepository) Get(ctx context.Context, id int) (domain.Event, erro
 }
 
 func (er *EventsRepository) GetLatest(ctx context.Context, taskdID int, taskType domain.TaskType) (domain.Event, error) {
-	tx := er.getter.DefaultTrOrDB(ctx, er.db)
-	dbTaskType, err := er.repoTaskType(taskType)
-	if err != nil {
-		return domain.Event{}, fmt.Errorf("repo task type: %w", err)
-	}
+	tx := er.getter.GetTx(ctx)
 
 	event, err := er.q.GetLatestEvent(ctx, tx, goqueries.GetLatestEventParams{
-		TaskID:   int32(taskdID),
-		TaskType: dbTaskType,
+		TaskID:   int64(taskdID),
+		TaskType: string(taskType),
 	})
 	if err != nil {
 		return domain.Event{}, fmt.Errorf("get latest event: %w", err)
@@ -185,14 +187,14 @@ func (er *EventsRepository) GetLatest(ctx context.Context, taskdID int, taskType
 }
 
 func (er *EventsRepository) Update(ctx context.Context, event domain.Event) error {
-	tx := er.getter.DefaultTrOrDB(ctx, er.db)
+	tx := er.getter.GetTx(ctx)
 
 	_, err := er.q.UpdateEvent(ctx, tx, goqueries.UpdateEventParams{
 		Text:      event.Text,
-		NextSend:  pgxconv.Timestamptz(event.NextSend),
-		FirstSend: pgxconv.Timestamptz(event.FirstSend),
-		Done:      event.Done,
-		ID:        int32(event.ID),
+		NextSend:  event.FirstSend,
+		FirstSend: event.FirstSend,
+		Done:      sqlconv.BoolToInt(event.Done),
+		ID:        int64(event.ID),
 	})
 	if err != nil {
 		return fmt.Errorf("update event: %w", err)
@@ -207,9 +209,9 @@ func (er *EventsRepository) Update(ctx context.Context, event domain.Event) erro
 }
 
 func (er *EventsRepository) Delete(ctx context.Context, id int) error {
-	tx := er.getter.DefaultTrOrDB(ctx, er.db)
+	tx := er.getter.GetTx(ctx)
 
-	ns, err := er.q.DeleteEvent(ctx, tx, int32(id))
+	ns, err := er.q.DeleteEvent(ctx, tx, int64(id))
 	if err != nil {
 		return fmt.Errorf("delete event: %w", err)
 	}
@@ -222,11 +224,11 @@ func (er *EventsRepository) Delete(ctx context.Context, id int) error {
 }
 
 func (er *EventsRepository) ListNotSended(ctx context.Context, till time.Time) ([]domain.Event, error) {
-	tx := er.getter.DefaultTrOrDB(ctx, er.db)
+	tx := er.getter.GetTx(ctx)
 
-	events, err := er.q.ListNotSendedEvents(ctx, tx, pgxconv.Timestamptz(till))
+	events, err := er.q.ListNotSendedEvents(ctx, tx, till)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
 
@@ -242,24 +244,24 @@ func (er *EventsRepository) ListNotSended(ctx context.Context, till time.Time) (
 }
 
 func (er *EventsRepository) GetNearest(ctx context.Context) (time.Time, error) {
-	tx := er.getter.DefaultTrOrDB(ctx, er.db)
+	tx := er.getter.GetTx(ctx)
 
 	t, err := er.q.GetNearestEventTime(ctx, tx)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, sql.ErrNoRows) {
 			return time.Time{}, fmt.Errorf("get nearest event: %w", apperr.ErrNotFound)
 		}
 
 		return time.Time{}, fmt.Errorf("list not sended notifiations: %w", err)
 	}
 
-	return pgxconv.TimeWithZone(t), nil
+	return t, nil
 }
 
 func (er *EventsRepository) ListDayEvents(ctx context.Context, userID, timeZoneOffset int) ([]domain.Event, error) {
-	tx := er.getter.DefaultTrOrDB(ctx, er.db)
+	tx := er.getter.GetTx(ctx)
 	events, err := er.q.ListUserDailyEvents(ctx, tx, goqueries.ListUserDailyEventsParams{
-		UserID:     int32(userID),
+		UserID:     int64(userID),
 		TimeOffset: pgxconv.Timestamptz(time.Time{}.Add(time.Duration(timeZoneOffset) * time.Hour)),
 	})
 	if err != nil {
@@ -270,8 +272,8 @@ func (er *EventsRepository) ListDayEvents(ctx context.Context, userID, timeZoneO
 }
 
 func (er *EventsRepository) ListNotDoneEvents(ctx context.Context, userID int) ([]domain.Event, error) {
-	tx := er.getter.DefaultTrOrDB(ctx, er.db)
-	events, err := er.q.ListNotDoneEvents(ctx, tx, int32(userID))
+	tx := er.getter.GetTx(ctx)
+	events, err := er.q.ListNotDoneEvents(ctx, tx, int64(userID))
 	if err != nil {
 		return nil, fmt.Errorf("list not done events: %w", err)
 	}

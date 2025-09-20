@@ -2,11 +2,10 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"slices"
-
-	"github.com/jackc/pgx/v5"
 
 	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/internal/service/repository/queries/goqueries"
@@ -43,7 +42,7 @@ func (tr *TagsRepository) List(ctx context.Context, userID int, listParams servi
 		Lim:    int64(listParams.Limit),
 	})
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, sql.ErrNoRows) {
 			return []domain.Tag{}, nil
 		}
 
@@ -103,7 +102,7 @@ func (tr *TagsRepository) Update(ctx context.Context, tagID int, name string) er
 func syncTags(ctx context.Context, tx txmanager.DBTX, q *goqueries.Queries, smthID, userID int, tags []domain.Tag) error {
 	dbTags, err := q.ListTagsForSmth(ctx, tx, int64(smthID))
 	if err != nil {
-		if !errors.Is(err, pgx.ErrNoRows) {
+		if !errors.Is(err, sql.ErrNoRows) {
 			return fmt.Errorf("list tags for smth: %w", err)
 		}
 	}
@@ -137,8 +136,8 @@ func syncTags(ctx context.Context, tx txmanager.DBTX, q *goqueries.Queries, smth
 
 	if len(tagIDsToDelete) != 0 {
 		err = q.DeleteTagsFromSmth(ctx, tx, goqueries.DeleteTagsFromSmthParams{
-			SmthID: int32(smthID),
-			TagIds: slice.Dto(tagIDsToDelete, func(i int) int32 { return int32(i) }),
+			SmthID: int64(smthID),
+			TagIds: slice.Dto(tagIDsToDelete, func(i int) int64 { return int64(i) }),
 		})
 		if err != nil {
 			return fmt.Errorf("delete tags from smth: %w", err)
@@ -146,4 +145,19 @@ func syncTags(ctx context.Context, tx txmanager.DBTX, q *goqueries.Queries, smth
 	}
 
 	return nil
+}
+
+func listTagsForSmths(ctx context.Context, tx txmanager.DBTX, q *goqueries.Queries, smthIDs []int64) ([]goqueries.ListTagsForSmthsRow, error) {
+	if len(smthIDs) == 0 {
+		return nil, nil
+	}
+
+	dbTags, err := q.ListTagsForSmths(ctx, tx, smthIDs)
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("list tags for smths: %w", err)
+		}
+	}
+
+	return dbTags, nil
 }

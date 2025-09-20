@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/Dyleme/Notifier/internal/domain/apperr"
@@ -10,6 +11,15 @@ import (
 type NotificationParams struct {
 	Period time.Duration `json:"period"`
 	Params Params        `json:"params"`
+}
+
+func (np *NotificationParams) JSON() []byte {
+	bts, err := json.Marshal(np)
+	if err != nil {
+		panic(err)
+	}
+
+	return bts
 }
 
 type Params struct {

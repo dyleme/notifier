@@ -75,7 +75,7 @@ func (en *EventNotifier) Do(ctx context.Context, now time.Time) {
 		for _, ev := range events {
 			notification, err := ev.NewNotification()
 			if err != nil {
-				log.Ctx(ctx).Error("new sending event", log.Err(err))
+				log.Ctx(ctx).Debug("event", "event", ev)
 
 				continue
 			}

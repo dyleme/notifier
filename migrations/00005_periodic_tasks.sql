@@ -13,7 +13,7 @@ CREATE TABLE periodic_tasks
     biggest_period INTEGER NOT NULL,
     notification_params JSON,
     FOREIGN KEY (user_id) REFERENCES users(id)
-)
+);
 -- +goose StatementEnd
 
 -- +goose Down

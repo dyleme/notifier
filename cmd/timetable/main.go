@@ -2,25 +2,17 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
-	"net/http"
 	"os"
 	"os/signal"
 
 	"github.com/Dyleme/timecache"
 	"github.com/benbjohnson/clock"
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/go-chi/cors"
-	"golang.org/x/sync/errgroup"
 
 	authRepository "github.com/Dyleme/Notifier/internal/authorization/repository"
 	authService "github.com/Dyleme/Notifier/internal/authorization/service"
 	"github.com/Dyleme/Notifier/internal/config"
-	"github.com/Dyleme/Notifier/internal/httpserver"
-	custMiddleware "github.com/Dyleme/Notifier/internal/httpserver/middleware"
 	"github.com/Dyleme/Notifier/internal/notifier/eventnotifier"
-	"github.com/Dyleme/Notifier/internal/service/handler"
 	"github.com/Dyleme/Notifier/internal/service/repository"
 	"github.com/Dyleme/Notifier/internal/service/service"
 	tgHandler "github.com/Dyleme/Notifier/internal/telegram/handler"
@@ -68,32 +60,14 @@ func main() { //nolint:funlen // main can be long
 		repository.NewEventsRepository(txGetter),
 		repository.NewDefaultNotificationParamsRepository(txGetter),
 		repository.NewTagsRepository(txGetter),
-		trManager,
+		txManager,
 		eventsNotifierJob,
 	)
-	timeTableHndlr := handler.New(svc)
 
-	authRepo := authRepository.New(db, txGetter)
+	authRepo := authRepository.New(txGetter)
 	authSvc := authService.NewAuth(
 		authRepo,
-		&authService.HashGen{},
-		jwtGen,
-		trManager,
-		codeGen,
-	)
-
-	router := httpserver.Route(
-		timeTableHndlr,
-		authHndlr,
-		jwtMiddleware.Handle,
-		apiTokenMiddleware.Handle,
-		[]func(next http.Handler) http.Handler{
-			cors.AllowAll().Handler,
-			custMiddleware.WithLogger(logger),
-			custMiddleware.LoggerMiddleware,
-			custMiddleware.RequestID,
-			middleware.Recoverer,
-		},
+		txManager,
 	)
 
 	tg, err := tgHandler.New(
@@ -101,7 +75,7 @@ func main() { //nolint:funlen // main can be long
 		userinfo.NewUserRepoCache(authSvc),
 		cfg.Telegram,
 		timecache.New[int64, tgHandler.TextMessageHandler](),
-		repository.NewKeyValueRepository(db, txGetter),
+		repository.NewKeyValueRepository(txGetter),
 	)
 	if err != nil {
 		logger.Error("tg init error", log.Err(err))
@@ -110,29 +84,10 @@ func main() { //nolint:funlen // main can be long
 	}
 
 	eventsNotifier.SetNotifier(tg)
-	authSvc.SetCodeSender(tg)
 
 	go eventsNotifierJob.Run(ctx)
 
-	serv := httpserver.New(router, cfg.Server)
-
-	wg, ctx := errgroup.WithContext(ctx)
-	wg.Go(func() error {
-		if err := serv.Run(ctx); err != nil {
-			return fmt.Errorf("server: %w", err)
-		}
-
-		return nil
-	})
-	wg.Go(func() error {
-		tg.Run(ctx)
-
-		return nil
-	})
-	err = wg.Wait()
-	if err != nil {
-		logger.Error("serve error", log.Err(err))
-	}
+	tg.Run(ctx)
 }
 
 func cancelOnInterruption(ctx context.Context) context.Context {

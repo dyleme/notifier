@@ -3,8 +3,6 @@ package service
 import (
 	"context"
 	"time"
-
-	"github.com/avito-tech/go-transaction-manager/trm"
 )
 
 type repositories struct {
@@ -28,7 +26,6 @@ type NotifierJob interface {
 
 type TxManager interface {
 	Do(ctx context.Context, fn func(ctx context.Context) error) (err error)
-	DoWithSettings(ctx context.Context, s trm.Settings, fn func(ctx context.Context) error) (err error)
 }
 
 func New(

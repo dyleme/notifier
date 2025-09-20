@@ -5,92 +5,40 @@ import (
 	"errors"
 	"fmt"
 
-	trManager "github.com/avito-tech/go-transaction-manager/trm/manager"
-	"golang.org/x/crypto/bcrypt"
-
 	"github.com/Dyleme/Notifier/internal/domain"
+	"github.com/Dyleme/Notifier/internal/domain/apperr"
+	"github.com/Dyleme/Notifier/pkg/database/txmanager"
 )
-
-// HashGenerator interface providing you the ability to generate password hash
-// and compare it with pure text passoword.
-type HashGenerator interface {
-	GeneratePasswordHash(password string) string
-	IsValidPassword(password string, hash []byte) bool
-}
-
-type CodeSender interface {
-	SendBindingMessage(ctx context.Context, tgID int, code string) error
-}
-
-// HashGen struct is realization of the HashGenerator interface with the bcrypt package.
-type HashGen struct{}
-
-// GeneratePasswordHash generates hash from the password.
-func (h *HashGen) GeneratePasswordHash(password string) string {
-	hash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.MinCost)
-
-	return string(hash)
-}
-
-// IsValidPassword compare the password and password hash,
-// returns true if they correspond, false in the other situations.
-func (h *HashGen) IsValidPassword(password string, hash []byte) bool {
-	err := bcrypt.CompareHashAndPassword(hash, []byte(password))
-
-	return err == nil
-}
-
-type ValidateUserInput struct {
-	AuthName string
-	Password string
-}
-
-type BindingAttempt struct {
-	ID           int
-	TGID         int
-	Code         string
-	PasswordHash string
-	Done         bool
-}
 
 // UserRepo is an interface which provides methods to implement with repository.
 type UserRepo interface {
+	Get(ctx context.Context, id int) (domain.User, error)
 	Create(ctx context.Context, input CreateUserInput) (user domain.User, err error)
-	Find(ctx context.Context, tgNickname string, tgID int) (domain.User, error)
+	FindByTgID(ctx context.Context, tgID int) (domain.User, error)
 	Update(ctx context.Context, user domain.User) error
 }
 
 // AuthService struct provides the ability to create user and validate it.
 type AuthService struct {
-	repo    UserRepo
-	hashGen HashGenerator
-	tg      CodeSender
-	tr      *trManager.Manager
+	repo UserRepo
+	tr   *txmanager.TxManager
 }
 
 // NewAuth is the constructor to the AuthService.
-func NewAuth(repo UserRepo, hashGen HashGenerator, tr *trManager.Manager) *AuthService {
+func NewAuth(repo UserRepo, tr *txmanager.TxManager) *AuthService {
 	return &AuthService{
-		repo:    repo,
-		hashGen: hashGen,
-		tr:      tr,
-		tg:      nil,
+		repo: repo,
+		tr:   tr,
 	}
-}
-
-func (s *AuthService) SetCodeSender(tg CodeSender) {
-	s.tg = tg
-}
-
-type StartUserBindingInput struct {
-	TGNickname string
-	Password   string
 }
 
 func (s *AuthService) GetTGUserInfo(ctx context.Context, tgID int) (domain.User, error) {
 	op := "AuthService.GetTGUserInfo: %w"
-	user, err := s.repo.Find(ctx, "", tgID)
+	user, err := s.repo.FindByTgID(ctx, tgID)
 	if err != nil {
+		if errors.Is(err, apperr.ErrNotFound) {
+			return domain.User{}, apperr.NotFoundError{Object: "user"}
+		}
 		return domain.User{}, fmt.Errorf(op, err)
 	}
 
@@ -107,8 +55,7 @@ func (s *AuthService) CreateUser(ctx context.Context, input CreateUserInput) (do
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		var err error
 		user, err = s.repo.Create(ctx, CreateUserInput{
-			TGNickname: input.TGNickname,
-			TGID:       input.TGID,
+			TGNickname: input.TGNickname, TGID: input.TGID,
 		})
 		if err != nil {
 			return fmt.Errorf("create user: %w", err)
@@ -131,9 +78,9 @@ func (s *AuthService) UpdateUserTime(ctx context.Context, id int, tzOffset domai
 	}
 
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
-		user, err := s.repo.Find(ctx, "", id)
+		user, err := s.repo.Get(ctx, id)
 		if err != nil {
-			return fmt.Errorf("get user: %w", err)
+			return fmt.Errorf("get user id[%v]: %w", id, err)
 		}
 		user.IsTimeZoneDST = isDst
 		user.TimeZoneOffset = int(tzOffset)

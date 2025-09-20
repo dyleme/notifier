@@ -35,14 +35,11 @@ LEFT JOIN smth2tags as s2t
   ON e.id = s2t.smth_id
 LEFT JOIN tags as t
   ON s2t.tag_id = t.id
-WHERE e.user_id = @user_id
-  AND next_send BETWEEN @from_time AND @to_time
-  AND (
-    @tag_ids IS NULL 
-    OR t.id IN (SELECT value FROM json_each(@tag_ids))
-  )
+WHERE e.user_id = ?
+  AND next_send <= @to_time
+  AND next_send >= @from_time
 ORDER BY next_send DESC
-LIMIT @lim OFFSET @off;
+LIMIT ? OFFSET ?;
 
 -- name: DeleteEvent :many
 DELETE FROM events

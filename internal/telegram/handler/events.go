@@ -49,7 +49,6 @@ func (le *ListEvents) listInline(ctx context.Context, b *bot.Bot, mes *models.Me
 	events, err := le.th.serv.ListEvents(ctx, user.ID, service.ListEventsFilterParams{
 		TimeBorders: model.NewInfiniteUpper(time.Now()),
 		ListParams:  defaultListParams,
-		Tags:        []int{},
 	})
 	if err != nil {
 		return fmt.Errorf("list events: %w", err)

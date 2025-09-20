@@ -2,12 +2,12 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/jackc/pgerrcode"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/Dyleme/Notifier/internal/domain"
@@ -91,7 +91,7 @@ func (t TgImagesRepository) Get(ctx context.Context, filename string) (domain.Tg
 	tx := t.getter.GetTx(ctx)
 	tgImage, err := t.q.GetTgImage(ctx, tx, filename)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, sql.ErrNoRows) {
 			return domain.TgImage{}, apperr.ErrNotFound
 		}
 
@@ -99,7 +99,6 @@ func (t TgImagesRepository) Get(ctx context.Context, filename string) (domain.Tg
 	}
 
 	return domain.TgImage{
-		ID:       int(tgImage.ID),
 		Filename: tgImage.Filename,
 		TgFileID: tgImage.TgFileID,
 	}, nil
@@ -107,7 +106,6 @@ func (t TgImagesRepository) Get(ctx context.Context, filename string) (domain.Tg
 
 func dtoTgImage(tgImage goqueries.TgImage) domain.TgImage {
 	return domain.TgImage{
-		ID:       int(tgImage.ID),
 		Filename: tgImage.Filename,
 		TgFileID: tgImage.TgFileID,
 	}

@@ -2,10 +2,9 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
-
-	"github.com/jackc/pgx/v5"
 
 	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/internal/domain/apperr"
@@ -28,18 +27,22 @@ func NewBasicTaskRepository(getter *txmanager.Getter) *BasicTaskRepository {
 	}
 }
 
-func (er *BasicTaskRepository) dtoWithTags(bt goqueries.SingleTask, dbTags []goqueries.Tag) domain.BasicTask {
+func (er *BasicTaskRepository) dtoWithTags(bt goqueries.SingleTask, dbTags []goqueries.Tag) (domain.BasicTask, error) {
+	notifParams, err := parseNotificationParams(bt.NotificationParams)
+	if err != nil {
+		return domain.BasicTask{}, fmt.Errorf("parse notification params: %w", err)
+	}
 	basicTask := domain.BasicTask{
 		ID:                 int(bt.ID),
 		UserID:             int(bt.UserID),
 		Text:               bt.Text,
 		Description:        bt.Description.String,
 		Start:              bt.Start,
-		NotificationParams: bt.NotificationParams,
+		NotificationParams: notifParams,
 		Tags:               slice.Dto(dbTags, dtoTag),
 	}
 
-	return basicTask
+	return basicTask, nil
 }
 
 func (er *BasicTaskRepository) Add(ctx context.Context, bt domain.BasicTask) (domain.BasicTask, error) {
@@ -51,7 +54,7 @@ func (er *BasicTaskRepository) Add(ctx context.Context, bt domain.BasicTask) (do
 		Text:               bt.Text,
 		Start:              bt.Start,
 		Description:        sqlconv.NullableString(bt.Description),
-		NotificationParams: bt.NotificationParams,
+		NotificationParams: bt.NotificationParams.JSON(),
 	})
 	if err != nil {
 		return domain.BasicTask{}, fmt.Errorf(op, err)
@@ -80,7 +83,7 @@ func (er *BasicTaskRepository) List(ctx context.Context, userID int, params serv
 		TagIds: slice.Dto(params.TagIDs, func(tagID int) int32 { return int32(tagID) }),
 	})
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
 
@@ -89,9 +92,9 @@ func (er *BasicTaskRepository) List(ctx context.Context, userID int, params serv
 
 	tasksIDs := slice.Dto(dbBasicTasks, func(t goqueries.ListBasicTasksRow) int64 { return t.SingleTask.ID })
 
-	rows, err := er.q.ListTagsForSmths(ctx, tx, tasksIDs)
+	rows, err := listTagsForSmths(ctx, tx, er.q, tasksIDs)
 	if err != nil {
-		if !errors.Is(err, pgx.ErrNoRows) {
+		if !errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("list tags for smths: %w", err)
 		}
 	}
@@ -104,7 +107,11 @@ func (er *BasicTaskRepository) List(ctx context.Context, userID int, params serv
 				tags = append(tags, row.Tag)
 			}
 		}
-		basicTasks = append(basicTasks, er.dtoWithTags(bt.SingleTask, tags))
+		task, err := er.dtoWithTags(bt.SingleTask, tags)
+		if err != nil {
+			return nil, fmt.Errorf("dto with tags: %w", err)
+		}
+		basicTasks = append(basicTasks, task)
 	}
 
 	return basicTasks, nil
@@ -132,7 +139,7 @@ func (er *BasicTaskRepository) Get(ctx context.Context, taskID int) (domain.Basi
 	tx := er.getter.GetTx(ctx)
 	dbBasicTask, err := er.q.GetBasicTask(ctx, tx, int64(taskID))
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, sql.ErrNoRows) {
 			return domain.BasicTask{}, fmt.Errorf("get basic task: %w", apperr.NotFoundError{Object: "basic task"})
 		}
 
@@ -141,12 +148,12 @@ func (er *BasicTaskRepository) Get(ctx context.Context, taskID int) (domain.Basi
 
 	tags, err := er.q.ListTagsForSmth(ctx, tx, int64(taskID))
 	if err != nil {
-		if !errors.Is(err, pgx.ErrNoRows) {
+		if !errors.Is(err, sql.ErrNoRows) {
 			return domain.BasicTask{}, fmt.Errorf("list tags for smth: %w", err)
 		}
 	}
 
-	return er.dtoWithTags(dbBasicTask, tags), nil
+	return er.dtoWithTags(dbBasicTask, tags)
 }
 
 func (er *BasicTaskRepository) Update(ctx context.Context, task domain.BasicTask) error {
@@ -157,7 +164,7 @@ func (er *BasicTaskRepository) Update(ctx context.Context, task domain.BasicTask
 		Start:              task.Start,
 		Text:               task.Text,
 		Description:        sqlconv.NullableString(task.Description),
-		NotificationParams: task.NotificationParams,
+		NotificationParams: task.NotificationParams.JSON(),
 		UserID:             int64(task.UserID),
 	})
 	if err != nil {

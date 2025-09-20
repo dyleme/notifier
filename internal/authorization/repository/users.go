@@ -8,14 +8,13 @@ import (
 	"strings"
 
 	"github.com/jackc/pgerrcode"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/Dyleme/Notifier/internal/authorization/repository/queries/goqueries"
 	"github.com/Dyleme/Notifier/internal/authorization/service"
 	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/internal/domain/apperr"
-	"github.com/Dyleme/Notifier/pkg/database/sqliteconv"
+	"github.com/Dyleme/Notifier/pkg/database/sqlconv"
 )
 
 func (r *Repository) Create(ctx context.Context, input service.CreateUserInput) (domain.User, error) {
@@ -34,7 +33,6 @@ func (r *Repository) Create(ctx context.Context, input service.CreateUserInput) 
 	}
 
 	return domain.User{
-		ID:             int(user.ID),
 		TGID:           int(user.TgID),
 		TimeZoneOffset: 0,
 		IsTimeZoneDST:  false,
@@ -56,10 +54,29 @@ func uniqueError(err error) (string, bool) {
 	return "", false
 }
 
-func (r *Repository) Find(ctx context.Context, nickname string, tgID int) (domain.User, error) {
+func (r *Repository) Get(ctx context.Context, id int) (domain.User, error) {
+	tx := r.getter.GetTx(ctx)
+	user, err := r.q.GetUser(ctx, tx, int64(id))
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return domain.User{}, apperr.ErrNotFound
+		}
+
+		return domain.User{}, fmt.Errorf("find user: %w", err)
+	}
+
+	return domain.User{
+		ID:             int(user.ID),
+		TGID:           int(user.TgID),
+		TimeZoneOffset: int(user.TimezoneOffset),
+		IsTimeZoneDST:  sqlconv.ToBool(user.TimezoneDst),
+	}, nil
+}
+
+func (r *Repository) FindByTgID(ctx context.Context, tgID int) (domain.User, error) {
 	op := "Repository.Find: %w"
 	tx := r.getter.GetTx(ctx)
-	out, err := r.q.FindUser(ctx, tx, int64(tgID))
+	out, err := r.q.FindUserByTgID(ctx, tx, int64(tgID))
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return domain.User{}, fmt.Errorf(op, apperr.ErrNotFound)
@@ -72,7 +89,7 @@ func (r *Repository) Find(ctx context.Context, nickname string, tgID int) (domai
 		ID:             int(out.ID),
 		TGID:           int(out.TgID),
 		TimeZoneOffset: int(out.TimezoneOffset),
-		IsTimeZoneDST:  sqliteconv.ToBool(out.TimezoneDst),
+		IsTimeZoneDST:  sqlconv.ToBool(out.TimezoneDst),
 	}, nil
 }
 
@@ -80,11 +97,11 @@ func (r *Repository) Update(ctx context.Context, user domain.User) error {
 	tx := r.getter.GetTx(ctx)
 	err := r.q.UpdateUser(ctx, tx, goqueries.UpdateUserParams{
 		TimezoneOffset: int64(user.TimeZoneOffset),
-		TimezoneDst:    sqliteconv.BoolToInt(user.IsTimeZoneDST),
+		TimezoneDst:    sqlconv.BoolToInt(user.IsTimeZoneDST),
 		TgID:           int64(user.TGID),
 	})
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, sql.ErrNoRows) {
 			return apperr.NotFoundError{Object: "user"}
 		}
 

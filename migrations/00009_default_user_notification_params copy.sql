@@ -4,8 +4,8 @@
 CREATE TABLE default_user_notification_params (
     user_id INTEGER PRIMARY KEY,
     params JSON NOT NULL,
-    FOREIGN KEY user_id REFERENCES users(id)
-)
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
 -- +goose StatementEnd
 
 -- +goose Down

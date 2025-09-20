@@ -25,7 +25,6 @@ type EventsRepository interface {
 type ListEventsFilterParams struct {
 	TimeBorders model.TimeBorders
 	ListParams  ListParams
-	Tags        []int
 }
 
 func (s *Service) ListEvents(ctx context.Context, userID int, params ListEventsFilterParams) ([]domain.Event, error) {

@@ -7,7 +7,7 @@ CREATE TABLE tags (
   user_id INTEGER NOT NULL,
   FOREIGN KEY (user_id) REFERENCES users(id),
   UNIQUE (name, user_id)
-)
+);
 -- +goose StatementEnd
 
 -- +goose Down

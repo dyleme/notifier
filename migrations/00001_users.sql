@@ -1,12 +1,13 @@
--- +goose Up
--- +goose StatementBegin
-CREATE TABLE users
-(
+-- +goose Up 
+-- +goose StatementBegin 
+CREATE TABLE users ( 
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     tg_id BIGINT NOT NULL,
     timezone_offset INT NOT NULL DEFAULT 0,
     timezone_dst SMALLINT NOT NULL DEFAULT 0
 );
+
+CREATE INDEX users_tg_id_idx ON users(tg_id);
 -- +goose StatementEnd
 
 -- +goose Down
