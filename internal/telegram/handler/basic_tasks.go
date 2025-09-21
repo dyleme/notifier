@@ -53,7 +53,7 @@ func (l *ListTasks) listInline(ctx context.Context, b *bot.Bot, mes *models.Mess
 		return fmt.Errorf(op, err)
 	}
 
-	tasks, err := l.th.serv.ListBasicTasks(ctx, user.ID, service.ListFilterParams{
+	tasks, err := l.th.serv.ListSingleTasks(ctx, user.ID, service.ListFilterParams{
 		ListParams: defaultListParams,
 		TagIDs:     []int{},
 	})
@@ -78,7 +78,7 @@ func (l *ListTasks) listInline(ctx context.Context, b *bot.Bot, mes *models.Mess
 
 	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick())
 	for _, task := range tasks {
-		ec := BasicTask{th: l.th} //nolint:exhaustruct //fill it in ec.HandleBtnTaskChosen
+		ec := SingleTask{th: l.th} //nolint:exhaustruct //fill it in ec.HandleBtnTaskChosen
 		text := task.Text + "\t|\t" + task.Start.In(user.Location()).Format(dayTimeFormat)
 		kbr.Row().Button(text, []byte(strconv.Itoa(task.ID)), errorHandling(ec.HandleBtnTaskChosen))
 	}
@@ -99,8 +99,8 @@ func (l *ListTasks) listInline(ctx context.Context, b *bot.Bot, mes *models.Mess
 
 const notSettedID = -1
 
-func NewTaskCreation(th *TelegramHandler, isWorkflow bool) BasicTask {
-	return BasicTask{
+func NewTaskCreation(th *TelegramHandler, isWorkflow bool) SingleTask {
+	return SingleTask{
 		id:          notSettedID,
 		th:          th,
 		text:        "",
@@ -111,7 +111,7 @@ func NewTaskCreation(th *TelegramHandler, isWorkflow bool) BasicTask {
 	}
 }
 
-type BasicTask struct {
+type SingleTask struct {
 	th          *TelegramHandler
 	id          int
 	text        string
@@ -121,7 +121,7 @@ type BasicTask struct {
 	isWorkflow  bool
 }
 
-func (bt *BasicTask) next(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64,
+func (bt *SingleTask) next(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64,
 	nextFunc func(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) error,
 ) error {
 	op := "SingleTask.next: %w"
@@ -140,11 +140,11 @@ func (bt *BasicTask) next(ctx context.Context, b *bot.Bot, relatedMsgID int, cha
 	return nil
 }
 
-func (bt *BasicTask) isCreation() bool {
+func (bt *SingleTask) isCreation() bool {
 	return bt.id == notSettedID
 }
 
-func (bt *BasicTask) String() string {
+func (bt *SingleTask) String() string {
 	var (
 		dateStr string
 		timeStr string
@@ -166,8 +166,8 @@ func (bt *BasicTask) String() string {
 	return taskStringBuilder.String()
 }
 
-func (bt *BasicTask) EditMenuMsg(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) error {
-	op := "BasicTask.EditMenuMsg: %w"
+func (bt *SingleTask) EditMenuMsg(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) error {
+	op := "SingleTask.EditMenuMsg: %w"
 	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick()).
 		Row().
 		Button("Set text", nil, onSelectErrorHandling(bt.SetTextMsg)).
@@ -199,7 +199,7 @@ func (bt *BasicTask) EditMenuMsg(ctx context.Context, b *bot.Bot, relatedMsgID i
 	return nil
 }
 
-func (bt *BasicTask) SetTextMsg(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) error {
+func (bt *SingleTask) SetTextMsg(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) error {
 	op := "SingleTask.SetTextMsg: %w"
 	_, err := b.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to specify
 		ChatID:    chatID,
@@ -218,7 +218,7 @@ func (bt *BasicTask) SetTextMsg(ctx context.Context, b *bot.Bot, relatedMsgID in
 	return nil
 }
 
-func (bt *BasicTask) HandleMsgSetText(ctx context.Context, b *bot.Bot, msg *models.Message, relatedMsgID int) error {
+func (bt *SingleTask) HandleMsgSetText(ctx context.Context, b *bot.Bot, msg *models.Message, relatedMsgID int) error {
 	op := "SingleTask.HandleMsgSetText: %w"
 	bt.text = msg.Text
 
@@ -240,8 +240,8 @@ func (bt *BasicTask) HandleMsgSetText(ctx context.Context, b *bot.Bot, msg *mode
 	return nil
 }
 
-func (bt *BasicTask) SetDateMsg(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) error {
-	op := "BasicTask.SetDateMsg: %w"
+func (bt *SingleTask) SetDateMsg(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) error {
+	op := "SingleTask.SetDateMsg: %w"
 	user, err := UserFromCtx(ctx)
 	if err != nil {
 		return fmt.Errorf(op, err)
@@ -273,8 +273,8 @@ func (bt *BasicTask) SetDateMsg(ctx context.Context, b *bot.Bot, relatedMsgID in
 	return nil
 }
 
-func (bt *BasicTask) HandleBtnSetDate(ctx context.Context, b *bot.Bot, msg *models.Message, bts []byte) error {
-	op := "BasicTask.HandleBtnSetDate: %w"
+func (bt *SingleTask) HandleBtnSetDate(ctx context.Context, b *bot.Bot, msg *models.Message, bts []byte) error {
+	op := "SingleTask.HandleBtnSetDate: %w"
 
 	if err := bt.handleSetDate(ctx, b, msg.Chat.ID, msg.ID, string(bts)); err != nil {
 		return fmt.Errorf(op, err)
@@ -283,7 +283,7 @@ func (bt *BasicTask) HandleBtnSetDate(ctx context.Context, b *bot.Bot, msg *mode
 	return nil
 }
 
-func (bt *BasicTask) HandleMsgSetDate(ctx context.Context, b *bot.Bot, msg *models.Message, relatedMsgID int) error {
+func (bt *SingleTask) HandleMsgSetDate(ctx context.Context, b *bot.Bot, msg *models.Message, relatedMsgID int) error {
 	op := "SingleTask.HandleMsgSetDate: %w"
 
 	if err := bt.handleSetDate(ctx, b, msg.Chat.ID, relatedMsgID, msg.Text); err != nil {
@@ -301,7 +301,7 @@ func (bt *BasicTask) HandleMsgSetDate(ctx context.Context, b *bot.Bot, msg *mode
 	return nil
 }
 
-func (bt *BasicTask) handleSetDate(ctx context.Context, b *bot.Bot, chatID int64, msgID int, dateStr string) error {
+func (bt *SingleTask) handleSetDate(ctx context.Context, b *bot.Bot, chatID int64, msgID int, dateStr string) error {
 	op := "SingleTask.handleSetDate: %w"
 
 	t, err := parseDate(dateStr)
@@ -320,7 +320,7 @@ func (bt *BasicTask) handleSetDate(ctx context.Context, b *bot.Bot, chatID int64
 	return nil
 }
 
-func (bt *BasicTask) SetTimeMsg(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) error {
+func (bt *SingleTask) SetTimeMsg(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) error {
 	op := "SingleTask.SetTimeMsg: %w"
 	caption := bt.String() + "\n\nEnter time"
 
@@ -340,7 +340,7 @@ func (bt *BasicTask) SetTimeMsg(ctx context.Context, b *bot.Bot, relatedMsgID in
 	return nil
 }
 
-func (bt *BasicTask) HandleMsgSetTime(ctx context.Context, b *bot.Bot, msg *models.Message, relatedMsgID int) error {
+func (bt *SingleTask) HandleMsgSetTime(ctx context.Context, b *bot.Bot, msg *models.Message, relatedMsgID int) error {
 	op := "SingleTask.HandleMsgSetTime: %w"
 	user, err := UserFromCtx(ctx)
 	if err != nil {
@@ -371,7 +371,7 @@ func (bt *BasicTask) HandleMsgSetTime(ctx context.Context, b *bot.Bot, msg *mode
 	return nil
 }
 
-func (bt *BasicTask) SetDescription(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) error {
+func (bt *SingleTask) SetDescription(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) error {
 	op := "SingleTask.SetDescription: %w"
 	caption := bt.String() + "\n\nEnter description"
 
@@ -391,7 +391,7 @@ func (bt *BasicTask) SetDescription(ctx context.Context, b *bot.Bot, relatedMsgI
 	return nil
 }
 
-func (bt *BasicTask) HandleMsgSetDescription(ctx context.Context, b *bot.Bot, msg *models.Message, relatedMsgID int) error {
+func (bt *SingleTask) HandleMsgSetDescription(ctx context.Context, b *bot.Bot, msg *models.Message, relatedMsgID int) error {
 	op := "SingleTask.HandleMsgSetDescription: %w"
 
 	bt.description = msg.Text
@@ -415,7 +415,7 @@ func (bt *BasicTask) HandleMsgSetDescription(ctx context.Context, b *bot.Bot, ms
 
 var ErrTimeInPast = errors.New("time is in past")
 
-func (bt *BasicTask) CreateInline(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
+func (bt *SingleTask) CreateInline(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
 	op := "SingleTask.CreateInline: %w"
 	user, err := UserFromCtx(ctx)
 	if err != nil {
@@ -427,7 +427,7 @@ func (bt *BasicTask) CreateInline(ctx context.Context, b *bot.Bot, msg *models.M
 		return fmt.Errorf(op, ErrTimeInPast)
 	}
 
-	task := domain.BasicTask{ //nolint:exhaustruct // don't know id on creation
+	task := domain.SingleTask{ //nolint:exhaustruct // don't know id on creation
 		UserID:             user.ID,
 		Text:               bt.text,
 		Description:        bt.description,
@@ -435,7 +435,7 @@ func (bt *BasicTask) CreateInline(ctx context.Context, b *bot.Bot, msg *models.M
 		NotificationParams: domain.NotificationParams{},
 	}
 
-	_, err = bt.th.serv.CreateBasicTask(ctx, task)
+	_, err = bt.th.serv.CreateSingleTask(ctx, task)
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}
@@ -448,7 +448,7 @@ func (bt *BasicTask) CreateInline(ctx context.Context, b *bot.Bot, msg *models.M
 	return nil
 }
 
-func (bt *BasicTask) UpdateInline(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
+func (bt *SingleTask) UpdateInline(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
 	op := "SingleTask.UpdateInline: %w"
 	user, err := UserFromCtx(ctx)
 	if err != nil {
@@ -457,7 +457,7 @@ func (bt *BasicTask) UpdateInline(ctx context.Context, b *bot.Bot, msg *models.M
 
 	t := bt.date.Add(bt.time.Sub(bt.time.Truncate(timeDay)))
 
-	_, err = bt.th.serv.UpdateBasicTask(ctx, domain.BasicTask{
+	_, err = bt.th.serv.UpdateSingleTask(ctx, domain.SingleTask{
 		ID:                 bt.id,
 		Text:               bt.text,
 		UserID:             user.ID,
@@ -479,14 +479,14 @@ func (bt *BasicTask) UpdateInline(ctx context.Context, b *bot.Bot, msg *models.M
 	return nil
 }
 
-func (bt *BasicTask) DeleteInline(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
+func (bt *SingleTask) DeleteInline(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
 	op := "SingleTask.DeleteInline: %w"
 	user, err := UserFromCtx(ctx)
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}
 
-	err = bt.th.serv.DeleteBasicTask(ctx, user.ID, bt.id)
+	err = bt.th.serv.DeleteSingleTask(ctx, user.ID, bt.id)
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}
@@ -499,7 +499,7 @@ func (bt *BasicTask) DeleteInline(ctx context.Context, b *bot.Bot, msg *models.M
 	return nil
 }
 
-func (bt *BasicTask) HandleBtnTaskChosen(ctx context.Context, b *bot.Bot, msg *models.Message, btsTaskID []byte) error {
+func (bt *SingleTask) HandleBtnTaskChosen(ctx context.Context, b *bot.Bot, msg *models.Message, btsTaskID []byte) error {
 	op := "TaskEdit.TaskChosen: %w"
 	user, err := UserFromCtx(ctx)
 	if err != nil {
@@ -511,7 +511,7 @@ func (bt *BasicTask) HandleBtnTaskChosen(ctx context.Context, b *bot.Bot, msg *m
 		return fmt.Errorf(op, err)
 	}
 
-	task, err := bt.th.serv.GetBasicTask(ctx, user.ID, taskID)
+	task, err := bt.th.serv.GetSingleTask(ctx, user.ID, taskID)
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}

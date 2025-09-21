@@ -1,12 +1,17 @@
 package domain
 
-import "github.com/Dyleme/Notifier/internal/domain/apperr"
+import (
+	"time"
+
+	"github.com/Dyleme/Notifier/internal/domain/apperr"
+)
 
 type User struct {
-	ID             int
-	TGID           int
-	TimeZoneOffset int
-	IsTimeZoneDST  bool
+	ID                        int
+	TGID                      int
+	TimeZoneOffset            int
+	IsTimeZoneDST             bool
+	DefaultNotificationPeriod time.Duration
 }
 
 type TimeZoneOffset int

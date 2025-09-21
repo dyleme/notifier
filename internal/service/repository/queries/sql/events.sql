@@ -1,20 +1,11 @@
 -- name: AddEvent :one
 INSERT INTO events (
-    user_id,
-    text,
-    task_id,
-    task_type,
-    next_send, 
-    notification_params,
-    first_send
+  task_id,
+  done,
+  original_sending,
+  next_sending
 ) VALUES (
-    @user_id,
-    @text,
-    @task_id,
-    @task_type,
-    @next_send,
-    @notification_params,
-    @next_send
+  ?,?,?,?
 ) RETURNING *;
 
 -- name: GetEvent :one
@@ -24,21 +15,18 @@ WHERE id = @id;
 -- name: GetLatestEvent :one
 SELECT * FROM events
 WHERE task_id = @task_id
-  AND task_type = @task_type
 ORDER BY next_send DESC
 LIMIT 1;
   
 -- name: ListUserEvents :many
-SELECT DISTINCT sqlc.embed(e) 
+SELECT DISTINCT e.*
 FROM events as e
-LEFT JOIN smth2tags as s2t
-  ON e.id = s2t.smth_id
-LEFT JOIN tags as t
-  ON s2t.tag_id = t.id
-WHERE e.user_id = ?
-  AND next_send <= @to_time
-  AND next_send >= @from_time
-ORDER BY next_send DESC
+JOIN tasks as t
+ON e.task_id = t.id
+WHERE t.user_id = ?
+  AND next_sending <= @to_time
+  AND next_sending >= @from_time
+ORDER BY next_sending DESC
 LIMIT ? OFFSET ?;
 
 -- name: DeleteEvent :many
@@ -48,35 +36,28 @@ RETURNING *;
 
 -- name: UpdateEvent :one
 UPDATE events
-SET text = @text,
-    next_send = @next_send,
-    first_send = @first_send,
-    done = @done
-WHERE id = @id
+SET
+  next_sending     = ?,
+  original_sending = ?,
+  done             = ?
+WHERE 
+  id = ?
 RETURNING *;
 
 -- name: ListNotSendedEvents :many
 SELECT * FROM events
-WHERE next_send <= @till
+WHERE next_sending <= @till
   AND done = 0
   AND notify = 1;
 
 -- name: GetNearestEventTime :one
-SELECT next_send FROM events
+SELECT next_sending FROM events
 WHERE done = 0
   AND notify = 1 
-ORDER BY next_send ASC
+ORDER BY next_sending ASC
 LIMIT 1;
 
--- name: ListUserDailyEvents :many
-SELECT * FROM events
-WHERE user_id = @user_id
-  AND datetime(next_send, @time_offset) BETWEEN date('now') AND date('now', '+1 day')
-ORDER BY next_send ASC;
-
--- name: ListNotDoneEvents :many
-SELECT * FROM events
-WHERE user_id = @user_id
-  AND done = 0
-  AND next_send < datetime('now')
-ORDER BY next_send ASC;
+-- name: RescheduleEvent :exec
+UPDATE events
+SET next_sending = ?
+WHERE id = ?;

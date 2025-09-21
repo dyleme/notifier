@@ -4,37 +4,23 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/internal/domain/apperr"
-	"github.com/Dyleme/Notifier/pkg/database/txmanager"
 )
 
 // UserRepo is an interface which provides methods to implement with repository.
 type UserRepo interface {
 	Get(ctx context.Context, id int) (domain.User, error)
-	Create(ctx context.Context, input CreateUserInput) (user domain.User, err error)
+	Create(ctx context.Context, user domain.User) (domain.User, error)
 	FindByTgID(ctx context.Context, tgID int) (domain.User, error)
 	Update(ctx context.Context, user domain.User) error
 }
 
-// AuthService struct provides the ability to create user and validate it.
-type AuthService struct {
-	repo UserRepo
-	tr   *txmanager.TxManager
-}
-
-// NewAuth is the constructor to the AuthService.
-func NewAuth(repo UserRepo, tr *txmanager.TxManager) *AuthService {
-	return &AuthService{
-		repo: repo,
-		tr:   tr,
-	}
-}
-
-func (s *AuthService) GetTGUserInfo(ctx context.Context, tgID int) (domain.User, error) {
+func (s *Service) GetTGUserInfo(ctx context.Context, tgID int) (domain.User, error) {
 	op := "AuthService.GetTGUserInfo: %w"
-	user, err := s.repo.FindByTgID(ctx, tgID)
+	user, err := s.repos.users.FindByTgID(ctx, tgID)
 	if err != nil {
 		if errors.Is(err, apperr.ErrNotFound) {
 			return domain.User{}, apperr.NotFoundError{Object: "user"}
@@ -45,18 +31,10 @@ func (s *AuthService) GetTGUserInfo(ctx context.Context, tgID int) (domain.User,
 	return user, nil
 }
 
-type CreateUserInput struct {
-	TGNickname string
-	TGID       int
-}
-
-func (s *AuthService) CreateUser(ctx context.Context, input CreateUserInput) (domain.User, error) {
-	var user domain.User
+func (s *Service) CreateUser(ctx context.Context, user domain.User) (domain.User, error) {
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		var err error
-		user, err = s.repo.Create(ctx, CreateUserInput{
-			TGNickname: input.TGNickname, TGID: input.TGID,
-		})
+		user, err = s.repos.users.Create(ctx, user)
 		if err != nil {
 			return fmt.Errorf("create user: %w", err)
 		}
@@ -72,20 +50,42 @@ func (s *AuthService) CreateUser(ctx context.Context, input CreateUserInput) (do
 
 var ErrInvalidOffset = errors.New("invalid offset")
 
-func (s *AuthService) UpdateUserTime(ctx context.Context, id int, tzOffset domain.TimeZoneOffset, isDst bool) error {
+func (s *Service) UpdateUserTime(ctx context.Context, id int, tzOffset domain.TimeZoneOffset, isDst bool) error {
 	if err := tzOffset.Valid(); err != nil {
 		return fmt.Errorf("invalid offset: %w", err)
 	}
 
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
-		user, err := s.repo.Get(ctx, id)
+		user, err := s.repos.users.Get(ctx, id)
 		if err != nil {
 			return fmt.Errorf("get user id[%v]: %w", id, err)
 		}
 		user.IsTimeZoneDST = isDst
 		user.TimeZoneOffset = int(tzOffset)
 
-		err = s.repo.Update(ctx, user)
+		err = s.repos.users.Update(ctx, user)
+		if err != nil {
+			return fmt.Errorf("update user: %w", err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("tr: %w", err)
+	}
+
+	return nil
+}
+
+func (s *Service) SetDefaultNotificatinPeriod(ctx context.Context, period time.Duration, userID int) error {
+	err := s.tr.Do(ctx, func(ctx context.Context) error {
+		user, err := s.repos.users.Get(ctx, userID)
+		if err != nil {
+			return fmt.Errorf("get user: %w", err)
+		}
+
+		user.DefaultNotificationPeriod = period
+		err = s.repos.users.Update(ctx, user)
 		if err != nil {
 			return fmt.Errorf("update user: %w", err)
 		}

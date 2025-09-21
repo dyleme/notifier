@@ -1,8 +1,0 @@
-package: api
-generate:
-  chi-server: true
-  models: true
-output: ./internal/authorization/handler/api/authapi.gen.go
-output-options:
-  include-tags:
-    - Authentication

@@ -6,12 +6,10 @@ import (
 )
 
 type repositories struct {
-	periodicTasks             PeriodicTasksRepository
-	basicTasks                BasicTaskRepository
-	tgImages                  TgImagesRepository
-	events                    EventsRepository
-	defaultNotificationParams DefaultNotificationParamsRepository
-	tags                      TagsRepository
+	users    UserRepo
+	tasks    TaskRepository
+	tgImages TgImagesRepository
+	events   EventsRepository
 }
 
 type Service struct {
@@ -29,23 +27,19 @@ type TxManager interface {
 }
 
 func New(
-	periodicTasks PeriodicTasksRepository,
-	basicTasks BasicTaskRepository,
+	users UserRepo,
+	tasks TaskRepository,
 	tgImages TgImagesRepository,
 	events EventsRepository,
-	defaultNotificationParams DefaultNotificationParamsRepository,
-	tags TagsRepository,
 	trManger TxManager,
 	notifierJob NotifierJob,
 ) *Service {
 	s := &Service{
 		repos: repositories{
-			periodicTasks:             periodicTasks,
-			basicTasks:                basicTasks,
-			tgImages:                  tgImages,
-			events:                    events,
-			defaultNotificationParams: defaultNotificationParams,
-			tags:                      tags,
+			users:    users,
+			tasks:    tasks,
+			tgImages: tgImages,
+			events:   events,
 		},
 		notifierJob: notifierJob,
 		tr:          trManger,

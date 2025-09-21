@@ -9,8 +9,6 @@ import (
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 	inKbr "github.com/go-telegram/ui/keyboard/inline"
-
-	"github.com/Dyleme/Notifier/internal/domain"
 )
 
 func (th *TelegramHandler) SettingsInline(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
@@ -18,7 +16,6 @@ func (th *TelegramHandler) SettingsInline(ctx context.Context, b *bot.Bot, msg *
 
 	timezoneSetting := &TimezoneSettings{th: th, zone: 0, isDST: false}
 	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick()).
-		Row().Button("Events", nil, errorHandling(th.EventMenu)).
 		Row().Button("Timezone", nil, errorHandling(timezoneSetting.CurrentTime))
 
 	_, err := b.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to fill
@@ -226,56 +223,4 @@ func absDur(d time.Duration) time.Duration {
 	}
 
 	return -d
-}
-
-func (th *TelegramHandler) EventMenu(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
-	op := "TelegramHandler.EventMenu: %w"
-
-	enableEvents := EnableEvents{th: th}
-	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick()).
-		Row().Button("Enable", nil, errorHandling(enableEvents.EnableInline))
-
-	_, err := b.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to fill
-		ChatID:      msg.Chat.ID,
-		MessageID:   msg.ID,
-		Caption:     "Events",
-		ReplyMarkup: kbr,
-	})
-	if err != nil {
-		return fmt.Errorf(op, err)
-	}
-
-	return nil
-}
-
-type EnableEvents struct {
-	th *TelegramHandler
-}
-
-const defaultEventPeriod = 5 * time.Minute
-
-func (en *EnableEvents) EnableInline(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
-	op := "TimezoneSettings.EnableInline: %w"
-	user, err := UserFromCtx(ctx)
-	if err != nil {
-		return fmt.Errorf(op, err)
-	}
-
-	_, err = en.th.serv.SetDefaultNotificationParams(ctx, domain.NotificationParams{
-		Period: defaultEventPeriod,
-		Params: domain.Params{
-			Telegram: int(msg.Chat.ID),
-			Webhook:  "",
-			Cmd:      "",
-		},
-	}, user.ID)
-	if err != nil {
-		return fmt.Errorf(op, err)
-	}
-
-	if err = en.th.MainMenuWithText(ctx, b, msg, "Events enabled"); err != nil {
-		return fmt.Errorf(op, err)
-	}
-
-	return nil
 }

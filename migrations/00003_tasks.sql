@@ -1,22 +1,21 @@
 
 -- +goose Up
 -- +goose StatementBegin
-CREATE TABLE periodic_tasks
+CREATE TABLE tasks
 (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     created_at DATETIME NOT NULL DEFAULT (datetime('now')),
-    text VARCHAR(250) NOT NULL,
-    description VARCHAR(250),
+    text TEXT NOT NULL,
+    description TEXT NOT NULL,
     user_id INTEGER NOT NULL,
-    start DATETIME NOT NULL,
-    smallest_period INTEGER NOT NULL,
-    biggest_period INTEGER NOT NULL,
-    notification_params JSON,
+    type TEXT NOT NULL,
+    start TEXT NOT NULL,
+    event_creation_params JSONB NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE periodic_tasks;
+DROP TABLE tasks;
 -- +goose StatementEnd

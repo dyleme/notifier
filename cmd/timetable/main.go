@@ -55,7 +55,7 @@ func main() { //nolint:funlen // main can be long
 	)
 	svc := service.New(
 		repository.NewPeriodicTaskRepository(txGetter),
-		repository.NewBasicTaskRepository(txGetter),
+		repository.NewSingleTaskRepository(txGetter),
 		repository.NewTGImagesRepository(txGetter, cache),
 		repository.NewEventsRepository(txGetter),
 		repository.NewDefaultNotificationParamsRepository(txGetter),

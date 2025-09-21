@@ -7,7 +7,6 @@ import (
 
 	"github.com/Dyleme/timecache"
 
-	"github.com/Dyleme/Notifier/internal/authorization/service"
 	"github.com/Dyleme/Notifier/internal/domain"
 )
 
@@ -18,7 +17,7 @@ type UserRepoCache struct {
 
 type UserRepo interface {
 	GetTGUserInfo(ctx context.Context, tgID int) (domain.User, error)
-	CreateUser(ctx context.Context, input service.CreateUserInput) (domain.User, error)
+	Create(ctx context.Context, user domain.User) (domain.User, error)
 	UpdateUserTime(ctx context.Context, id int, timezone domain.TimeZoneOffset, isDst bool) error
 }
 
@@ -67,25 +66,32 @@ func (u *UserRepoCache) GetUserInfo(ctx context.Context, tgID int) (User, error)
 	return userID, nil
 }
 
-func (u *UserRepoCache) AddUser(ctx context.Context, tgID int, nickname string) (User, error) {
-	domainUser, err := u.userRepo.CreateUser(ctx, service.CreateUserInput{
-		TGNickname: nickname,
-		TGID:       tgID,
-	})
+const (
+	defaultNotificationPeriod = 5 * time.Minute
+)
+
+func (u *UserRepoCache) AddUser(ctx context.Context, tgID int) (User, error) {
+	user := domain.User{
+		TGID:                      tgID,
+		TimeZoneOffset:            3,
+		IsTimeZoneDST:             false,
+		DefaultNotificationPeriod: defaultNotificationPeriod,
+	}
+	user, err := u.userRepo.Create(ctx, user)
 	if err != nil {
 		return User{}, fmt.Errorf("repo create: %w", err)
 	}
 
-	user := User{
-		TGID:  domainUser.TGID,
-		ID:    domainUser.ID,
-		Zone:  domainUser.TimeZoneOffset,
-		IsDST: domainUser.IsTimeZoneDST,
+	cacheUser := User{
+		TGID:  user.TGID,
+		ID:    user.ID,
+		Zone:  user.TimeZoneOffset,
+		IsDST: user.IsTimeZoneDST,
 	}
 
-	u.cache.StoreDefDur(tgID, user)
+	u.cache.StoreDefDur(tgID, cacheUser)
 
-	return user, nil
+	return cacheUser, nil
 }
 
 func (u *UserRepoCache) UpdateUserTime(ctx context.Context, tgID, tzOffset int, isDST bool) error {

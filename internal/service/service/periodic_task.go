@@ -1,0 +1,72 @@
+package service
+
+import (
+	"context"
+	"fmt"
+	"log/slog"
+	"time"
+
+	"github.com/Dyleme/Notifier/internal/domain"
+	"github.com/Dyleme/Notifier/pkg/log"
+	"github.com/Dyleme/Notifier/pkg/utils/slice"
+)
+
+func (s *Service) CreatePeriodicTask(ctx context.Context, perTask domain.PeriodicTask, userID int) error {
+	log.Ctx(ctx).Debug("creating periodic task", slog.Any("periodic task", perTask))
+
+	createdEvent := perTask.NewEvent(time.Now())
+
+	err := s.tr.Do(ctx, func(ctx context.Context) error {
+		return s.addTask(ctx, perTask.Task, createdEvent)
+	})
+	if err != nil {
+		return fmt.Errorf("tr: %w", err)
+	}
+
+	return nil
+}
+
+func (s *Service) GetPeriodicTask(ctx context.Context, taskID, userID int) (domain.PeriodicTask, error) {
+	log.Ctx(ctx).Debug("getting periodic task", "taskID", taskID)
+	task, err := s.repos.tasks.Get(ctx, taskID, userID)
+	if err != nil {
+		return domain.PeriodicTask{}, fmt.Errorf("get[taskID=%v]: %w", taskID, err)
+	}
+
+	return domain.PeriodictaskFromTask(task)
+}
+
+func (s *Service) ListPeriodicTasks(ctx context.Context, userID int, params ListParams) ([]domain.PeriodicTask, error) {
+	tasks, err := s.repos.tasks.List(ctx, userID, params)
+	if err != nil {
+		return nil, fmt.Errorf("list tasks userID[%v]: %w", userID, err)
+	}
+
+	periodicTasks, err := slice.DtoError(tasks, domain.PeriodictaskFromTask)
+	if err != nil {
+		return nil, fmt.Errorf("periodic task from task: %w", err)
+	}
+
+	return periodicTasks, nil
+}
+
+func (s *Service) UpdatePeriodicTask(ctx context.Context, perTask domain.PeriodicTask, userID int) error {
+	log.Ctx(ctx).Debug("updating periodic task", "task", perTask, "userID", userID)
+
+	updatedEvent := perTask.NewEvent(time.Now())
+	err := s.tr.Do(ctx, func(ctx context.Context) error {
+		err := s.updateTask(ctx, perTask.Task, updatedEvent)
+		if err != nil {
+			return fmt.Errorf("update task: %w", err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("tr: %w", err)
+	}
+
+	s.notifierJob.UpdateWithTime(ctx, updatedEvent.OriginalSending)
+
+	return nil
+}

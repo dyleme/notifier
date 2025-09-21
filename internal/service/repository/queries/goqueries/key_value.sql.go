@@ -7,6 +7,7 @@ package goqueries
 
 import (
 	"context"
+	"encoding/json"
 )
 
 const deleteValue = `-- name: DeleteValue :exec
@@ -26,9 +27,9 @@ FROM key_value
 WHERE key = ?1
 `
 
-func (q *Queries) GetValue(ctx context.Context, db DBTX, key string) ([]byte, error) {
+func (q *Queries) GetValue(ctx context.Context, db DBTX, key string) (json.RawMessage, error) {
 	row := db.QueryRowContext(ctx, getValue, key)
-	var value []byte
+	var value json.RawMessage
 	err := row.Scan(&value)
 	return value, err
 }
@@ -43,8 +44,8 @@ SET value = @value
 `
 
 type SetValueParams struct {
-	Key   string `db:"key"`
-	Value []byte `db:"value"`
+	Key   string          `db:"key"`
+	Value json.RawMessage `db:"value"`
 }
 
 func (q *Queries) SetValue(ctx context.Context, db DBTX, arg SetValueParams) error {

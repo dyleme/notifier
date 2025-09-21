@@ -12,56 +12,37 @@ import (
 
 const addEvent = `-- name: AddEvent :one
 INSERT INTO events (
-    user_id,
-    text,
-    task_id,
-    task_type,
-    next_send, 
-    notification_params,
-    first_send
+  task_id,
+  done,
+  original_sending,
+  next_sending
 ) VALUES (
-    ?1,
-    ?2,
-    ?3,
-    ?4,
-    ?5,
-    ?6,
-    ?5
-) RETURNING id, created_at, user_id, text, description, task_id, task_type, next_send, first_send, done, notify, notification_params
+  ?,?,?,?
+) RETURNING id, created_at, task_id, next_sending, original_sending, done
 `
 
 type AddEventParams struct {
-	UserID             int64     `db:"user_id"`
-	Text               string    `db:"text"`
-	TaskID             int64     `db:"task_id"`
-	TaskType           string    `db:"task_type"`
-	NextSend           time.Time `db:"next_send"`
-	NotificationParams []byte    `db:"notification_params"`
+	TaskID          int64     `db:"task_id"`
+	Done            int64     `db:"done"`
+	OriginalSending time.Time `db:"original_sending"`
+	NextSending     time.Time `db:"next_sending"`
 }
 
 func (q *Queries) AddEvent(ctx context.Context, db DBTX, arg AddEventParams) (Event, error) {
 	row := db.QueryRowContext(ctx, addEvent,
-		arg.UserID,
-		arg.Text,
 		arg.TaskID,
-		arg.TaskType,
-		arg.NextSend,
-		arg.NotificationParams,
+		arg.Done,
+		arg.OriginalSending,
+		arg.NextSending,
 	)
 	var i Event
 	err := row.Scan(
 		&i.ID,
 		&i.CreatedAt,
-		&i.UserID,
-		&i.Text,
-		&i.Description,
 		&i.TaskID,
-		&i.TaskType,
-		&i.NextSend,
-		&i.FirstSend,
+		&i.NextSending,
+		&i.OriginalSending,
 		&i.Done,
-		&i.Notify,
-		&i.NotificationParams,
 	)
 	return i, err
 }
@@ -69,7 +50,7 @@ func (q *Queries) AddEvent(ctx context.Context, db DBTX, arg AddEventParams) (Ev
 const deleteEvent = `-- name: DeleteEvent :many
 DELETE FROM events
 WHERE id = ?1
-RETURNING id, created_at, user_id, text, description, task_id, task_type, next_send, first_send, done, notify, notification_params
+RETURNING id, created_at, task_id, next_sending, original_sending, done
 `
 
 func (q *Queries) DeleteEvent(ctx context.Context, db DBTX, id int64) ([]Event, error) {
@@ -84,16 +65,10 @@ func (q *Queries) DeleteEvent(ctx context.Context, db DBTX, id int64) ([]Event, 
 		if err := rows.Scan(
 			&i.ID,
 			&i.CreatedAt,
-			&i.UserID,
-			&i.Text,
-			&i.Description,
 			&i.TaskID,
-			&i.TaskType,
-			&i.NextSend,
-			&i.FirstSend,
+			&i.NextSending,
+			&i.OriginalSending,
 			&i.Done,
-			&i.Notify,
-			&i.NotificationParams,
 		); err != nil {
 			return nil, err
 		}
@@ -109,7 +84,7 @@ func (q *Queries) DeleteEvent(ctx context.Context, db DBTX, id int64) ([]Event, 
 }
 
 const getEvent = `-- name: GetEvent :one
-SELECT id, created_at, user_id, text, description, task_id, task_type, next_send, first_send, done, notify, notification_params FROM events
+SELECT id, created_at, task_id, next_sending, original_sending, done FROM events
 WHERE id = ?1
 `
 
@@ -119,115 +94,53 @@ func (q *Queries) GetEvent(ctx context.Context, db DBTX, id int64) (Event, error
 	err := row.Scan(
 		&i.ID,
 		&i.CreatedAt,
-		&i.UserID,
-		&i.Text,
-		&i.Description,
 		&i.TaskID,
-		&i.TaskType,
-		&i.NextSend,
-		&i.FirstSend,
+		&i.NextSending,
+		&i.OriginalSending,
 		&i.Done,
-		&i.Notify,
-		&i.NotificationParams,
 	)
 	return i, err
 }
 
 const getLatestEvent = `-- name: GetLatestEvent :one
-SELECT id, created_at, user_id, text, description, task_id, task_type, next_send, first_send, done, notify, notification_params FROM events
+SELECT id, created_at, task_id, next_sending, original_sending, done FROM events
 WHERE task_id = ?1
-  AND task_type = ?2
 ORDER BY next_send DESC
 LIMIT 1
 `
 
-type GetLatestEventParams struct {
-	TaskID   int64  `db:"task_id"`
-	TaskType string `db:"task_type"`
-}
-
-func (q *Queries) GetLatestEvent(ctx context.Context, db DBTX, arg GetLatestEventParams) (Event, error) {
-	row := db.QueryRowContext(ctx, getLatestEvent, arg.TaskID, arg.TaskType)
+func (q *Queries) GetLatestEvent(ctx context.Context, db DBTX, taskID int64) (Event, error) {
+	row := db.QueryRowContext(ctx, getLatestEvent, taskID)
 	var i Event
 	err := row.Scan(
 		&i.ID,
 		&i.CreatedAt,
-		&i.UserID,
-		&i.Text,
-		&i.Description,
 		&i.TaskID,
-		&i.TaskType,
-		&i.NextSend,
-		&i.FirstSend,
+		&i.NextSending,
+		&i.OriginalSending,
 		&i.Done,
-		&i.Notify,
-		&i.NotificationParams,
 	)
 	return i, err
 }
 
 const getNearestEventTime = `-- name: GetNearestEventTime :one
-SELECT next_send FROM events
+SELECT next_sending FROM events
 WHERE done = 0
   AND notify = 1 
-ORDER BY next_send ASC
+ORDER BY next_sending ASC
 LIMIT 1
 `
 
 func (q *Queries) GetNearestEventTime(ctx context.Context, db DBTX) (time.Time, error) {
 	row := db.QueryRowContext(ctx, getNearestEventTime)
-	var next_send time.Time
-	err := row.Scan(&next_send)
-	return next_send, err
-}
-
-const listNotDoneEvents = `-- name: ListNotDoneEvents :many
-SELECT id, created_at, user_id, text, description, task_id, task_type, next_send, first_send, done, notify, notification_params FROM events
-WHERE user_id = ?1
-  AND done = 0
-  AND next_send < datetime('now')
-ORDER BY next_send ASC
-`
-
-func (q *Queries) ListNotDoneEvents(ctx context.Context, db DBTX, userID int64) ([]Event, error) {
-	rows, err := db.QueryContext(ctx, listNotDoneEvents, userID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Event
-	for rows.Next() {
-		var i Event
-		if err := rows.Scan(
-			&i.ID,
-			&i.CreatedAt,
-			&i.UserID,
-			&i.Text,
-			&i.Description,
-			&i.TaskID,
-			&i.TaskType,
-			&i.NextSend,
-			&i.FirstSend,
-			&i.Done,
-			&i.Notify,
-			&i.NotificationParams,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+	var next_sending time.Time
+	err := row.Scan(&next_sending)
+	return next_sending, err
 }
 
 const listNotSendedEvents = `-- name: ListNotSendedEvents :many
-SELECT id, created_at, user_id, text, description, task_id, task_type, next_send, first_send, done, notify, notification_params FROM events
-WHERE next_send <= ?1
+SELECT id, created_at, task_id, next_sending, original_sending, done FROM events
+WHERE next_sending <= ?1
   AND done = 0
   AND notify = 1
 `
@@ -244,64 +157,10 @@ func (q *Queries) ListNotSendedEvents(ctx context.Context, db DBTX, till time.Ti
 		if err := rows.Scan(
 			&i.ID,
 			&i.CreatedAt,
-			&i.UserID,
-			&i.Text,
-			&i.Description,
 			&i.TaskID,
-			&i.TaskType,
-			&i.NextSend,
-			&i.FirstSend,
+			&i.NextSending,
+			&i.OriginalSending,
 			&i.Done,
-			&i.Notify,
-			&i.NotificationParams,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listUserDailyEvents = `-- name: ListUserDailyEvents :many
-SELECT id, created_at, user_id, text, description, task_id, task_type, next_send, first_send, done, notify, notification_params FROM events
-WHERE user_id = ?1
-  AND datetime(next_send, ?2) BETWEEN date('now') AND date('now', '+1 day')
-ORDER BY next_send ASC
-`
-
-type ListUserDailyEventsParams struct {
-	UserID     int64       `db:"user_id"`
-	TimeOffset interface{} `db:"time_offset"`
-}
-
-func (q *Queries) ListUserDailyEvents(ctx context.Context, db DBTX, arg ListUserDailyEventsParams) ([]Event, error) {
-	rows, err := db.QueryContext(ctx, listUserDailyEvents, arg.UserID, arg.TimeOffset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Event
-	for rows.Next() {
-		var i Event
-		if err := rows.Scan(
-			&i.ID,
-			&i.CreatedAt,
-			&i.UserID,
-			&i.Text,
-			&i.Description,
-			&i.TaskID,
-			&i.TaskType,
-			&i.NextSend,
-			&i.FirstSend,
-			&i.Done,
-			&i.Notify,
-			&i.NotificationParams,
 		); err != nil {
 			return nil, err
 		}
@@ -317,16 +176,14 @@ func (q *Queries) ListUserDailyEvents(ctx context.Context, db DBTX, arg ListUser
 }
 
 const listUserEvents = `-- name: ListUserEvents :many
-SELECT DISTINCT e.id, e.created_at, e.user_id, e.text, e.description, e.task_id, e.task_type, e.next_send, e.first_send, e.done, e.notify, e.notification_params 
+SELECT DISTINCT e.id, e.created_at, e.task_id, e.next_sending, e.original_sending, e.done
 FROM events as e
-LEFT JOIN smth2tags as s2t
-  ON e.id = s2t.smth_id
-LEFT JOIN tags as t
-  ON s2t.tag_id = t.id
-WHERE e.user_id = ?
-  AND next_send <= ?
-  AND next_send >= ?
-ORDER BY next_send DESC
+JOIN tasks as t
+ON e.task_id = t.id
+WHERE t.user_id = ?
+  AND next_sending <= ?
+  AND next_sending >= ?
+ORDER BY next_sending DESC
 LIMIT ? OFFSET ?
 `
 
@@ -338,11 +195,7 @@ type ListUserEventsParams struct {
 	Offset   int64     `db:"offset"`
 }
 
-type ListUserEventsRow struct {
-	Event Event `db:"event"`
-}
-
-func (q *Queries) ListUserEvents(ctx context.Context, db DBTX, arg ListUserEventsParams) ([]ListUserEventsRow, error) {
+func (q *Queries) ListUserEvents(ctx context.Context, db DBTX, arg ListUserEventsParams) ([]Event, error) {
 	rows, err := db.QueryContext(ctx, listUserEvents,
 		arg.UserID,
 		arg.ToTime,
@@ -354,22 +207,16 @@ func (q *Queries) ListUserEvents(ctx context.Context, db DBTX, arg ListUserEvent
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListUserEventsRow
+	var items []Event
 	for rows.Next() {
-		var i ListUserEventsRow
+		var i Event
 		if err := rows.Scan(
-			&i.Event.ID,
-			&i.Event.CreatedAt,
-			&i.Event.UserID,
-			&i.Event.Text,
-			&i.Event.Description,
-			&i.Event.TaskID,
-			&i.Event.TaskType,
-			&i.Event.NextSend,
-			&i.Event.FirstSend,
-			&i.Event.Done,
-			&i.Event.Notify,
-			&i.Event.NotificationParams,
+			&i.ID,
+			&i.CreatedAt,
+			&i.TaskID,
+			&i.NextSending,
+			&i.OriginalSending,
+			&i.Done,
 		); err != nil {
 			return nil, err
 		}
@@ -384,29 +231,44 @@ func (q *Queries) ListUserEvents(ctx context.Context, db DBTX, arg ListUserEvent
 	return items, nil
 }
 
+const rescheduleEvent = `-- name: RescheduleEvent :exec
+UPDATE events
+SET next_sending = ?
+WHERE id = ?
+`
+
+type RescheduleEventParams struct {
+	NextSending time.Time `db:"next_sending"`
+	ID          int64     `db:"id"`
+}
+
+func (q *Queries) RescheduleEvent(ctx context.Context, db DBTX, arg RescheduleEventParams) error {
+	_, err := db.ExecContext(ctx, rescheduleEvent, arg.NextSending, arg.ID)
+	return err
+}
+
 const updateEvent = `-- name: UpdateEvent :one
 UPDATE events
-SET text = ?1,
-    next_send = ?2,
-    first_send = ?3,
-    done = ?4
-WHERE id = ?5
-RETURNING id, created_at, user_id, text, description, task_id, task_type, next_send, first_send, done, notify, notification_params
+SET
+  next_sending     = ?,
+  original_sending = ?,
+  done             = ?
+WHERE 
+  id = ?
+RETURNING id, created_at, task_id, next_sending, original_sending, done
 `
 
 type UpdateEventParams struct {
-	Text      string    `db:"text"`
-	NextSend  time.Time `db:"next_send"`
-	FirstSend time.Time `db:"first_send"`
-	Done      int64     `db:"done"`
-	ID        int64     `db:"id"`
+	NextSending     time.Time `db:"next_sending"`
+	OriginalSending time.Time `db:"original_sending"`
+	Done            int64     `db:"done"`
+	ID              int64     `db:"id"`
 }
 
 func (q *Queries) UpdateEvent(ctx context.Context, db DBTX, arg UpdateEventParams) (Event, error) {
 	row := db.QueryRowContext(ctx, updateEvent,
-		arg.Text,
-		arg.NextSend,
-		arg.FirstSend,
+		arg.NextSending,
+		arg.OriginalSending,
 		arg.Done,
 		arg.ID,
 	)
@@ -414,16 +276,10 @@ func (q *Queries) UpdateEvent(ctx context.Context, db DBTX, arg UpdateEventParam
 	err := row.Scan(
 		&i.ID,
 		&i.CreatedAt,
-		&i.UserID,
-		&i.Text,
-		&i.Description,
 		&i.TaskID,
-		&i.TaskType,
-		&i.NextSend,
-		&i.FirstSend,
+		&i.NextSending,
+		&i.OriginalSending,
 		&i.Done,
-		&i.Notify,
-		&i.NotificationParams,
 	)
 	return i, err
 }

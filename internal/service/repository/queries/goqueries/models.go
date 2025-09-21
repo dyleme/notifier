@@ -5,88 +5,33 @@
 package goqueries
 
 import (
-	"database/sql"
 	"encoding/json"
 	"time"
 )
 
-type DefaultUserNotificationParam struct {
-	UserID int64  `db:"user_id"`
-	Params []byte `db:"params"`
-}
-
 type Event struct {
-	ID                 int64          `db:"id"`
-	CreatedAt          time.Time      `db:"created_at"`
-	UserID             int64          `db:"user_id"`
-	Text               string         `db:"text"`
-	Description        sql.NullString `db:"description"`
-	TaskID             int64          `db:"task_id"`
-	TaskType           string         `db:"task_type"`
-	NextSend           time.Time      `db:"next_send"`
-	FirstSend          time.Time      `db:"first_send"`
-	Done               int64          `db:"done"`
-	Notify             int64          `db:"notify"`
-	NotificationParams []byte         `db:"notification_params"`
+	ID              int64     `db:"id"`
+	CreatedAt       time.Time `db:"created_at"`
+	TaskID          int64     `db:"task_id"`
+	NextSending     time.Time `db:"next_sending"`
+	OriginalSending time.Time `db:"original_sending"`
+	Done            int64     `db:"done"`
 }
 
 type KeyValue struct {
-	Key   string `db:"key"`
-	Value []byte `db:"value"`
+	Key   string          `db:"key"`
+	Value json.RawMessage `db:"value"`
 }
 
-type Notification struct {
-	ID                 int64           `db:"id"`
-	CreatedAt          time.Time       `db:"created_at"`
-	UserID             int64           `db:"user_id"`
-	Text               string          `db:"text"`
-	Description        sql.NullString  `db:"description"`
-	EventID            int64           `db:"event_id"`
-	EventType          string          `db:"event_type"`
-	SendTime           time.Time       `db:"send_time"`
-	Sended             bool            `db:"sended"`
-	Done               bool            `db:"done"`
-	NotificationParams json.RawMessage `db:"notification_params"`
-	InlineKeyboard     sql.NullString  `db:"inline_keyboard"`
-	ResendCount        sql.NullInt64   `db:"resend_count"`
-	MaxResendCount     sql.NullInt64   `db:"max_resend_count"`
-	ResendInterval     sql.NullString  `db:"resend_interval"`
-	LastResendTime     sql.NullTime    `db:"last_resend_time"`
-}
-
-type PeriodicTask struct {
-	ID                 int64          `db:"id"`
-	CreatedAt          time.Time      `db:"created_at"`
-	Text               string         `db:"text"`
-	Description        sql.NullString `db:"description"`
-	UserID             int64          `db:"user_id"`
-	Start              time.Time      `db:"start"`
-	SmallestPeriod     int64          `db:"smallest_period"`
-	BiggestPeriod      int64          `db:"biggest_period"`
-	NotificationParams []byte         `db:"notification_params"`
-}
-
-type SingleTask struct {
-	ID                 int64          `db:"id"`
-	CreatedAt          time.Time      `db:"created_at"`
-	Text               string         `db:"text"`
-	Description        sql.NullString `db:"description"`
-	UserID             int64          `db:"user_id"`
-	Start              time.Time      `db:"start"`
-	NotificationParams []byte         `db:"notification_params"`
-}
-
-type Smth2tag struct {
-	SmthID int64 `db:"smth_id"`
-	TagID  int64 `db:"tag_id"`
-	UserID int64 `db:"user_id"`
-}
-
-type Tag struct {
-	ID        int64     `db:"id"`
-	CreatedAt time.Time `db:"created_at"`
-	Name      string    `db:"name"`
-	UserID    int64     `db:"user_id"`
+type Task struct {
+	ID                  int64           `db:"id"`
+	CreatedAt           time.Time       `db:"created_at"`
+	Text                string          `db:"text"`
+	Description         string          `db:"description"`
+	UserID              int64           `db:"user_id"`
+	Type                string          `db:"type"`
+	Start               string          `db:"start"`
+	EventCreationParams json.RawMessage `db:"event_creation_params"`
 }
 
 type TgImage struct {
@@ -95,8 +40,9 @@ type TgImage struct {
 }
 
 type User struct {
-	ID             int64 `db:"id"`
-	TgID           int64 `db:"tg_id"`
-	TimezoneOffset int64 `db:"timezone_offset"`
-	TimezoneDst    int64 `db:"timezone_dst"`
+	ID                       int64 `db:"id"`
+	TgID                     int64 `db:"tg_id"`
+	TimezoneOffset           int64 `db:"timezone_offset"`
+	TimezoneDst              int64 `db:"timezone_dst"`
+	NotificationRetryPeriodS int64 `db:"notification_retry_period_s"`
 }
