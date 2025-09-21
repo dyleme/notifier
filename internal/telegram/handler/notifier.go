@@ -50,17 +50,17 @@ func (n *Notification) deleteOldNotificationMsg(ctx context.Context, eventID, ch
 	return nil
 }
 
-func (th *TelegramHandler) Notify(ctx context.Context, event domain.Notification) error {
-	user, err := th.userRepo.GetUserInfo(ctx, event.Params.Params.Telegram)
+func (th *TelegramHandler) Notify(ctx context.Context, notif domain.Notification) error {
+	user, err := th.userRepo.GetUserInfo(ctx, notif.TgID)
 	if err != nil {
-		return fmt.Errorf("get user info[tgID=%v]: %w", event.Params.Params.Telegram, err)
+		return fmt.Errorf("get user info[tgID=%v]: %w", notif.TgID, err)
 	}
 	n := Notification{
 		th:        th,
 		done:      false,
-		id:        event.EventID,
-		message:   event.Message,
-		notifTime: event.SendTime,
+		id:        notif.EventID,
+		message:   notif.Message,
+		notifTime: notif.SendTime,
 	}
 	err = n.sendMessage(ctx, int64(user.TGID), user)
 	if err != nil {
@@ -213,7 +213,7 @@ func (n *Notification) SetDateMsg(ctx context.Context, b *bot.Bot, relatedMsgID 
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}
-	text := n.String() + "\n\nEnter date (it can bt or one of provided, or you can type your own date)"
+	text := n.String() + "\n\nEnter date (it can be either one of provided, or you can type your own date)"
 	now := time.Now().In(user.Location())
 	nowStr := now.Format(dayPointFormat)
 	tomorrow := time.Now().Add(timeDay).In(user.Location())

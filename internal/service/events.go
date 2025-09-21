@@ -14,11 +14,11 @@ import (
 
 //go:generate mockgen -destination=mocks/events_mocks.go -package=mocks . EventsRepository
 type EventsRepository interface {
-	Add(ctx context.Context, event domain.Event) error
-	List(ctx context.Context, userID int, params ListEventsFilterParams) ([]domain.Event, error)
-	Get(ctx context.Context, id, userID int) (domain.Event, error)
-	GetLatest(ctx context.Context, taskdID int) (domain.Event, error)
-	Update(ctx context.Context, event domain.Event) error
+	Add(ctx context.Context, event domain.Sending) error
+	List(ctx context.Context, userID int, params ListEventsFilterParams) ([]domain.Sending, error)
+	Get(ctx context.Context, id, userID int) (domain.Sending, error)
+	GetLatest(ctx context.Context, taskdID int) (domain.Sending, error)
+	Update(ctx context.Context, event domain.Sending) error
 	Delete(ctx context.Context, id int) error
 }
 
@@ -27,8 +27,8 @@ type ListEventsFilterParams struct {
 	ListParams  ListParams
 }
 
-func (s *Service) ListEvents(ctx context.Context, userID int, params ListEventsFilterParams) ([]domain.Event, error) {
-	var events []domain.Event
+func (s *Service) ListEvents(ctx context.Context, userID int, params ListEventsFilterParams) ([]domain.Sending, error) {
+	var events []domain.Sending
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		var err error
 		events, err = s.repos.events.List(ctx, userID, params)
@@ -45,8 +45,8 @@ func (s *Service) ListEvents(ctx context.Context, userID int, params ListEventsF
 	return events, nil
 }
 
-func (s *Service) GetEvent(ctx context.Context, eventID, userID int) (domain.Event, error) {
-	var event domain.Event
+func (s *Service) GetEvent(ctx context.Context, eventID, userID int) (domain.Sending, error) {
+	var event domain.Sending
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		var err error
 		event, err = s.repos.events.Get(ctx, eventID, userID)
@@ -57,7 +57,7 @@ func (s *Service) GetEvent(ctx context.Context, eventID, userID int) (domain.Eve
 		return nil
 	})
 	if err != nil {
-		return domain.Event{}, fmt.Errorf("tr: %w", err)
+		return domain.Sending{}, fmt.Errorf("tr: %w", err)
 	}
 
 	return event, nil

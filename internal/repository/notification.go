@@ -5,24 +5,24 @@ import (
 	"time"
 
 	"github.com/Dyleme/Notifier/internal/domain"
-	"github.com/Dyleme/Notifier/internal/service/repository/queries/goqueries"
+	"github.com/Dyleme/Notifier/internal/repository/queries/goqueries"
 	"github.com/Dyleme/Notifier/pkg/database/txmanager"
 	"github.com/Dyleme/Notifier/pkg/utils/slice"
 )
 
-type NotificationRepository struct {
+type EventsRepository struct {
 	q      *goqueries.Queries
 	getter *txmanager.Getter
 }
 
-func NewNotificationRepository(getter *txmanager.Getter) *NotificationRepository {
-	return &NotificationRepository{
+func NewEventsRepository(getter *txmanager.Getter) *EventsRepository {
+	return &EventsRepository{
 		getter: getter,
 		q:      &goqueries.Queries{},
 	}
 }
 
-func (r *NotificationRepository) ListNotSent(
+func (r *EventsRepository) ListNotSent(
 	ctx context.Context, till time.Time,
 ) ([]domain.Notification, error) {
 	tx := r.getter.GetTx(ctx)

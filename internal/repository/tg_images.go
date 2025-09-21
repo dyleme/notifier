@@ -12,7 +12,7 @@ import (
 
 	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/internal/domain/apperr"
-	"github.com/Dyleme/Notifier/internal/service/repository/queries/goqueries"
+	"github.com/Dyleme/Notifier/internal/repository/queries/goqueries"
 	"github.com/Dyleme/Notifier/pkg/database/txmanager"
 )
 

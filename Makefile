@@ -50,7 +50,7 @@ migrate.version:
 	goose  -dir $(MIGRATIONS_FOLDER) sqlite3 ${DB_CONNECTION} version
 
 .PHONY: gen
-gen: gen.sqlc gen.api gen.go
+gen: gen.sqlc gen.go
 
 .PHONY: gen.sqlc
 gen.sqlc:
@@ -61,12 +61,6 @@ gen.sqlc:
 gen.sqlc.sqlite:
 	@echo "----------- Generate sqlc for SQLite ----------------"
 	@sqlc generate -f sqlc_sqlite.yaml
-
-.PHONY: gen.api
-gen.api:
-	@echo "----------- Generate apis ----------------"
-	@oapi-codegen --config api/auth-config.yml api/openapi.yaml
-	@oapi-codegen --config api/timetable-config.yml api/openapi.yaml
 
 .PHONY: gen.go
 gen.go:

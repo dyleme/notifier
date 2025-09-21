@@ -21,8 +21,8 @@ type Notifier interface {
 type Repository interface {
 	GetNextTime(ctx context.Context) (time.Time, error)
 	DailyNotificationsUsers(ctx context.Context, now time.Time) ([]domain.User, error)
-	ListDayEvents(ctx context.Context, userID, timeZoneOffset int) ([]domain.Event, error)
-	ListNotDoneEvents(ctx context.Context, userID int) ([]domain.Event, error)
+	ListDayEvents(ctx context.Context, userID, timeZoneOffset int) ([]domain.Sending, error)
+	ListNotDoneEvents(ctx context.Context, userID int) ([]domain.Sending, error)
 }
 
 type TxManager interface {

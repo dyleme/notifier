@@ -8,7 +8,7 @@ import (
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 
-	timetableService "github.com/Dyleme/Notifier/internal/service/service"
+	timetableService "github.com/Dyleme/Notifier/internal/service"
 	"github.com/Dyleme/Notifier/internal/telegram/userinfo"
 	"github.com/Dyleme/Notifier/pkg/log"
 )

@@ -1,5 +1,5 @@
--- name: AddEvent :one
-INSERT INTO events (
+-- name: AddSending :one
+INSERT INTO sendings (
   task_id,
   done,
   original_sending,
@@ -8,19 +8,19 @@ INSERT INTO events (
   ?,?,?,?
 ) RETURNING *;
 
--- name: GetEvent :one
-SELECT * FROM events
+-- name: GetSendning :one
+SELECT * FROM sendings
 WHERE id = @id;
 
--- name: GetLatestEvent :one
-SELECT * FROM events
+-- name: GetLatestSending :one
+SELECT * FROM sendings
 WHERE task_id = @task_id
 ORDER BY next_send DESC
 LIMIT 1;
   
--- name: ListUserEvents :many
+-- name: ListUserSending :many
 SELECT DISTINCT e.*
-FROM events as e
+FROM sendings as e
 JOIN tasks as t
 ON e.task_id = t.id
 WHERE t.user_id = ?
@@ -29,13 +29,13 @@ WHERE t.user_id = ?
 ORDER BY next_sending DESC
 LIMIT ? OFFSET ?;
 
--- name: DeleteEvent :many
-DELETE FROM events
+-- name: DeleteSending :many
+DELETE FROM sendings
 WHERE id = @id
 RETURNING *;
 
--- name: UpdateEvent :one
-UPDATE events
+-- name: UpdateSending :one
+UPDATE sendings
 SET
   next_sending     = ?,
   original_sending = ?,
@@ -44,20 +44,20 @@ WHERE
   id = ?
 RETURNING *;
 
--- name: ListNotSendedEvents :many
-SELECT * FROM events
+-- name: ListNotSendedSending :many
+SELECT * FROM sendings
 WHERE next_sending <= @till
   AND done = 0
   AND notify = 1;
 
--- name: GetNearestEventTime :one
-SELECT next_sending FROM events
+-- name: GetNearestSendingTime :one
+SELECT next_sending FROM sendings
 WHERE done = 0
   AND notify = 1 
 ORDER BY next_sending ASC
 LIMIT 1;
 
--- name: RescheduleEvent :exec
-UPDATE events
+-- name: RescheduleSending :exec
+UPDATE sendings
 SET next_sending = ?
 WHERE id = ?;

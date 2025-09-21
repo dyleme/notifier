@@ -45,7 +45,7 @@ func PeriodictaskFromTask(t Task) (PeriodicTask, error) {
 	}, nil
 }
 
-func (pt PeriodicTask) NewEvent(now time.Time) Event {
+func (pt PeriodicTask) NewEvent(now time.Time) Sending {
 	minDays := int(pt.SmallestPeriod / timeDay)
 	maxDays := int(pt.BiggestPeriod / timeDay)
 	days := minDays
@@ -55,7 +55,7 @@ func (pt PeriodicTask) NewEvent(now time.Time) Event {
 	dayBeginning := now.Add(time.Duration(days) * timeDay).Truncate(timeDay)
 	sendTime := dayBeginning.Add(pt.Start)
 
-	return Event{
+	return Sending{
 		TaskID:          pt.ID,
 		Done:            false,
 		OriginalSending: sendTime,
@@ -80,8 +80,8 @@ func SingleTaskFromTask(t Task) (SingleTask, error) {
 	}, nil
 }
 
-func (st SingleTask) NewEvent() Event {
-	return Event{
+func (st SingleTask) NewEvent() Sending {
+	return Sending{
 		TaskID:          st.ID,
 		Done:            false,
 		OriginalSending: st.Date.Add(st.Start),
@@ -89,7 +89,7 @@ func (st SingleTask) NewEvent() Event {
 	}
 }
 
-type Event struct {
+type Sending struct {
 	ID              int
 	CreatedAt       time.Time
 	TaskID          int
@@ -98,18 +98,18 @@ type Event struct {
 	NextSending     time.Time
 }
 
-func (ev Event) Rescheule(now time.Time, period time.Duration) Event {
-	return ev.RescheuleToTime(now.Add(period))
+func (s Sending) Rescheule(now time.Time, period time.Duration) Sending {
+	return s.RescheuleToTime(now.Add(period))
 }
 
-func (ev Event) RescheuleToTime(t time.Time) Event {
-	ev.NextSending = t
+func (s Sending) RescheuleToTime(t time.Time) Sending {
+	s.NextSending = t
 
-	return ev
+	return s
 }
 
-func (ev Event) MarkDone() Event {
-	ev.Done = true
+func (s Sending) MarkDone() Sending {
+	s.Done = true
 
-	return ev
+	return s
 }

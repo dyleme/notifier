@@ -20,7 +20,7 @@ type TaskRepository interface {
 	Get(ctx context.Context, taskID, userID int) (domain.Task, error)
 }
 
-func (s *Service) addTask(ctx context.Context, task domain.Task, event domain.Event) error {
+func (s *Service) addTask(ctx context.Context, task domain.Task, event domain.Sending) error {
 	_, err := s.repos.tasks.Add(ctx, task)
 	if err != nil {
 		return fmt.Errorf("add task: %w", err)
@@ -34,7 +34,7 @@ func (s *Service) addTask(ctx context.Context, task domain.Task, event domain.Ev
 	return nil
 }
 
-func (s *Service) updateTask(ctx context.Context, task domain.Task, event domain.Event) error {
+func (s *Service) updateTask(ctx context.Context, task domain.Task, event domain.Sending) error {
 	err := s.repos.tasks.Update(ctx, task)
 	if err != nil {
 		return fmt.Errorf("update task: %w", err)
@@ -96,7 +96,7 @@ func (s *Service) createNewEvent(ctx context.Context, taskID, userID int) error 
 		return fmt.Errorf("get task: %w", err)
 	}
 
-	var event domain.Event
+	var event domain.Sending
 
 	switch task.Type {
 	case domain.Signle:

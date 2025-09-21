@@ -1,7 +1,7 @@
 
 -- +goose Up
 -- +goose StatementBegin
-CREATE TABLE events
+CREATE TABLE sendings
 (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     created_at DATETIME NOT NULL DEFAULT (datetime('now')),
@@ -15,5 +15,5 @@ CREATE TABLE events
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE events;
+DROP TABLE sendings;
 -- +goose StatementEnd

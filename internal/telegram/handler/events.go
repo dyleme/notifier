@@ -12,7 +12,7 @@ import (
 	"github.com/go-telegram/bot/models"
 	inKbr "github.com/go-telegram/ui/keyboard/inline"
 
-	"github.com/Dyleme/Notifier/internal/service/service"
+	"github.com/Dyleme/Notifier/internal/service"
 	"github.com/Dyleme/Notifier/pkg/log"
 	model "github.com/Dyleme/Notifier/pkg/model"
 )

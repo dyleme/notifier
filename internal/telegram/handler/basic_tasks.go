@@ -13,7 +13,7 @@ import (
 	inKbr "github.com/go-telegram/ui/keyboard/inline"
 
 	"github.com/Dyleme/Notifier/internal/domain"
-	"github.com/Dyleme/Notifier/internal/service/service"
+	"github.com/Dyleme/Notifier/internal/service"
 )
 
 var ErrCantParseMessage = errors.New("cant parse message")

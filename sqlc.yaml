@@ -1,12 +1,12 @@
 version: "2"
 sql:
   - schema: "migrations"
-    queries: "internal/service/repository/queries/sql"
+    queries: "internal/repository/queries/sql"
     engine: "sqlite"
     gen:
       go:
         package: "goqueries"
-        out: "internal/service/repository/queries/goqueries"
+        out: "internal/repository/queries/goqueries"
         sql_package: "database/sql"
         emit_db_tags: true
         emit_methods_with_db_argument: true
