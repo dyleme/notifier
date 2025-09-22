@@ -9,7 +9,7 @@ import (
 
 type CmdNotifier struct{}
 
-func (cn CmdNotifier) Notify(ctx context.Context, notif domain.Notification) error {
+func (cn CmdNotifier) Notify(ctx context.Context, notif domain.Event) error {
 	log.Ctx(ctx).Info("notify", "notification", notif)
 
 	return nil

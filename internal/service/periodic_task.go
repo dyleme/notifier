@@ -8,7 +8,6 @@ import (
 
 	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/pkg/log"
-	"github.com/Dyleme/Notifier/pkg/utils/slice"
 )
 
 func (s *Service) CreatePeriodicTask(ctx context.Context, perTask domain.PeriodicTask, userID int) error {
@@ -33,26 +32,24 @@ func (s *Service) GetPeriodicTask(ctx context.Context, taskID, userID int) (doma
 		return domain.PeriodicTask{}, fmt.Errorf("get[taskID=%v]: %w", taskID, err)
 	}
 
-	return domain.PeriodictaskFromTask(task)
+	return domain.PeriodicTask{Task: task}, nil
 }
 
 func (s *Service) ListPeriodicTasks(ctx context.Context, userID int, params ListParams) ([]domain.PeriodicTask, error) {
-	tasks, err := s.repos.tasks.List(ctx, userID, params)
+	tasks, err := s.repos.tasks.List(ctx, userID, domain.Periodic, params)
 	if err != nil {
 		return nil, fmt.Errorf("list tasks userID[%v]: %w", userID, err)
 	}
 
-	periodicTasks, err := slice.DtoError(tasks, domain.PeriodictaskFromTask)
-	if err != nil {
-		return nil, fmt.Errorf("periodic task from task: %w", err)
+	periodicTasks := make([]domain.PeriodicTask, 0, len(tasks))
+	for _, t := range tasks {
+		periodicTasks = append(periodicTasks, domain.PeriodicTask{Task: t})
 	}
 
 	return periodicTasks, nil
 }
 
 func (s *Service) UpdatePeriodicTask(ctx context.Context, perTask domain.PeriodicTask, userID int) error {
-	log.Ctx(ctx).Debug("updating periodic task", "task", perTask, "userID", userID)
-
 	updatedEvent := perTask.NewEvent(time.Now())
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		err := s.updateTask(ctx, perTask.Task, updatedEvent)

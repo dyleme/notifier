@@ -1,4 +1,4 @@
-package handler
+package telegram
 
 import (
 	"context"
@@ -46,6 +46,7 @@ func (le *ListEvents) listInline(ctx context.Context, b *bot.Bot, mes *models.Me
 		return fmt.Errorf("user from ctx: %w", err)
 	}
 
+	log.Ctx(ctx).Debug("before list events", slog.Int("user_id", user.ID))
 	events, err := le.th.serv.ListEvents(ctx, user.ID, service.ListEventsFilterParams{
 		TimeBorders: model.NewInfiniteUpper(time.Now()),
 		ListParams:  defaultListParams,
@@ -73,8 +74,8 @@ func (le *ListEvents) listInline(ctx context.Context, b *bot.Bot, mes *models.Me
 	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick())
 	for _, event := range events {
 		ev := Event{th: le.th} //nolint:exhaustruct //fill it in ev.HandleBtnTaskChosen
-		text := event.Text + " " + event.FirstSend.Format(dayTimeFormat)
-		kbr.Row().Button(text, []byte(strconv.Itoa(event.ID)), errorHandling(ev.HandleBtnChosen))
+		text := event.Text
+		kbr.Row().Button(text, []byte(strconv.Itoa(event.SendingID)), errorHandling(ev.HandleBtnChosen))
 	}
 	kbr.Row().Button("Cancel", nil, errorHandling(le.th.MainMenuInline))
 
@@ -93,7 +94,7 @@ func (le *ListEvents) listInline(ctx context.Context, b *bot.Bot, mes *models.Me
 
 type Event struct {
 	th         *TelegramHandler
-	id         int
+	sendingID  int
 	text       string
 	time       time.Time
 	isWorkflow bool
@@ -115,10 +116,10 @@ func (ev *Event) HandleBtnChosen(ctx context.Context, b *bot.Bot, msg *models.Me
 		return fmt.Errorf("get periodic task[taskID=%v,userID=%v]: %w", eventID, user.ID, err)
 	}
 
-	ev.id = event.ID
+	ev.sendingID = event.SendingID
 	ev.text = event.Text
 	ev.isWorkflow = false
-	ev.time = event.FirstSend
+	ev.time = event.NextSending
 
 	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick()).
 		Button("Edit", nil, onSelectErrorHandling(ev.EditMenuMsg)).
@@ -316,11 +317,11 @@ func (ev *Event) UpdateInline(ctx context.Context, b *bot.Bot, msg *models.Messa
 	}
 
 	log.Ctx(ctx).Debug("before", slog.Time("time", ev.time))
-	err = ev.th.serv.ChangeEventTime(ctx, ev.id, ev.time, user.ID)
+	err = ev.th.serv.ChangeEventTime(ctx, ev.sendingID, ev.time, user.ID)
 	if err != nil {
 		return fmt.Errorf("change event time: %w", err)
 	}
-	log.Ctx(ctx).Debug("change event time", slog.Int("by", user.ID), slog.Time("time", ev.time), slog.Int("event", ev.id))
+	log.Ctx(ctx).Debug("change event time", slog.Int("by", user.ID), slog.Time("time", ev.time), slog.Int("event", ev.sendingID))
 
 	err = ev.th.MainMenuWithText(ctx, b, msg, "Event successfully updated:\n"+ev.String())
 	if err != nil {
@@ -336,7 +337,7 @@ func (ev *Event) DeleteInline(ctx context.Context, b *bot.Bot, msg *models.Messa
 		return fmt.Errorf("delete inline: user from ctx: %w", err)
 	}
 
-	err = ev.th.serv.DeleteEvent(ctx, ev.id, user.ID)
+	err = ev.th.serv.DeleteSending(ctx, ev.sendingID, user.ID)
 	if err != nil {
 		return fmt.Errorf("delete inline: delete event: %w", err)
 	}

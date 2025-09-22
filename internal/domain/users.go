@@ -14,6 +14,10 @@ type User struct {
 	DefaultNotificationPeriod time.Duration
 }
 
+func (u User) Location() *time.Location {
+	return time.FixedZone("Temporary", u.TimeZoneOffset*int(time.Hour/time.Second))
+}
+
 type TimeZoneOffset int
 
 func (to TimeZoneOffset) Valid() error {

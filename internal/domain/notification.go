@@ -2,10 +2,24 @@ package domain
 
 import "time"
 
-type Notification struct {
-	EventID            int
-	SendTime           time.Time
-	Message            string
+type Event struct {
+	TaskID             int
+	SendingID          int
+	Done               bool
+	OriginalSending    time.Time
+	NextSending        time.Time
+	Text               string
+	Descriptoin        string
 	TgID               int
 	NotificationPeriod time.Duration
+}
+
+func (e Event) ExtractSending() Sending {
+	return Sending{
+		ID:              e.SendingID,
+		TaskID:          e.TaskID,
+		Done:            e.Done,
+		OriginalSending: e.OriginalSending,
+		NextSending:     e.NextSending,
+	}
 }

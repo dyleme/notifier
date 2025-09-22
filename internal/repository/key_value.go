@@ -10,6 +10,7 @@ import (
 	"github.com/Dyleme/Notifier/internal/domain/apperr"
 	"github.com/Dyleme/Notifier/internal/repository/queries/goqueries"
 	"github.com/Dyleme/Notifier/pkg/database/txmanager"
+	"github.com/Dyleme/Notifier/pkg/log"
 )
 
 type KeyValueRepository struct {
@@ -45,6 +46,7 @@ func (r *KeyValueRepository) PutValue(ctx context.Context, key string, value any
 		return ErrEmptyValue
 	}
 
+	log.Ctx(ctx).Debug("put value", "key", key, "value", value)
 	err = r.q.SetValue(ctx, tx, goqueries.SetValueParams{
 		Key:   key,
 		Value: bts,

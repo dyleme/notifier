@@ -1,15 +1,17 @@
-package handler
+package telegram
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime/debug"
+	"time"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 
+	"github.com/Dyleme/Notifier/internal/domain"
 	serverrors "github.com/Dyleme/Notifier/internal/domain/apperr"
-	"github.com/Dyleme/Notifier/internal/telegram/userinfo"
 	"github.com/Dyleme/Notifier/pkg/log"
 )
 
@@ -31,7 +33,8 @@ func recoverPanicMiddleware(next bot.HandlerFunc) bot.HandlerFunc {
 	return func(ctx context.Context, bot *bot.Bot, update *models.Update) {
 		defer func() {
 			if r := recover(); r != nil {
-				handleError(log.WithCtx(ctx, "panic", "true"), bot, chatID(update), fmt.Errorf("%v", r))
+				stack := debug.Stack()
+				handleError(log.WithCtx(ctx, "stack", string(stack)), bot, chatID(update), fmt.Errorf("%v", r))
 			}
 		}()
 
@@ -49,18 +52,14 @@ func (th *TelegramHandler) UserMiddleware(next bot.HandlerFunc) bot.HandlerFunc 
 		}
 
 		var tgUserID int64
-		var nickname string
 		switch {
 		case update.Message != nil:
 			tgUserID = update.Message.From.ID
-			nickname = update.Message.From.Username
 		case update.CallbackQuery != nil:
 			tgUserID = update.CallbackQuery.From.ID
-			nickname = update.CallbackQuery.From.Username
 		}
 
-		var userInfo userinfo.User
-		userInfo, err = th.userRepo.GetUserInfo(ctx, int(tgUserID))
+		user, err := th.serv.GetTGUser(ctx, int(tgUserID))
 		if err != nil {
 			var notFoundErr serverrors.NotFoundError
 			if !errors.As(err, &notFoundErr) {
@@ -69,7 +68,13 @@ func (th *TelegramHandler) UserMiddleware(next bot.HandlerFunc) bot.HandlerFunc 
 				return
 			}
 
-			userInfo, err = th.userRepo.AddUser(ctx, int(tgUserID), nickname)
+			user = domain.User{
+				TGID:                      int(tgUserID),
+				TimeZoneOffset:            0,
+				IsTimeZoneDST:             false,
+				DefaultNotificationPeriod: 5 * time.Minute,
+			}
+			user, err = th.serv.CreateUser(ctx, user)
 			if err != nil {
 				handleError(ctx, b, chatID, err)
 
@@ -77,8 +82,8 @@ func (th *TelegramHandler) UserMiddleware(next bot.HandlerFunc) bot.HandlerFunc 
 			}
 		}
 
-		ctx = context.WithValue(ctx, userCtxKey, userInfo)
-		log.WithCtx(ctx, "userID", userInfo.ID)
+		ctx = context.WithValue(ctx, userCtxKey, user)
+		ctx = log.WithCtx(ctx, "userID", user.ID)
 
 		next(ctx, b, update)
 	}
@@ -90,10 +95,10 @@ const userCtxKey ctxKey = "userID"
 
 var ErrNoUserInCtx = errors.New("no user id in context")
 
-func UserFromCtx(ctx context.Context) (userinfo.User, error) {
-	userID, ok := ctx.Value(userCtxKey).(userinfo.User)
+func UserFromCtx(ctx context.Context) (domain.User, error) {
+	userID, ok := ctx.Value(userCtxKey).(domain.User)
 	if !ok {
-		return userinfo.User{}, ErrNoUserInCtx
+		return domain.User{}, ErrNoUserInCtx
 	}
 
 	return userID, nil

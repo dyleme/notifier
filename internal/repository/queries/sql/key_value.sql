@@ -6,12 +6,12 @@ WHERE key = @key;
 -- name: SetValue :exec
 INSERT INTO key_value
 (key, value)
-VALUES (@key, @value)
+VALUES (?1, ?2)
 ON CONFLICT (key)
 DO UPDATE
-SET value = @value;
+SET value = ?2;
 
 -- name: DeleteValue :exec
 DELETE
 FROM key_value
-WHERE key = @key;
+WHERE key = ?;

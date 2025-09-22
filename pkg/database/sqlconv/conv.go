@@ -1,6 +1,9 @@
 package sqlconv
 
-import "database/sql"
+import (
+	"database/sql"
+	"time"
+)
 
 func ToBool(i int64) bool {
 	return i != 0
@@ -29,4 +32,8 @@ func NullableString(s string) sql.NullString {
 	}
 
 	return sql.NullString{String: s, Valid: true}
+}
+
+func OnlyTimeFromDuration(dur time.Duration) string {
+	return time.Time{}.Add(dur).Format(time.RFC3339)
 }

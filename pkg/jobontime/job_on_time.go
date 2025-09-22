@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Dyleme/Notifier/pkg/log"
 	"github.com/benbjohnson/clock"
 )
 
@@ -58,6 +59,7 @@ func (j *JobInTime) setNextEventTime(ctx context.Context) {
 
 	t := j.nearestCheckTime(ctx)
 	j.nextSendTime = t
+	log.Ctx(ctx).Debug("set next send time", "time", t)
 	j.timer.Reset(j.clock.Until(t))
 }
 

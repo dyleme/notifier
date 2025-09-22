@@ -16,7 +16,14 @@ import (
 
 type UsersRepository struct {
 	q      *goqueries.Queries
-	getter txmanager.Getter
+	getter *txmanager.Getter
+}
+
+func NewUserRepository(getter *txmanager.Getter) *UsersRepository {
+	return &UsersRepository{
+		q:      goqueries.New(),
+		getter: getter,
+	}
 }
 
 func (r *UsersRepository) dto(dbUser goqueries.User) domain.User {
@@ -58,7 +65,7 @@ func (r *UsersRepository) Get(ctx context.Context, id int) (domain.User, error) 
 	return r.dto(dbUser), nil
 }
 
-func (r *UsersRepository) FindByTgID(ctx context.Context, tgID int) (domain.User, error) {
+func (r *UsersRepository) GetByTgID(ctx context.Context, tgID int) (domain.User, error) {
 	op := "Repository.Find: %w"
 	tx := r.getter.GetTx(ctx)
 	dbUser, err := r.q.GetUserByTgID(ctx, tx, int64(tgID))

@@ -20,7 +20,8 @@ WHERE id      = ?
 SELECT *
 FROM tasks
 WHERE user_id = ?
-ORDER BY bt.id DESC
+  AND type = ?
+ORDER BY id DESC
 LIMIT ? OFFSET ?;
 
 -- name: CountListSingleTasks :one

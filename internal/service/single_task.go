@@ -6,7 +6,6 @@ import (
 
 	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/pkg/log"
-	"github.com/Dyleme/Notifier/pkg/utils/slice"
 )
 
 func (s *Service) CreateSingleTask(ctx context.Context, singleTask domain.SingleTask) error {
@@ -33,18 +32,18 @@ func (s *Service) GetSingleTask(ctx context.Context, userID, taskID int) (domain
 		return domain.SingleTask{}, fmt.Errorf("get basic task userID[%v], taskID[%v]: %w", userID, taskID, err)
 	}
 
-	return domain.SingleTaskFromTask(task)
+	return domain.SingleTask{Task: task}, nil
 }
 
 func (s *Service) ListSingleTasks(ctx context.Context, userID int, params ListParams) ([]domain.SingleTask, error) {
-	tasks, err := s.repos.tasks.List(ctx, userID, params)
+	tasks, err := s.repos.tasks.List(ctx, userID, domain.Single, params)
 	if err != nil {
 		return nil, fmt.Errorf("list tasks userID[%v]: %w", userID, err)
 	}
 
-	singleTasks, err := slice.DtoError(tasks, domain.SingleTaskFromTask)
-	if err != nil {
-		return nil, fmt.Errorf("single task from task: %w", err)
+	singleTasks := make([]domain.SingleTask, 0, len(tasks))
+	for _, t := range tasks {
+		singleTasks = append(singleTasks, domain.SingleTask{Task: t})
 	}
 
 	return singleTasks, nil

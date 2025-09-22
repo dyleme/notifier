@@ -2,46 +2,44 @@ package repository
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/internal/domain/apperr"
 	"github.com/Dyleme/Notifier/internal/repository/queries/goqueries"
-	"github.com/Dyleme/Notifier/internal/service"
 	"github.com/Dyleme/Notifier/pkg/database/sqlconv"
-	"github.com/Dyleme/Notifier/pkg/database/txmanager"
 	"github.com/Dyleme/Notifier/pkg/utils/slice"
 )
 
-type SendingRepository struct {
-	q      *goqueries.Queries
-	getter *txmanager.Getter
+func (er *EventsRepository) dto(dbEv goqueries.Event) domain.Event {
+	event := domain.Event{
+		TaskID:             int(dbEv.TaskID),
+		SendingID:          int(dbEv.SendingID),
+		Done:               sqlconv.ToBool(dbEv.Done),
+		OriginalSending:    dbEv.OriginalSending,
+		NextSending:        dbEv.NextSending,
+		Text:               dbEv.Text,
+		Descriptoin:        dbEv.Description,
+		TgID:               int(dbEv.TaskID),
+		NotificationPeriod: time.Duration(dbEv.NotificationRetryPeriodS) * time.Second,
+	}
+
+	return event
 }
 
-func NewSendingRepository(getter *txmanager.Getter) *SendingRepository {
-	return &SendingRepository{
-		getter: getter,
-		q:      &goqueries.Queries{},
+func (er *EventsRepository) dtoSending(dbSnd goqueries.Sending) domain.Sending {
+	return domain.Sending{
+		ID:              int(dbSnd.ID),
+		CreatedAt:       dbSnd.CreatedAt,
+		TaskID:          int(dbSnd.TaskID),
+		Done:            sqlconv.ToBool(dbSnd.Done),
+		OriginalSending: dbSnd.OriginalSending,
+		NextSending:     dbSnd.NextSending,
 	}
 }
 
-func (er *SendingRepository) dto(dbEv goqueries.Sending) (domain.Sending, error) {
-	event := domain.Sending{
-		ID:              int(dbEv.ID),
-		CreatedAt:       dbEv.CreatedAt,
-		TaskID:          int(dbEv.TaskID),
-		Done:            sqlconv.ToBool(dbEv.Done),
-		OriginalSending: dbEv.OriginalSending,
-		NextSending:     dbEv.NextSending,
-	}
-
-	return event, nil
-}
-
-func (er *SendingRepository) Add(ctx context.Context, event domain.Sending) error {
+func (er *EventsRepository) AddSending(ctx context.Context, event domain.Sending) error {
 	tx := er.getter.GetTx(ctx)
 
 	_, err := er.q.AddSending(ctx, tx, goqueries.AddSendingParams{
@@ -57,29 +55,7 @@ func (er *SendingRepository) Add(ctx context.Context, event domain.Sending) erro
 	return nil
 }
 
-func (er *SendingRepository) List(ctx context.Context, userID int, params service.ListEventsFilterParams) ([]domain.Sending, error) {
-	tx := er.getter.GetTx(ctx)
-
-	rowsSendings, err := er.q.ListUserSending(ctx, tx, goqueries.ListUserSendingParams{
-		UserID:   int64(userID),
-		FromTime: params.TimeBorders.From,
-		ToTime:   params.TimeBorders.To,
-		Offset:   int64(params.ListParams.Offset),
-		Limit:    int64(params.ListParams.Limit),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("list user events: %w", err)
-	}
-
-	events, err := slice.DtoError(rowsSendings, er.dto)
-	if err != nil {
-		return nil, fmt.Errorf("list user events: %w", err)
-	}
-
-	return events, nil
-}
-
-func (er *SendingRepository) Get(ctx context.Context, id int) (domain.Sending, error) {
+func (er *EventsRepository) GetSending(ctx context.Context, id int) (domain.Sending, error) {
 	tx := er.getter.GetTx(ctx)
 
 	event, err := er.q.GetSendning(ctx, tx, int64(id))
@@ -87,20 +63,20 @@ func (er *SendingRepository) Get(ctx context.Context, id int) (domain.Sending, e
 		return domain.Sending{}, fmt.Errorf("get event: %w", err)
 	}
 
-	return er.dto(event)
+	return er.dtoSending(event), nil
 }
 
-func (er *SendingRepository) GetLatest(ctx context.Context, taskdID int) (domain.Sending, error) {
+func (er *EventsRepository) GetLatestSending(ctx context.Context, taskdID int) (domain.Sending, error) {
 	tx := er.getter.GetTx(ctx)
 	event, err := er.q.GetLatestSending(ctx, tx, int64(taskdID))
 	if err != nil {
-		return domain.Sending{}, fmt.Errorf("get latest event: %w", err)
+		return domain.Sending{}, fmt.Errorf("get latest event[taskID=%d]: %w", taskdID, err)
 	}
 
-	return er.dto(event)
+	return er.dtoSending(event), nil
 }
 
-func (er *SendingRepository) Update(ctx context.Context, event domain.Sending) error {
+func (er *EventsRepository) UpdateSending(ctx context.Context, event domain.Sending) error {
 	tx := er.getter.GetTx(ctx)
 	_, err := er.q.UpdateSending(ctx, tx, goqueries.UpdateSendingParams{
 		NextSending:     event.NextSending,
@@ -115,7 +91,7 @@ func (er *SendingRepository) Update(ctx context.Context, event domain.Sending) e
 	return nil
 }
 
-func (er *SendingRepository) Delete(ctx context.Context, id int) error {
+func (er *EventsRepository) DeleteSending(ctx context.Context, id int) error {
 	tx := er.getter.GetTx(ctx)
 
 	ns, err := er.q.DeleteSending(ctx, tx, int64(id))
@@ -130,33 +106,13 @@ func (er *SendingRepository) Delete(ctx context.Context, id int) error {
 	return nil
 }
 
-func (er *SendingRepository) ListNotSended(ctx context.Context, till time.Time) ([]domain.Sending, error) {
+func (er *EventsRepository) ListNotSended(ctx context.Context, till time.Time) ([]domain.Event, error) {
 	tx := er.getter.GetTx(ctx)
 
-	dbSendings, err := er.q.ListNotSendedSending(ctx, tx, till)
+	dbEvents, err := er.q.ListNotSentEvents(ctx, tx, till)
 	if err != nil {
 		return nil, fmt.Errorf("list not sended notifiations: %w", err)
 	}
 
-	events, err := slice.DtoError(dbSendings, er.dto)
-	if err != nil {
-		return nil, fmt.Errorf("list not sended notifiations: %w", err)
-	}
-
-	return events, nil
-}
-
-func (er *SendingRepository) GetNearest(ctx context.Context) (time.Time, error) {
-	tx := er.getter.GetTx(ctx)
-
-	t, err := er.q.GetNearestSendingTime(ctx, tx)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return time.Time{}, fmt.Errorf("get nearest event: %w", apperr.ErrNotFound)
-		}
-
-		return time.Time{}, fmt.Errorf("list not sended notifiations: %w", err)
-	}
-
-	return t, nil
+	return slice.Dto(dbEvents, er.dto), nil
 }

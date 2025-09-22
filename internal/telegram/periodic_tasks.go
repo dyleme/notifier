@@ -1,4 +1,4 @@
-package handler
+package telegram
 
 import (
 	"context"
@@ -234,9 +234,61 @@ func (pt *PeriodicTask) HandleMsgSetText(ctx context.Context, b *bot.Bot, msg *m
 
 	pt.th.waitingActionsStore.Delete(msg.Chat.ID)
 
-	err = pt.next(ctx, b, relatedMsgID, msg.Chat.ID, pt.SetSmallestPeriodMsg)
+	err = pt.next(ctx, b, relatedMsgID, msg.Chat.ID, pt.SetTimeMsg)
 	if err != nil {
 		return fmt.Errorf(op, err)
+	}
+
+	return nil
+}
+
+func (pt *PeriodicTask) SetTimeMsg(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) error {
+	op := "SingleTask.SetTimeMsg: %w"
+	caption := pt.String() + "\n\nEnter time"
+
+	pt.th.waitingActionsStore.StoreDefDur(chatID, TextMessageHandler{
+		handle:    pt.HandleMsgSetTime,
+		messageID: relatedMsgID,
+	})
+	_, err := b.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to fill
+		ChatID:    chatID,
+		MessageID: relatedMsgID,
+		Caption:   caption,
+	})
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+
+	return nil
+}
+
+func (pt *PeriodicTask) HandleMsgSetTime(ctx context.Context, b *bot.Bot, msg *models.Message, relatedMsgID int) error {
+	op := "SingleTask.HandleMsgSetTime: %w"
+	user, err := UserFromCtx(ctx)
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+
+	t, err := parseTime(msg.Text, user.Location())
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+	pt.time = t
+	pt.th.waitingActionsStore.Delete(msg.Chat.ID)
+
+	_, err = b.DeleteMessage(ctx, &bot.DeleteMessageParams{
+		ChatID:    msg.Chat.ID,
+		MessageID: msg.ID,
+	})
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+
+	pt.isWorkflow = false
+
+	err = pt.next(ctx, b, relatedMsgID, msg.Chat.ID, pt.SetSmallestPeriodMsg)
+	if err != nil {
+		return fmt.Errorf("next[msgID=%v,chatID=%v]: %w", msg.ID, msg.Chat.ID, err)
 	}
 
 	return nil
@@ -287,7 +339,6 @@ func (pt *PeriodicTask) HandleMsgSetSmallestPeriod(ctx context.Context, b *bot.B
 }
 
 func (pt *PeriodicTask) SetBiggestPeriodMsg(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) error {
-	op := "PeriodicTask.SetBiggestPeriodMsg: %w"
 	caption := pt.String() + "\n\nEnter biggest amount of days in period"
 	pt.th.waitingActionsStore.StoreDefDur(chatID, TextMessageHandler{
 		handle:    pt.HandleMsgSetBiggestPeriod,
@@ -300,7 +351,7 @@ func (pt *PeriodicTask) SetBiggestPeriodMsg(ctx context.Context, b *bot.Bot, rel
 		Caption:   caption,
 	})
 	if err != nil {
-		return fmt.Errorf(op, err)
+		return fmt.Errorf("edit message caption: %w", err)
 	}
 
 	return nil
@@ -322,60 +373,9 @@ func (pt *PeriodicTask) HandleMsgSetBiggestPeriod(ctx context.Context, b *bot.Bo
 	}
 	pt.th.waitingActionsStore.Delete(msg.Chat.ID)
 
-	err = pt.next(ctx, b, relatedMsgID, msg.Chat.ID, pt.SetTimeMsg)
-	if err != nil {
-		return fmt.Errorf("next[msgID=%v,chatID=%v]: %w", msg.ID, msg.Chat.ID, err)
-	}
-
-	return nil
-}
-
-func (pt *PeriodicTask) SetTimeMsg(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) error {
-	op := "SingleTask.SetTimeMsg: %w"
-	caption := pt.String() + "\n\nEnter time"
-
-	pt.th.waitingActionsStore.StoreDefDur(chatID, TextMessageHandler{
-		handle:    pt.HandleMsgSetTime,
-		messageID: relatedMsgID,
-	})
-	_, err := b.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to fill
-		ChatID:    chatID,
-		MessageID: relatedMsgID,
-		Caption:   caption,
-	})
-	if err != nil {
-		return fmt.Errorf(op, err)
-	}
-
-	return nil
-}
-
-func (pt *PeriodicTask) HandleMsgSetTime(ctx context.Context, b *bot.Bot, msg *models.Message, relatedMsgID int) error {
-	op := "SingleTask.HandleMsgSetTime: %w"
-	user, err := UserFromCtx(ctx)
-	if err != nil {
-		return fmt.Errorf(op, err)
-	}
-
-	t, err := parseTime(msg.Text, user.Location())
-	if err != nil {
-		return fmt.Errorf(op, err)
-	}
-	pt.time = t
-	pt.th.waitingActionsStore.Delete(msg.Chat.ID)
-
-	_, err = b.DeleteMessage(ctx, &bot.DeleteMessageParams{
-		ChatID:    msg.Chat.ID,
-		MessageID: msg.ID,
-	})
-	if err != nil {
-		return fmt.Errorf(op, err)
-	}
-
-	pt.isWorkflow = false
 	err = pt.EditMenuMsg(ctx, b, relatedMsgID, msg.Chat.ID)
 	if err != nil {
-		return fmt.Errorf(op, err)
+		return fmt.Errorf("edit menu msg: %w", err)
 	}
 
 	return nil
@@ -435,17 +435,18 @@ func (pt *PeriodicTask) CreateInline(ctx context.Context, b *bot.Bot, msg *model
 		return fmt.Errorf("user from ctx: %w", err)
 	}
 
-	task := domain.PeriodicTask{ //nolint:exhaustruct //no need to fill
-		Text:               pt.text,
-		Description:        pt.description,
-		UserID:             user.ID,
-		Time:               computeStartTime(pt.time, user.Location()),
-		SmallestPeriod:     pt.smallestPeriod,
-		BiggestPeriod:      pt.biggestPeriod,
-		NotificationParams: domain.NotificationParams{},
-	}
+	task := domain.NewPeriodicTask(
+		domain.TaskCreationParams{
+			Text:        pt.text,
+			Description: pt.description,
+			UserID:      user.ID,
+			Start:       computeStartTime(pt.time, user.Location()),
+		},
+		pt.smallestPeriod,
+		pt.biggestPeriod,
+	)
 
-	_, err = pt.th.serv.CreatePeriodicTask(ctx, task, user.ID)
+	err = pt.th.serv.CreatePeriodicTask(ctx, task, user.ID)
 	if err != nil {
 		return fmt.Errorf("create periodic task userID[%v]: %w", user.ID, err)
 	}
@@ -465,18 +466,17 @@ func (pt *PeriodicTask) UpdateInline(ctx context.Context, b *bot.Bot, msg *model
 		return fmt.Errorf(op, err)
 	}
 
-	params := domain.PeriodicTask{
-		ID:                 pt.id,
-		Text:               pt.text,
-		Description:        pt.description,
-		UserID:             user.ID,
-		Time:               computeStartTime(pt.time, user.Location()),
-		SmallestPeriod:     pt.smallestPeriod,
-		BiggestPeriod:      pt.biggestPeriod,
-		Tags:               nil,
-		NotificationParams: domain.NotificationParams{},
-		Notify:             true,
-	}
+	params := domain.NewPeriodicTask(
+		domain.TaskCreationParams{
+			ID:          pt.id,
+			Text:        pt.text,
+			Description: pt.description,
+			UserID:      user.ID,
+			Start:       computeStartTime(pt.time, user.Location()),
+		},
+		pt.smallestPeriod,
+		pt.biggestPeriod,
+	)
 
 	err = pt.th.serv.UpdatePeriodicTask(ctx, params, user.ID)
 	if err != nil {
@@ -498,7 +498,7 @@ func (pt *PeriodicTask) DeleteInline(ctx context.Context, b *bot.Bot, msg *model
 		return fmt.Errorf(op, err)
 	}
 
-	err = pt.th.serv.DeletePeriodicTask(ctx, pt.id, user.ID)
+	err = pt.th.serv.DeleteTask(ctx, pt.id, user.ID)
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}
@@ -532,8 +532,8 @@ func (pt *PeriodicTask) HandleBtnTaskChosen(ctx context.Context, b *bot.Bot, msg
 	pt.text = task.Text
 	pt.description = task.Description
 	pt.isWorkflow = false
-	pt.biggestPeriod = task.BiggestPeriod
-	pt.smallestPeriod = task.SmallestPeriod
+	pt.biggestPeriod = task.BiggestPeriod()
+	pt.smallestPeriod = task.SmallestPeriod()
 
 	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick()).
 		Button("Edit", nil, onSelectErrorHandling(pt.EditMenuMsg)).

@@ -2,7 +2,7 @@ package config
 
 import (
 	"github.com/Dyleme/Notifier/internal/notifier/eventnotifier"
-	"github.com/Dyleme/Notifier/internal/telegram/handler"
+	"github.com/Dyleme/Notifier/internal/telegram"
 )
 
 type Config struct {
@@ -10,7 +10,7 @@ type Config struct {
 	DatabaseFile string
 	APIKey       string
 	NotifierJob  eventnotifier.Config
-	Telegram     handler.Config
+	Telegram     telegram.Config
 }
 
 func mapConfig(cc *compositeConfig) Config {
@@ -20,7 +20,7 @@ func mapConfig(cc *compositeConfig) Config {
 		NotifierJob: eventnotifier.Config{
 			CheckTasksPeriod: cc.NotifierJob.CheckPeriod,
 		},
-		Telegram: handler.Config{
+		Telegram: telegram.Config{
 			Token: cc.Telegram.Token,
 		},
 	}

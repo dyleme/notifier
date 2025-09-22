@@ -15,7 +15,7 @@ import (
 )
 
 type Notifier interface {
-	Notify(ctx context.Context, notif domain.Notification) error
+	Notify(ctx context.Context, notif domain.Event) error
 }
 
 type Repository interface {
@@ -82,7 +82,7 @@ func (dn *DailyNotifier) Do(ctx context.Context, now time.Time) {
 
 			log.Ctx(ctx).Debug("user events", slog.Int("user_id", user.ID), slog.Any("events", events), slog.Any("not_done_events", notDoneEvents))
 
-			err = dn.notifier.Notify(ctx, domain.Notification{})
+			err = dn.notifier.Notify(ctx, domain.Event{})
 			if err != nil {
 				log.Ctx(ctx).Error("notify error", log.Err(err), slog.Time("run_time", now))
 			}

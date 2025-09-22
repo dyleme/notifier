@@ -1,4 +1,4 @@
-package handler
+package telegram
 
 import (
 	"context"
@@ -13,7 +13,6 @@ import (
 	inKbr "github.com/go-telegram/ui/keyboard/inline"
 
 	"github.com/Dyleme/Notifier/internal/domain"
-	"github.com/Dyleme/Notifier/internal/service"
 )
 
 var ErrCantParseMessage = errors.New("cant parse message")
@@ -53,10 +52,7 @@ func (l *ListTasks) listInline(ctx context.Context, b *bot.Bot, mes *models.Mess
 		return fmt.Errorf(op, err)
 	}
 
-	tasks, err := l.th.serv.ListSingleTasks(ctx, user.ID, service.ListFilterParams{
-		ListParams: defaultListParams,
-		TagIDs:     []int{},
-	})
+	tasks, err := l.th.serv.ListSingleTasks(ctx, user.ID, defaultListParams)
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}
@@ -79,7 +75,7 @@ func (l *ListTasks) listInline(ctx context.Context, b *bot.Bot, mes *models.Mess
 	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick())
 	for _, task := range tasks {
 		ec := SingleTask{th: l.th} //nolint:exhaustruct //fill it in ec.HandleBtnTaskChosen
-		text := task.Text + "\t|\t" + task.Start.In(user.Location()).Format(dayTimeFormat)
+		text := task.Text
 		kbr.Row().Button(text, []byte(strconv.Itoa(task.ID)), errorHandling(ec.HandleBtnTaskChosen))
 	}
 	kbr.Row().Button("Cancel", nil, errorHandling(l.th.MainMenuInline))
@@ -427,15 +423,14 @@ func (bt *SingleTask) CreateInline(ctx context.Context, b *bot.Bot, msg *models.
 		return fmt.Errorf(op, ErrTimeInPast)
 	}
 
-	task := domain.SingleTask{ //nolint:exhaustruct // don't know id on creation
-		UserID:             user.ID,
-		Text:               bt.text,
-		Description:        bt.description,
-		Start:              t,
-		NotificationParams: domain.NotificationParams{},
-	}
+	task := domain.NewSingleTask(domain.TaskCreationParams{
+		Text:        bt.text,
+		Description: bt.description,
+		UserID:      user.ID,
+		Start:       computeStartTime(t, user.Location()),
+	}, bt.date)
 
-	_, err = bt.th.serv.CreateSingleTask(ctx, task)
+	err = bt.th.serv.CreateSingleTask(ctx, task)
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}
@@ -457,16 +452,15 @@ func (bt *SingleTask) UpdateInline(ctx context.Context, b *bot.Bot, msg *models.
 
 	t := bt.date.Add(bt.time.Sub(bt.time.Truncate(timeDay)))
 
-	_, err = bt.th.serv.UpdateSingleTask(ctx, domain.SingleTask{
-		ID:                 bt.id,
-		Text:               bt.text,
-		UserID:             user.ID,
-		Description:        bt.description,
-		Start:              t,
-		NotificationParams: domain.NotificationParams{},
-		Tags:               nil,
-		Notify:             true,
-	}, user.ID)
+	task := domain.NewSingleTask(domain.TaskCreationParams{
+		ID:          bt.id,
+		Text:        bt.text,
+		Description: bt.description,
+		UserID:      user.ID,
+		Start:       computeStartTime(t, user.Location()),
+	}, bt.date)
+
+	err = bt.th.serv.UpdateSingleTask(ctx, task, user.ID)
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}
@@ -486,7 +480,7 @@ func (bt *SingleTask) DeleteInline(ctx context.Context, b *bot.Bot, msg *models.
 		return fmt.Errorf(op, err)
 	}
 
-	err = bt.th.serv.DeleteSingleTask(ctx, user.ID, bt.id)
+	err = bt.th.serv.DeleteTask(ctx, user.ID, bt.id)
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}
@@ -517,8 +511,8 @@ func (bt *SingleTask) HandleBtnTaskChosen(ctx context.Context, b *bot.Bot, msg *
 	}
 
 	bt.id = task.ID
-	bt.date = task.Start
-	bt.time = task.Start
+	bt.date = task.Date()
+	bt.time = time.Time{}.Add(task.Start)
 	bt.text = task.Text
 	bt.description = task.Description
 	bt.isWorkflow = false

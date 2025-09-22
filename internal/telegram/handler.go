@@ -1,4 +1,4 @@
-package handler
+package telegram
 
 import (
 	"context"
@@ -9,7 +9,6 @@ import (
 	"github.com/go-telegram/bot/models"
 
 	timetableService "github.com/Dyleme/Notifier/internal/service"
-	"github.com/Dyleme/Notifier/internal/telegram/userinfo"
 	"github.com/Dyleme/Notifier/pkg/log"
 )
 
@@ -20,17 +19,15 @@ type Config struct {
 type TelegramHandler struct {
 	bot                 *bot.Bot
 	serv                *timetableService.Service
-	userRepo            UserRepo
 	kvRepo              KVRepo
 	waitingActionsStore WaitingActionsStore
 }
 
-func New(service *timetableService.Service, userRepo UserRepo, cfg Config, actionsStore WaitingActionsStore, kvStore KVRepo) (*TelegramHandler, error) {
+func New(service *timetableService.Service, cfg Config, actionsStore WaitingActionsStore, kvStore KVRepo) (*TelegramHandler, error) {
 	op := "New: %w"
 	tgHandler := TelegramHandler{
 		kvRepo:              kvStore,
 		serv:                service,
-		userRepo:            userRepo,
 		waitingActionsStore: actionsStore,
 		bot:                 nil, // set this field later by calling SetBot method
 	}
@@ -70,12 +67,6 @@ type WaitingActionsStore interface {
 	StoreDefDur(key int64, val TextMessageHandler)
 	Get(key int64) (TextMessageHandler, error)
 	Delete(key int64)
-}
-
-type UserRepo interface {
-	GetUserInfo(ctx context.Context, tgID int) (userinfo.User, error)
-	AddUser(ctx context.Context, tgID int, nickname string) (userinfo.User, error)
-	UpdateUserTime(ctx context.Context, tgID int, timezoneOffset int, isDST bool) error
 }
 
 type KVRepo interface {

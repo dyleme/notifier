@@ -14,13 +14,13 @@ import (
 type UserRepo interface {
 	Get(ctx context.Context, id int) (domain.User, error)
 	Create(ctx context.Context, user domain.User) (domain.User, error)
-	FindByTgID(ctx context.Context, tgID int) (domain.User, error)
+	GetByTgID(ctx context.Context, tgID int) (domain.User, error)
 	Update(ctx context.Context, user domain.User) error
 }
 
-func (s *Service) GetTGUserInfo(ctx context.Context, tgID int) (domain.User, error) {
+func (s *Service) GetTGUser(ctx context.Context, tgID int) (domain.User, error) {
 	op := "AuthService.GetTGUserInfo: %w"
-	user, err := s.repos.users.FindByTgID(ctx, tgID)
+	user, err := s.repos.users.GetByTgID(ctx, tgID)
 	if err != nil {
 		if errors.Is(err, apperr.ErrNotFound) {
 			return domain.User{}, apperr.NotFoundError{Object: "user"}

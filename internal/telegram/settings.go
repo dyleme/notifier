@@ -1,4 +1,4 @@
-package handler
+package telegram
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 	inKbr "github.com/go-telegram/ui/keyboard/inline"
@@ -53,8 +54,8 @@ func (ts *TimezoneSettings) CurrentTime(ctx context.Context, b *bot.Bot, msg *mo
 		return fmt.Errorf(op, err)
 	}
 
-	ts.isDST = user.IsDST
-	ts.zone = user.Zone
+	ts.isDST = user.IsTimeZoneDST
+	ts.zone = user.TimeZoneOffset
 
 	if err = ts.EditMenuMsg(ctx, b, msg.ID, msg.Chat.ID); err != nil {
 		return fmt.Errorf(op, err)
@@ -180,7 +181,7 @@ func (ts *TimezoneSettings) HandleBtnSetDst(ctx context.Context, b *bot.Bot, msg
 func (ts *TimezoneSettings) UpdateInline(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
 	op := "TimezoneSettings.UpdateInline: %w"
 
-	err := ts.th.userRepo.UpdateUserTime(ctx, int(msg.Chat.ID), ts.zone, ts.isDST)
+	err := ts.th.serv.UpdateUserTime(ctx, int(msg.Chat.ID), domain.TimeZoneOffset(ts.zone), ts.isDST)
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}

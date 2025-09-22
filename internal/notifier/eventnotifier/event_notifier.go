@@ -14,12 +14,12 @@ import (
 )
 
 type Notifier interface {
-	Notify(ctx context.Context, notif domain.Notification) error
+	Notify(ctx context.Context, event domain.Event) error
 }
 
-type Repository interface {
-	ListNotSent(ctx context.Context, till time.Time) ([]domain.Notification, error)
-	Reschedule(ctx context.Context, eventID int, nextSendingTime time.Time) error
+type Service interface {
+	ListNotSentEvents(ctx context.Context, till time.Time) ([]domain.Event, error)
+	RescheduleSending(ctx context.Context, event domain.Event) error
 	GetNearest(ctx context.Context) (time.Time, error)
 }
 
@@ -32,14 +32,14 @@ type Config struct {
 }
 
 type EventNotifier struct {
-	repo     Repository
+	serv     Service
 	notifier Notifier
 	tm       TxManager
 }
 
-func New(repo Repository, tr TxManager) *EventNotifier {
+func New(tr TxManager) *EventNotifier {
 	return &EventNotifier{
-		repo:     repo,
+		serv:     nil,
 		tm:       tr,
 		notifier: nil,
 	}
@@ -49,8 +49,12 @@ func (en *EventNotifier) SetNotifier(notifier Notifier) {
 	en.notifier = notifier
 }
 
+func (en *EventNotifier) SetService(serv Service) {
+	en.serv = serv
+}
+
 func (en *EventNotifier) GetNextTime(ctx context.Context) (time.Time, bool) {
-	t, err := en.repo.GetNearest(ctx)
+	t, err := en.serv.GetNearest(ctx)
 	if err != nil {
 		if errors.Is(err, apperr.ErrNotFound) {
 			log.Ctx(ctx).Debug("no events found")
@@ -66,21 +70,21 @@ func (en *EventNotifier) GetNextTime(ctx context.Context) (time.Time, bool) {
 
 func (en *EventNotifier) Do(ctx context.Context, now time.Time) {
 	err := en.tm.Do(ctx, func(ctx context.Context) error {
-		notifications, err := en.repo.ListNotSent(ctx, now)
+		events, err := en.serv.ListNotSentEvents(ctx, now)
 		if err != nil {
 			return fmt.Errorf("list not sended events: %w", err)
 		}
-		log.Ctx(ctx).Info("found not sended events", slog.Any("events", slice.Dto(notifications, func(n domain.Notification) int { return n.EventID })))
+		log.Ctx(ctx).Info("found not sended events", slog.Any("events", slice.Dto(events, func(e domain.Event) int { return e.SendingID })))
 
-		for _, notif := range notifications {
-			err = en.notifier.Notify(ctx, notif)
+		for _, ev := range events {
+			err = en.notifier.Notify(ctx, ev)
 			if err != nil {
 				log.Ctx(ctx).Error("notifier error", log.Err(err))
 
 				continue
 			}
 
-			err = en.repo.Reschedule(ctx, notif.EventID, now.Add(notif.NotificationPeriod))
+			err = en.serv.RescheduleSending(ctx, ev)
 			if err != nil {
 				log.Ctx(ctx).Error("reschedule error", log.Err(err))
 			}

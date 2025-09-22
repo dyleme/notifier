@@ -9,14 +9,11 @@ import (
 	"github.com/Dyleme/timecache"
 	"github.com/benbjohnson/clock"
 
-	authRepository "github.com/Dyleme/Notifier/internal/authorization/repository"
-	authService "github.com/Dyleme/Notifier/internal/authorization/service"
 	"github.com/Dyleme/Notifier/internal/config"
 	"github.com/Dyleme/Notifier/internal/notifier/eventnotifier"
-	"github.com/Dyleme/Notifier/internal/service/repository"
-	"github.com/Dyleme/Notifier/internal/service/service"
-	tgHandler "github.com/Dyleme/Notifier/internal/telegram/handler"
-	"github.com/Dyleme/Notifier/internal/telegram/userinfo"
+	"github.com/Dyleme/Notifier/internal/repository"
+	"github.com/Dyleme/Notifier/internal/service"
+	"github.com/Dyleme/Notifier/internal/telegram"
 	"github.com/Dyleme/Notifier/pkg/database/sqldatabase"
 	"github.com/Dyleme/Notifier/pkg/database/txmanager"
 	"github.com/Dyleme/Notifier/pkg/jobontime"
@@ -44,37 +41,27 @@ func main() { //nolint:funlen // main can be long
 	txManager := txmanager.New(db)
 	txGetter := txmanager.NewGetter(db)
 	nower := clock.New()
-	eventsNotifier := eventnotifier.New(
-		repository.NewEventsRepository(txGetter),
-		txManager,
-	)
+	eventsNotifier := eventnotifier.New(txManager)
 	eventsNotifierJob := jobontime.New(
 		nower,
 		eventsNotifier,
 		cfg.NotifierJob.CheckTasksPeriod,
 	)
+	userRepo := repository.NewUserRepository(txGetter)
+
 	svc := service.New(
-		repository.NewPeriodicTaskRepository(txGetter),
-		repository.NewSingleTaskRepository(txGetter),
+		userRepo,
+		repository.NewTasksRepository(txGetter),
 		repository.NewTGImagesRepository(txGetter, cache),
 		repository.NewEventsRepository(txGetter),
-		repository.NewDefaultNotificationParamsRepository(txGetter),
-		repository.NewTagsRepository(txGetter),
 		txManager,
 		eventsNotifierJob,
 	)
 
-	authRepo := authRepository.New(txGetter)
-	authSvc := authService.NewAuth(
-		authRepo,
-		txManager,
-	)
-
-	tg, err := tgHandler.New(
+	tg, err := telegram.New(
 		svc,
-		userinfo.NewUserRepoCache(authSvc),
 		cfg.Telegram,
-		timecache.New[int64, tgHandler.TextMessageHandler](),
+		timecache.New[int64, telegram.TextMessageHandler](),
 		repository.NewKeyValueRepository(txGetter),
 	)
 	if err != nil {
@@ -84,6 +71,7 @@ func main() { //nolint:funlen // main can be long
 	}
 
 	eventsNotifier.SetNotifier(tg)
+	eventsNotifier.SetService(svc)
 
 	go eventsNotifierJob.Run(ctx)
 

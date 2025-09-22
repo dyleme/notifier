@@ -1,4 +1,4 @@
-package handler
+package telegram
 
 import (
 	"context"
@@ -13,32 +13,35 @@ import (
 
 	"github.com/Dyleme/Notifier/internal/domain"
 	serverrors "github.com/Dyleme/Notifier/internal/domain/apperr"
-	"github.com/Dyleme/Notifier/internal/telegram/userinfo"
 	"github.com/Dyleme/Notifier/pkg/log"
 )
 
 type Notification struct {
 	th        *TelegramHandler
 	done      bool
-	id        int
+	sendingID int
 	message   string
 	notifTime time.Time
 }
 
-func (n *Notification) deleteOldNotificationMsg(ctx context.Context, eventID, chatID int) error {
+func sendingKey(sendingID int) string {
+	return "sending:" + strconv.Itoa(sendingID)
+}
+
+func (n *Notification) deleteOldNotificationMsg(ctx context.Context, sendingID, chatID int) error {
 	var oldMsgID int
-	err := n.th.kvRepo.GetValue(ctx, strconv.Itoa(eventID), &oldMsgID)
+	err := n.th.kvRepo.GetValue(ctx, sendingKey(sendingID), &oldMsgID)
 	if err != nil {
 		if errors.Is(err, serverrors.ErrNotFound) {
-			log.Ctx(ctx).Debug("no message id found", "eventID", eventID)
+			log.Ctx(ctx).Debug("no message id found", "sendingID", sendingID)
 
 			return nil
 		}
 
-		return fmt.Errorf("get message id [eventID=%v]: %w", eventID, err)
+		return fmt.Errorf("get message id [eventID=%v]: %w", sendingID, err)
 	}
 
-	log.Ctx(ctx).Info("got msgID", "eventID", eventID, "msgID", oldMsgID)
+	log.Ctx(ctx).Info("got msgID", "eventID", sendingID, "msgID", oldMsgID)
 	_, err = n.th.bot.DeleteMessage(ctx, &bot.DeleteMessageParams{
 		ChatID:    chatID,
 		MessageID: oldMsgID,
@@ -50,49 +53,49 @@ func (n *Notification) deleteOldNotificationMsg(ctx context.Context, eventID, ch
 	return nil
 }
 
-func (th *TelegramHandler) Notify(ctx context.Context, notif domain.Notification) error {
-	user, err := th.userRepo.GetUserInfo(ctx, notif.TgID)
+func (th *TelegramHandler) Notify(ctx context.Context, notif domain.Event) error {
+	user, err := th.serv.GetTGUser(ctx, notif.TgID)
 	if err != nil {
 		return fmt.Errorf("get user info[tgID=%v]: %w", notif.TgID, err)
 	}
 	n := Notification{
 		th:        th,
 		done:      false,
-		id:        notif.EventID,
-		message:   notif.Message,
-		notifTime: notif.SendTime,
+		sendingID: notif.SendingID,
+		message:   notif.Text,
+		notifTime: notif.NextSending,
 	}
-	err = n.sendMessage(ctx, int64(user.TGID), user)
+	err = n.sendMessage(ctx, user)
 	if err != nil {
-		return fmt.Errorf("send message [user: %v]: %w", user, err)
+		return fmt.Errorf("send message [user: %v]: %w", user.TGID, err)
 	}
 
 	return nil
 }
 
-func (n *Notification) sendMessage(ctx context.Context, chatID int64, user userinfo.User) error {
+func (n *Notification) sendMessage(ctx context.Context, user domain.User) error {
 	kb := inKbr.New(n.th.bot, inKbr.NoDeleteAfterClick()).
 		Button("Done", nil, errorHandling(n.setDone)).
 		Button("Reschedule", nil, onSelectErrorHandling(n.SetTimeMsg))
 	text := n.message + " " + n.notifTime.In(user.Location()).Format(dayTimeFormat)
 	msg, err := n.th.bot.SendMessage(ctx, &bot.SendMessageParams{ //nolint:exhaustruct //no need to specify
-		ChatID:      chatID,
+		ChatID:      user.TGID,
 		Text:        text,
 		ReplyMarkup: kb,
 	})
 	if err != nil {
-		return fmt.Errorf("send message [chatID=%v, text=%q]: %w", chatID, text, err)
+		return fmt.Errorf("send message [chatID=%v, text=%q]: %w", user.TGID, text, err)
 	}
 
-	err = n.deleteOldNotificationMsg(ctx, n.id, int(chatID))
+	err = n.deleteOldNotificationMsg(ctx, n.sendingID, user.TGID)
 	if err != nil {
 		log.Ctx(ctx).Error("delete old notification msg", log.Err(err))
 	}
 
-	log.Ctx(ctx).Info("save msgID", "eventID", n.id, "msgID", msg.ID)
-	err = n.th.kvRepo.PutValue(ctx, strconv.Itoa(n.id), msg.ID)
+	log.Ctx(ctx).Info("save msgID", "sendingID", n.sendingID, "msgID", msg.ID)
+	err = n.th.kvRepo.PutValue(ctx, sendingKey(n.sendingID), msg.ID)
 	if err != nil {
-		return fmt.Errorf("put message id [eventID=%v]: %w", n.id, err)
+		return fmt.Errorf("put message id [sendingID=%v]: %w", n.sendingID, err)
 	}
 
 	return nil
@@ -105,7 +108,7 @@ func (n *Notification) setUndone(ctx context.Context, _ *bot.Bot, msg *models.Me
 		return fmt.Errorf("user from ctx: %w", err)
 	}
 
-	err = n.sendMessage(ctx, msg.Chat.ID, user)
+	err = n.sendMessage(ctx, user)
 	if err != nil {
 		return fmt.Errorf("send message: %w", err)
 	}
@@ -138,9 +141,9 @@ func (n *Notification) SendDone(ctx context.Context, b *bot.Bot, msg *models.Mes
 		return fmt.Errorf("user from ctx: %w", err)
 	}
 
-	err = n.th.serv.SetEventDoneStatus(ctx, n.id, user.ID, n.done)
+	err = n.th.serv.SetEventDoneStatus(ctx, n.sendingID, user.ID, n.done)
 	if err != nil {
-		return fmt.Errorf("set task done status [eventID=%v, userID=%v]: %w", n.id, user.ID, err)
+		return fmt.Errorf("set task done status [eventID=%v, userID=%v]: %w", n.sendingID, user.ID, err)
 	}
 
 	_, err = b.DeleteMessage(ctx, &bot.DeleteMessageParams{
@@ -285,12 +288,7 @@ func (n *Notification) handleSetDate(ctx context.Context, b *bot.Bot, chatID int
 }
 
 func (n *Notification) Reschedule(ctx context.Context, b *bot.Bot, msgID int, chatID int64) error {
-	user, err := UserFromCtx(ctx)
-	if err != nil {
-		return fmt.Errorf("user from ctx: %w", err)
-	}
-
-	err = n.th.serv.ReschedulEventToTime(ctx, n.id, user.ID, n.notifTime)
+	err := n.th.serv.ReschedulSendingToTime(ctx, n.sendingID, n.notifTime)
 	if err != nil {
 		return fmt.Errorf("reschedule event: %w", err)
 	}
