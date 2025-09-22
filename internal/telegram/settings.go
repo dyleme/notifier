@@ -6,13 +6,14 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 	inKbr "github.com/go-telegram/ui/keyboard/inline"
+
+	"github.com/Dyleme/Notifier/internal/domain"
 )
 
-func (th *TelegramHandler) SettingsInline(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
+func (th *Handler) SettingsInline(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
 	op := "TelegramHandler.SettingsInline: %w"
 
 	timezoneSetting := &TimezoneSettings{th: th, zone: 0, isDST: false}
@@ -33,7 +34,7 @@ func (th *TelegramHandler) SettingsInline(ctx context.Context, b *bot.Bot, msg *
 }
 
 type TimezoneSettings struct {
-	th    *TelegramHandler
+	th    *Handler
 	zone  int
 	isDST bool
 }

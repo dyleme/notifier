@@ -17,7 +17,7 @@ import (
 )
 
 type Notification struct {
-	th        *TelegramHandler
+	th        *Handler
 	done      bool
 	sendingID int
 	message   string
@@ -53,7 +53,7 @@ func (n *Notification) deleteOldNotificationMsg(ctx context.Context, sendingID, 
 	return nil
 }
 
-func (th *TelegramHandler) Notify(ctx context.Context, notif domain.Event) error {
+func (th *Handler) Notify(ctx context.Context, notif domain.Event) error {
 	user, err := th.serv.GetTGUser(ctx, notif.TgID)
 	if err != nil {
 		return fmt.Errorf("get user info[tgID=%v]: %w", notif.TgID, err)
@@ -101,7 +101,7 @@ func (n *Notification) sendMessage(ctx context.Context, user domain.User) error 
 	return nil
 }
 
-func (n *Notification) setUndone(ctx context.Context, _ *bot.Bot, msg *models.Message, _ []byte) error {
+func (n *Notification) setUndone(ctx context.Context, _ *bot.Bot, _ *models.Message, _ []byte) error {
 	n.done = false
 	user, err := UserFromCtx(ctx)
 	if err != nil {
@@ -244,10 +244,8 @@ func (n *Notification) SetDateMsg(ctx context.Context, b *bot.Bot, relatedMsgID 
 }
 
 func (n *Notification) HandleBtnSetDate(ctx context.Context, b *bot.Bot, msg *models.Message, bts []byte) error {
-	op := "SingleTask.HandleBtnSetDate: %w"
-
 	if err := n.handleSetDate(ctx, b, msg.Chat.ID, msg.ID, string(bts)); err != nil {
-		return fmt.Errorf(op, err)
+		return err
 	}
 
 	return nil

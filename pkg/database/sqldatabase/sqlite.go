@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	_ "modernc.org/sqlite"
+	_ "modernc.org/sqlite" // sqlite driver
 )
 
 func NewSQLite(ctx context.Context, filepath string) (*sql.DB, error) {

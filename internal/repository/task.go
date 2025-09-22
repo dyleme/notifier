@@ -92,6 +92,7 @@ func (r *TasksRepository) Update(ctx context.Context, task domain.Task) error {
 		Time:                sqlconv.OnlyTimeFromDuration(task.Start),
 		EventCreationParams: eventCreationParams,
 	})
+
 	return err
 }
 

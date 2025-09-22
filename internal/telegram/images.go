@@ -12,7 +12,7 @@ import (
 	serverrors "github.com/Dyleme/Notifier/internal/domain/apperr"
 )
 
-func (th *TelegramHandler) SendImage(ctx context.Context, filename string, image []byte, sendPhotoParams *bot.SendPhotoParams) error {
+func (th *Handler) SendImage(ctx context.Context, filename string, image []byte, sendPhotoParams *bot.SendPhotoParams) error {
 	op := "TelegramHandler.SendImage: %w"
 
 	photo, knownImage, err := th.getInputFile(ctx, filename, image)
@@ -37,7 +37,7 @@ func (th *TelegramHandler) SendImage(ctx context.Context, filename string, image
 	return nil
 }
 
-func (th *TelegramHandler) getInputFile(ctx context.Context, filename string, data []byte) (inputFile models.InputFile, known bool, err error) { //nolint:nonamedreturns // better readability
+func (th *Handler) getInputFile(ctx context.Context, filename string, data []byte) (inputFile models.InputFile, known bool, err error) { //nolint:nonamedreturns // better readability
 	op := "TelegramHandler.getInputFile: %w"
 	tgImage, err := th.serv.GetTgImage(ctx, filename)
 	if err != nil {

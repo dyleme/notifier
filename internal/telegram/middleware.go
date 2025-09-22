@@ -42,7 +42,11 @@ func recoverPanicMiddleware(next bot.HandlerFunc) bot.HandlerFunc {
 	}
 }
 
-func (th *TelegramHandler) UserMiddleware(next bot.HandlerFunc) bot.HandlerFunc {
+const (
+	defaultNotificatinPeriod = 5 * time.Minute
+)
+
+func (th *Handler) UserMiddleware(next bot.HandlerFunc) bot.HandlerFunc {
 	return func(ctx context.Context, b *bot.Bot, update *models.Update) {
 		chatID, err := th.chatID(update)
 		if err != nil {
@@ -72,7 +76,7 @@ func (th *TelegramHandler) UserMiddleware(next bot.HandlerFunc) bot.HandlerFunc 
 				TGID:                      int(tgUserID),
 				TimeZoneOffset:            0,
 				IsTimeZoneDST:             false,
-				DefaultNotificationPeriod: 5 * time.Minute,
+				DefaultNotificationPeriod: defaultNotificatinPeriod,
 			}
 			user, err = th.serv.CreateUser(ctx, user)
 			if err != nil {
@@ -104,7 +108,7 @@ func UserFromCtx(ctx context.Context) (domain.User, error) {
 	return userID, nil
 }
 
-func loggingMiddleware(next bot.HandlerFunc) bot.HandlerFunc {
+func loggingMiddleware(next bot.HandlerFunc) bot.HandlerFunc { //nolint:unused // for debug
 	return func(ctx context.Context, bot *bot.Bot, update *models.Update) {
 		log.Ctx(ctx).Debug("got update", "update", update)
 

@@ -17,7 +17,7 @@ import (
 	model "github.com/Dyleme/Notifier/pkg/model"
 )
 
-func (th *TelegramHandler) EventsMenuInline(ctx context.Context, b *bot.Bot, mes *models.Message, _ []byte) error {
+func (th *Handler) EventsMenuInline(ctx context.Context, b *bot.Bot, mes *models.Message, _ []byte) error {
 	listEvents := ListEvents{th: th}
 	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick()).
 		Row().Button("List events", nil, errorHandling(listEvents.listInline)).
@@ -37,7 +37,7 @@ func (th *TelegramHandler) EventsMenuInline(ctx context.Context, b *bot.Bot, mes
 }
 
 type ListEvents struct {
-	th *TelegramHandler
+	th *Handler
 }
 
 func (le *ListEvents) listInline(ctx context.Context, b *bot.Bot, mes *models.Message, _ []byte) error {
@@ -93,7 +93,7 @@ func (le *ListEvents) listInline(ctx context.Context, b *bot.Bot, mes *models.Me
 }
 
 type Event struct {
-	th         *TelegramHandler
+	th         *Handler
 	sendingID  int
 	text       string
 	time       time.Time
@@ -234,10 +234,9 @@ func (ev *Event) HandleMsgSetTime(ctx context.Context, b *bot.Bot, msg *models.M
 }
 
 func (ev *Event) SetDateMsg(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) error {
-	op := "SingleTask.SetDateMsg: %w"
 	user, err := UserFromCtx(ctx)
 	if err != nil {
-		return fmt.Errorf(op, err)
+		return fmt.Errorf("user from ctx: %w", err)
 	}
 	caption := ev.String() + "\n\nEnter date (it can bt or one of provided, or you can type your own date)"
 	now := time.Now().In(user.Location())
@@ -260,7 +259,7 @@ func (ev *Event) SetDateMsg(ctx context.Context, b *bot.Bot, relatedMsgID int, c
 		ReplyMarkup: kbr,
 	})
 	if err != nil {
-		return fmt.Errorf(op, err)
+		return fmt.Errorf("edit message caption: %w", err)
 	}
 
 	return nil
@@ -317,7 +316,7 @@ func (ev *Event) UpdateInline(ctx context.Context, b *bot.Bot, msg *models.Messa
 	}
 
 	log.Ctx(ctx).Debug("before", slog.Time("time", ev.time))
-	err = ev.th.serv.ChangeEventTime(ctx, ev.sendingID, ev.time, user.ID)
+	err = ev.th.serv.ChangeEventTime(ctx, ev.sendingID, ev.time)
 	if err != nil {
 		return fmt.Errorf("change event time: %w", err)
 	}
@@ -332,12 +331,7 @@ func (ev *Event) UpdateInline(ctx context.Context, b *bot.Bot, msg *models.Messa
 }
 
 func (ev *Event) DeleteInline(ctx context.Context, b *bot.Bot, msg *models.Message, _ []byte) error {
-	user, err := UserFromCtx(ctx)
-	if err != nil {
-		return fmt.Errorf("delete inline: user from ctx: %w", err)
-	}
-
-	err = ev.th.serv.DeleteSending(ctx, ev.sendingID, user.ID)
+	err := ev.th.serv.DeleteSending(ctx, ev.sendingID)
 	if err != nil {
 		return fmt.Errorf("delete inline: delete event: %w", err)
 	}

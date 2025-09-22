@@ -17,7 +17,7 @@ import (
 
 var ErrCantParseMessage = errors.New("cant parse message")
 
-func (th *TelegramHandler) TasksMenuInline(ctx context.Context, b *bot.Bot, mes *models.Message, _ []byte) error {
+func (th *Handler) TasksMenuInline(ctx context.Context, b *bot.Bot, mes *models.Message, _ []byte) error {
 	op := "TelegramHandler.TasksMenuInline: %w"
 
 	listTasks := ListTasks{th: th}
@@ -41,7 +41,7 @@ func (th *TelegramHandler) TasksMenuInline(ctx context.Context, b *bot.Bot, mes 
 }
 
 type ListTasks struct {
-	th *TelegramHandler
+	th *Handler
 }
 
 func (l *ListTasks) listInline(ctx context.Context, b *bot.Bot, mes *models.Message, _ []byte) error {
@@ -95,7 +95,7 @@ func (l *ListTasks) listInline(ctx context.Context, b *bot.Bot, mes *models.Mess
 
 const notSettedID = -1
 
-func NewTaskCreation(th *TelegramHandler, isWorkflow bool) SingleTask {
+func NewTaskCreation(th *Handler, isWorkflow bool) SingleTask {
 	return SingleTask{
 		id:          notSettedID,
 		th:          th,
@@ -108,7 +108,7 @@ func NewTaskCreation(th *TelegramHandler, isWorkflow bool) SingleTask {
 }
 
 type SingleTask struct {
-	th          *TelegramHandler
+	th          *Handler
 	id          int
 	text        string
 	date        time.Time

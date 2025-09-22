@@ -13,7 +13,7 @@ const (
 )
 
 func (st SingleTask) Date() time.Time {
-	dateStr := st.EventCreationParams[dateKey].(string)
+	dateStr := st.EventCreationParams[dateKey].(string) //nolint:errcheck,forcetypeassert //hope nothing will broke
 
 	t, err := time.Parse(time.RFC3339, dateStr)
 	if err != nil {

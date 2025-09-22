@@ -8,7 +8,6 @@ import (
 type Config struct {
 	Env          string
 	DatabaseFile string
-	APIKey       string
 	NotifierJob  eventnotifier.Config
 	Telegram     telegram.Config
 }

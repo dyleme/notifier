@@ -69,7 +69,7 @@ func (s *Service) GetEvent(ctx context.Context, eventID, userID int) (domain.Eve
 	return event, nil
 }
 
-func (s *Service) ChangeEventTime(ctx context.Context, eventID int, newTime time.Time, userID int) error {
+func (s *Service) ChangeEventTime(ctx context.Context, eventID int, newTime time.Time) error {
 	if newTime.Before(time.Now()) {
 		return fmt.Errorf("time: %w", apperr.ErrEventPastType)
 	}
@@ -98,7 +98,7 @@ func (s *Service) ChangeEventTime(ctx context.Context, eventID int, newTime time
 	return nil
 }
 
-func (s *Service) DeleteSending(ctx context.Context, sendingID, userID int) error {
+func (s *Service) DeleteSending(ctx context.Context, sendingID int) error {
 	err := s.repos.events.DeleteSending(ctx, sendingID)
 	if err != nil {
 		if errors.Is(err, apperr.ErrNotFound) {

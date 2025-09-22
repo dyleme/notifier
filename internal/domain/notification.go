@@ -9,7 +9,7 @@ type Event struct {
 	OriginalSending    time.Time
 	NextSending        time.Time
 	Text               string
-	Descriptoin        string
+	Descriptions       string
 	TgID               int
 	NotificationPeriod time.Duration
 }

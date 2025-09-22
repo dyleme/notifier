@@ -16,16 +16,16 @@ type Config struct {
 	Token string
 }
 
-type TelegramHandler struct {
+type Handler struct {
 	bot                 *bot.Bot
 	serv                *timetableService.Service
 	kvRepo              KVRepo
 	waitingActionsStore WaitingActionsStore
 }
 
-func New(service *timetableService.Service, cfg Config, actionsStore WaitingActionsStore, kvStore KVRepo) (*TelegramHandler, error) {
+func New(service *timetableService.Service, cfg Config, actionsStore WaitingActionsStore, kvStore KVRepo) (*Handler, error) {
 	op := "New: %w"
-	tgHandler := TelegramHandler{
+	tgHandler := Handler{
 		kvRepo:              kvStore,
 		serv:                service,
 		waitingActionsStore: actionsStore,
@@ -53,7 +53,7 @@ func New(service *timetableService.Service, cfg Config, actionsStore WaitingActi
 	return &tgHandler, nil
 }
 
-func (th *TelegramHandler) Run(ctx context.Context) {
+func (th *Handler) Run(ctx context.Context) {
 	log.Ctx(ctx).Info("start telegram bot")
 	th.bot.Start(ctx)
 }
@@ -75,7 +75,7 @@ type KVRepo interface {
 	DeleteValue(ctx context.Context, key string) error
 }
 
-func (th *TelegramHandler) Handle(ctx context.Context, b *bot.Bot, update *models.Update) {
+func (th *Handler) Handle(ctx context.Context, b *bot.Bot, update *models.Update) {
 	op := "TelegramHandler.Handle: %w"
 	chatID, err := th.chatID(update)
 	if err != nil {
@@ -106,7 +106,7 @@ func (th *TelegramHandler) Handle(ctx context.Context, b *bot.Bot, update *model
 	}
 }
 
-func (th *TelegramHandler) InfoListener(ctx context.Context, b *bot.Bot, update *models.Update) {
+func (th *Handler) InfoListener(ctx context.Context, b *bot.Bot, update *models.Update) {
 	op := "TelegramHandler.InfoListener: %w"
 
 	if update.Message != nil {
@@ -116,7 +116,7 @@ func (th *TelegramHandler) InfoListener(ctx context.Context, b *bot.Bot, update 
 	}
 }
 
-func (th *TelegramHandler) StartListener(ctx context.Context, b *bot.Bot, update *models.Update) {
+func (th *Handler) StartListener(ctx context.Context, b *bot.Bot, update *models.Update) {
 	op := "TelegramHandler.StartListener: %w"
 	chatID, err := th.chatID(update)
 	if err != nil {
@@ -133,7 +133,7 @@ func (th *TelegramHandler) StartListener(ctx context.Context, b *bot.Bot, update
 	}
 }
 
-func (th *TelegramHandler) CancelListener(ctx context.Context, b *bot.Bot, update *models.Update) {
+func (th *Handler) CancelListener(ctx context.Context, b *bot.Bot, update *models.Update) {
 	op := "TelegramHandler.CancelListener: %w"
 	chatID, err := th.chatID(update)
 	if err != nil {
@@ -162,7 +162,7 @@ func (th *TelegramHandler) CancelListener(ctx context.Context, b *bot.Bot, updat
 	}
 }
 
-func (th *TelegramHandler) chatID(update *models.Update) (int64, error) {
+func (th *Handler) chatID(update *models.Update) (int64, error) {
 	switch {
 	case update.Message != nil:
 		return update.Message.Chat.ID, nil

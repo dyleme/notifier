@@ -78,7 +78,7 @@ func (r *EventsRepository) ListNotSent(
 				TgID:               int(e.TgID),
 				NotificationPeriod: time.Duration(e.NotificationRetryPeriodS) * time.Second,
 				TaskID:             int(e.TaskID),
-				Descriptoin:        e.Description,
+				Descriptions:       e.Description,
 			}
 		},
 	)
@@ -86,10 +86,10 @@ func (r *EventsRepository) ListNotSent(
 	return notifs, nil
 }
 
-func (er *EventsRepository) GetNearest(ctx context.Context) (time.Time, error) {
-	tx := er.getter.GetTx(ctx)
+func (r *EventsRepository) GetNearest(ctx context.Context) (time.Time, error) {
+	tx := r.getter.GetTx(ctx)
 
-	t, err := er.q.GetNearestSendingTime(ctx, tx)
+	t, err := r.q.GetNearestSendingTime(ctx, tx)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return time.Time{}, fmt.Errorf("get nearest event: %w", apperr.ErrNotFound)

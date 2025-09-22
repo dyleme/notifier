@@ -10,7 +10,7 @@ import (
 	"github.com/Dyleme/Notifier/pkg/log"
 )
 
-func (s *Service) CreatePeriodicTask(ctx context.Context, perTask domain.PeriodicTask, userID int) error {
+func (s *Service) CreatePeriodicTask(ctx context.Context, perTask domain.PeriodicTask) error {
 	log.Ctx(ctx).Debug("creating periodic task", slog.Any("periodic task", perTask))
 
 	createdEvent := perTask.NewEvent(time.Now())
@@ -49,7 +49,7 @@ func (s *Service) ListPeriodicTasks(ctx context.Context, userID int, params List
 	return periodicTasks, nil
 }
 
-func (s *Service) UpdatePeriodicTask(ctx context.Context, perTask domain.PeriodicTask, userID int) error {
+func (s *Service) UpdatePeriodicTask(ctx context.Context, perTask domain.PeriodicTask) error {
 	updatedEvent := perTask.NewEvent(time.Now())
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		err := s.updateTask(ctx, perTask.Task, updatedEvent)

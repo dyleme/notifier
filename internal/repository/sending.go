@@ -12,7 +12,7 @@ import (
 	"github.com/Dyleme/Notifier/pkg/utils/slice"
 )
 
-func (er *EventsRepository) dto(dbEv goqueries.Event) domain.Event {
+func (r *EventsRepository) dto(dbEv goqueries.Event) domain.Event {
 	event := domain.Event{
 		TaskID:             int(dbEv.TaskID),
 		SendingID:          int(dbEv.SendingID),
@@ -20,7 +20,7 @@ func (er *EventsRepository) dto(dbEv goqueries.Event) domain.Event {
 		OriginalSending:    dbEv.OriginalSending,
 		NextSending:        dbEv.NextSending,
 		Text:               dbEv.Text,
-		Descriptoin:        dbEv.Description,
+		Descriptions:       dbEv.Description,
 		TgID:               int(dbEv.TaskID),
 		NotificationPeriod: time.Duration(dbEv.NotificationRetryPeriodS) * time.Second,
 	}
@@ -28,7 +28,7 @@ func (er *EventsRepository) dto(dbEv goqueries.Event) domain.Event {
 	return event
 }
 
-func (er *EventsRepository) dtoSending(dbSnd goqueries.Sending) domain.Sending {
+func (r *EventsRepository) dtoSending(dbSnd goqueries.Sending) domain.Sending {
 	return domain.Sending{
 		ID:              int(dbSnd.ID),
 		CreatedAt:       dbSnd.CreatedAt,
@@ -39,10 +39,10 @@ func (er *EventsRepository) dtoSending(dbSnd goqueries.Sending) domain.Sending {
 	}
 }
 
-func (er *EventsRepository) AddSending(ctx context.Context, event domain.Sending) error {
-	tx := er.getter.GetTx(ctx)
+func (r *EventsRepository) AddSending(ctx context.Context, event domain.Sending) error {
+	tx := r.getter.GetTx(ctx)
 
-	_, err := er.q.AddSending(ctx, tx, goqueries.AddSendingParams{
+	_, err := r.q.AddSending(ctx, tx, goqueries.AddSendingParams{
 		TaskID:          int64(event.TaskID),
 		Done:            sqlconv.BoolToInt(event.Done),
 		OriginalSending: event.OriginalSending,
@@ -55,30 +55,30 @@ func (er *EventsRepository) AddSending(ctx context.Context, event domain.Sending
 	return nil
 }
 
-func (er *EventsRepository) GetSending(ctx context.Context, id int) (domain.Sending, error) {
-	tx := er.getter.GetTx(ctx)
+func (r *EventsRepository) GetSending(ctx context.Context, id int) (domain.Sending, error) {
+	tx := r.getter.GetTx(ctx)
 
-	event, err := er.q.GetSendning(ctx, tx, int64(id))
+	event, err := r.q.GetSendning(ctx, tx, int64(id))
 	if err != nil {
 		return domain.Sending{}, fmt.Errorf("get event: %w", err)
 	}
 
-	return er.dtoSending(event), nil
+	return r.dtoSending(event), nil
 }
 
-func (er *EventsRepository) GetLatestSending(ctx context.Context, taskdID int) (domain.Sending, error) {
-	tx := er.getter.GetTx(ctx)
-	event, err := er.q.GetLatestSending(ctx, tx, int64(taskdID))
+func (r *EventsRepository) GetLatestSending(ctx context.Context, taskdID int) (domain.Sending, error) {
+	tx := r.getter.GetTx(ctx)
+	event, err := r.q.GetLatestSending(ctx, tx, int64(taskdID))
 	if err != nil {
 		return domain.Sending{}, fmt.Errorf("get latest event[taskID=%d]: %w", taskdID, err)
 	}
 
-	return er.dtoSending(event), nil
+	return r.dtoSending(event), nil
 }
 
-func (er *EventsRepository) UpdateSending(ctx context.Context, event domain.Sending) error {
-	tx := er.getter.GetTx(ctx)
-	_, err := er.q.UpdateSending(ctx, tx, goqueries.UpdateSendingParams{
+func (r *EventsRepository) UpdateSending(ctx context.Context, event domain.Sending) error {
+	tx := r.getter.GetTx(ctx)
+	_, err := r.q.UpdateSending(ctx, tx, goqueries.UpdateSendingParams{
 		NextSending:     event.NextSending,
 		OriginalSending: event.OriginalSending,
 		Done:            sqlconv.BoolToInt(event.Done),
@@ -91,10 +91,10 @@ func (er *EventsRepository) UpdateSending(ctx context.Context, event domain.Send
 	return nil
 }
 
-func (er *EventsRepository) DeleteSending(ctx context.Context, id int) error {
-	tx := er.getter.GetTx(ctx)
+func (r *EventsRepository) DeleteSending(ctx context.Context, id int) error {
+	tx := r.getter.GetTx(ctx)
 
-	ns, err := er.q.DeleteSending(ctx, tx, int64(id))
+	ns, err := r.q.DeleteSending(ctx, tx, int64(id))
 	if err != nil {
 		return fmt.Errorf("delete event: %w", err)
 	}
@@ -106,13 +106,13 @@ func (er *EventsRepository) DeleteSending(ctx context.Context, id int) error {
 	return nil
 }
 
-func (er *EventsRepository) ListNotSended(ctx context.Context, till time.Time) ([]domain.Event, error) {
-	tx := er.getter.GetTx(ctx)
+func (r *EventsRepository) ListNotSended(ctx context.Context, till time.Time) ([]domain.Event, error) {
+	tx := r.getter.GetTx(ctx)
 
-	dbEvents, err := er.q.ListNotSentEvents(ctx, tx, till)
+	dbEvents, err := r.q.ListNotSentEvents(ctx, tx, till)
 	if err != nil {
 		return nil, fmt.Errorf("list not sended notifiations: %w", err)
 	}
 
-	return slice.Dto(dbEvents, er.dto), nil
+	return slice.Dto(dbEvents, r.dto), nil
 }

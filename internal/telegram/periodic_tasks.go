@@ -14,7 +14,7 @@ import (
 	"github.com/Dyleme/Notifier/internal/domain"
 )
 
-func (th *TelegramHandler) PeriodicTasksMenuInline(ctx context.Context, b *bot.Bot, mes *models.Message, _ []byte) error {
+func (th *Handler) PeriodicTasksMenuInline(ctx context.Context, b *bot.Bot, mes *models.Message, _ []byte) error {
 	op := "TelegramHandler.TasksMenuInline: %w"
 
 	listTasks := ListPeriodicTasks{th: th}
@@ -38,7 +38,7 @@ func (th *TelegramHandler) PeriodicTasksMenuInline(ctx context.Context, b *bot.B
 }
 
 type ListPeriodicTasks struct {
-	th *TelegramHandler
+	th *Handler
 }
 
 func (l *ListPeriodicTasks) listInline(ctx context.Context, b *bot.Bot, mes *models.Message, _ []byte) error {
@@ -90,7 +90,7 @@ func (l *ListPeriodicTasks) listInline(ctx context.Context, b *bot.Bot, mes *mod
 	return nil
 }
 
-func NewPeriodicTaskCreation(th *TelegramHandler, isWorkflow bool) PeriodicTask {
+func NewPeriodicTaskCreation(th *Handler, isWorkflow bool) PeriodicTask {
 	return PeriodicTask{
 		id:             notSettedID,
 		th:             th,
@@ -104,7 +104,7 @@ func NewPeriodicTaskCreation(th *TelegramHandler, isWorkflow bool) PeriodicTask 
 }
 
 type PeriodicTask struct {
-	th             *TelegramHandler
+	th             *Handler
 	id             int
 	text           string
 	smallestPeriod time.Duration
@@ -168,7 +168,6 @@ func (pt *PeriodicTask) String() string {
 }
 
 func (pt *PeriodicTask) EditMenuMsg(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) error {
-	op := "SingleTask.EditMenuMsg: %w"
 	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick()).
 		Row().
 		Button("Set text", nil, onSelectErrorHandling(pt.SetTextMsg)).
@@ -195,7 +194,7 @@ func (pt *PeriodicTask) EditMenuMsg(ctx context.Context, b *bot.Bot, relatedMsgI
 
 	_, err := b.EditMessageCaption(ctx, params)
 	if err != nil {
-		return fmt.Errorf(op, err)
+		return fmt.Errorf("edit message caption: %w", err)
 	}
 
 	return nil
@@ -446,7 +445,7 @@ func (pt *PeriodicTask) CreateInline(ctx context.Context, b *bot.Bot, msg *model
 		pt.biggestPeriod,
 	)
 
-	err = pt.th.serv.CreatePeriodicTask(ctx, task, user.ID)
+	err = pt.th.serv.CreatePeriodicTask(ctx, task)
 	if err != nil {
 		return fmt.Errorf("create periodic task userID[%v]: %w", user.ID, err)
 	}
@@ -478,7 +477,7 @@ func (pt *PeriodicTask) UpdateInline(ctx context.Context, b *bot.Bot, msg *model
 		pt.biggestPeriod,
 	)
 
-	err = pt.th.serv.UpdatePeriodicTask(ctx, params, user.ID)
+	err = pt.th.serv.UpdatePeriodicTask(ctx, params)
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}

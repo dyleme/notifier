@@ -21,7 +21,7 @@ import (
 	"github.com/Dyleme/Notifier/pkg/log/slogpretty"
 )
 
-func main() { //nolint:funlen // main can be long
+func main() {
 	cfg, err := config.Load()
 	if err != nil {
 		panic(err)

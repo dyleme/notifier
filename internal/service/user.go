@@ -25,6 +25,7 @@ func (s *Service) GetTGUser(ctx context.Context, tgID int) (domain.User, error) 
 		if errors.Is(err, apperr.ErrNotFound) {
 			return domain.User{}, apperr.NotFoundError{Object: "user"}
 		}
+
 		return domain.User{}, fmt.Errorf(op, err)
 	}
 

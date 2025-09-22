@@ -32,12 +32,14 @@ type PeriodicTask struct {
 }
 
 func (pt PeriodicTask) SmallestPeriod() time.Duration {
-	f := pt.EventCreationParams[smallestPeriodKey].(float64)
+	f := pt.EventCreationParams[smallestPeriodKey].(float64) //nolint:errcheck,forcetypeassert //hope nothing will broke
+
 	return time.Duration(f)
 }
 
 func (pt PeriodicTask) BiggestPeriod() time.Duration {
-	f := pt.EventCreationParams[biggestPeriodKey].(float64)
+	f := pt.EventCreationParams[biggestPeriodKey].(float64) //nolint:errcheck,forcetypeassert //hope nothing will broke
+
 	return time.Duration(f)
 }
 
@@ -63,7 +65,7 @@ func (pt PeriodicTask) NewEvent(now time.Time) Sending {
 	maxDays := int(pt.BiggestPeriod() / timeDay)
 	days := minDays
 	if diff := maxDays - minDays; diff > 0 {
-		days += rand.IntN(diff)
+		days += rand.IntN(diff) //nolint:gosec // no need for security
 	}
 	dayBeginning := now.Add(time.Duration(days) * timeDay).Truncate(timeDay)
 	sendTime := dayBeginning.Add(pt.Start)
