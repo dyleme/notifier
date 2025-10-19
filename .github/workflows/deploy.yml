@@ -19,7 +19,7 @@ jobs:
 
     - name: Build application
       run: |
-        CGO_ENABLED=1 go build -ldflags="-s -w" -o myapp ./cmd/app
+        CGO_ENABLED=1 go build -ldflags="-s -w" -o myapp ./cmd/timetable
 
     - name: Prepare deployment package
       run: |
