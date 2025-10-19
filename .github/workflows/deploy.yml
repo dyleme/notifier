@@ -1,49 +1,105 @@
-name: Deploying
+name: Deploy Go Application
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
 
 jobs:
-  push-docker:
-    name: Build and push docker image
+  deploy:
     runs-on: ubuntu-latest
+    
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.22'
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+    - name: Build application
+      run: |
+        CGO_ENABLED=1 go build -ldflags="-s -w" -o myapp ./cmd/app
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+    - name: Prepare deployment package
+      run: |
+        mkdir -p deployment/{bin,migrations,scripts}
+        cp myapp deployment/bin/
+        cp -r migrations/* deployment/migrations/
+        [ -f .env ] && cp .env deployment/ || true
+        
+        # Create migration script
+        cat > deployment/scripts/run_migrations.sh << 'EOF'
+        #!/bin/bash
+        set -e
+        cd "$(dirname "$0")/.."
+        echo "Running migrations..."
+        goose -dir migrations sqlite3 "./data/app.db" up
+        echo "Migrations completed"
+        EOF
+        chmod +x deployment/scripts/run_migrations.sh
 
-      - name: Build and push Docker handler image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: dyleme/schedudler:latest
+    - name: Deploy to server
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          sudo systemctl stop myapp || true
+          sudo mkdir -p /opt/myapp/{current,backup}
+          sudo tar -czf /opt/myapp/backup/backup_$(date +%Y%m%d_%H%M%S).tar.gz /opt/myapp/current/ 2>/dev/null || true
+          sudo rm -rf /opt/myapp/new
+          sudo mkdir -p /opt/myapp/new
 
-  redeploy:
-    name: Update service on server
-    runs-on: ubuntu-latest
-    needs: push-docker
-    steps:
-      - name: install ssh keys
-        run: |
-          install -m 600 -D /dev/null ~/.ssh/id_rsa
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.SSH_HOST }} > ~/.ssh/known_hosts
-      - name: connect and pull
-        run: ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd ${{ secrets.WORK_DIR }} && git checkout ${{ secrets.MAIN_BRANCH }} && git pull && make redeploy && exit"
-      - name: cleanup
-        run: rm -rf ~/.ssh
+    - name: Upload files
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        source: "deployment/*"
+        target: "/opt/myapp/new"
+        strip_components: 1
+
+    - name: Setup and start application
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          sudo mv /opt/myapp/new /opt/myapp/current
+          sudo chmod +x /opt/myapp/current/bin/myapp
+          sudo chmod +x /opt/myapp/current/scripts/run_migrations.sh
+          sudo mkdir -p /opt/myapp/current/data
+          sudo chown ${{ secrets.SSH_USER }}:${{ secrets.SSH_USER }} /opt/myapp/current/data
+          
+          # Install goose and run migrations
+          cd /opt/myapp/current
+          ./scripts/run_migrations.sh
+          
+          # Create systemd service
+          sudo bash -c 'cat > /etc/systemd/system/myapp.service << EOF
+          [Unit]
+          Description=My Go Application
+          After=network.target
+          
+          [Service]
+          Type=simple
+          User=${{ secrets.SSH_USER }}
+          WorkingDirectory=/opt/myapp/current
+          ExecStart=/opt/myapp/current/bin/myapp
+          Restart=always
+          RestartSec=10
+          Environment=PATH=/usr/local/go/bin:/home/${{ secrets.SSH_USER }}/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+          
+          [Install]
+          WantedBy=multi-user.target
+          EOF'
+          
+          sudo systemctl daemon-reload
+          sudo systemctl enable myapp
+          sudo systemctl start myapp
+          sleep 3
+          sudo systemctl status myapp --no-pager
