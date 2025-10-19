@@ -531,8 +531,8 @@ func (pt *PeriodicTask) HandleBtnTaskChosen(ctx context.Context, b *bot.Bot, msg
 	pt.text = task.Text
 	pt.description = task.Description
 	pt.isWorkflow = false
-	pt.biggestPeriod = task.BiggestPeriod()
-	pt.smallestPeriod = task.SmallestPeriod()
+	pt.biggestPeriod = task.BiggestPeriod
+	pt.smallestPeriod = task.SmallestPeriod
 
 	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick()).
 		Button("Edit", nil, onSelectErrorHandling(pt.EditMenuMsg)).

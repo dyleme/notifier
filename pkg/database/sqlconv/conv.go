@@ -35,5 +35,5 @@ func NullableString(s string) sql.NullString {
 }
 
 func OnlyTimeFromDuration(dur time.Duration) string {
-	return time.Time{}.Add(dur).Format(time.RFC3339)
+	return time.Time{}.Add(dur).Format("15:04:05")
 }

@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
+	"sync"
 
 	"github.com/Dyleme/timecache"
 	"github.com/benbjohnson/clock"
@@ -21,21 +23,35 @@ import (
 	"github.com/Dyleme/Notifier/pkg/log/slogpretty"
 )
 
-func main() {
+func main() { //nolint:funlen // main can be long
+	var closeFuncs []func() error
 	cfg, err := config.Load()
 	if err != nil {
 		panic(err)
 	}
-	logger := setupLogger(cfg.Env)
+	logger, closeLogFile, err := setupLogger(cfg.Env, cfg.LogFile)
+	if err != nil {
+		panic(err)
+	}
+	closeFuncs = append(closeFuncs, closeLogFile)
+	defer func() {
+		for i := len(closeFuncs) - 1; i >= 0; i-- {
+			if err := closeFuncs[i](); err != nil {
+				logger.Error("close func error", log.Err(err))
+			}
+		}
+	}()
+
 	ctx := log.InCtx(context.Background(), logger)
 	ctx = cancelOnInterruption(ctx)
 
-	db, err := sqldatabase.NewSQLite(ctx, cfg.DatabaseFile)
+	db, closeDB, err := sqldatabase.NewSQLite(ctx, cfg.DatabaseFile)
 	if err != nil {
 		logger.Error("db init error", log.Err(err))
 
 		return
 	}
+	closeFuncs = append(closeFuncs, closeDB)
 
 	cache := repository.NewUniversalCache()
 	txManager := txmanager.New(db)
@@ -73,9 +89,27 @@ func main() {
 	eventsNotifier.SetNotifier(tg)
 	eventsNotifier.SetService(svc)
 
-	go eventsNotifierJob.Run(ctx)
+	run(
+		ctx,
+		[]func(ctx context.Context){
+			eventsNotifierJob.Run,
+			tg.Run,
+		},
+	)
+}
 
-	tg.Run(ctx)
+func run(ctx context.Context, funcs []func(ctx context.Context)) {
+	var wg sync.WaitGroup
+	for _, f := range funcs {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			f(ctx)
+		}()
+	}
+
+	wg.Wait()
 }
 
 func cancelOnInterruption(ctx context.Context) context.Context {
@@ -96,22 +130,33 @@ const (
 	localEnv = "local"
 	devEnv   = "dev"
 	prodEnv  = "prod"
+
+	ownerWriteOthersRead = 0o644
 )
 
-func setupLogger(env string) *slog.Logger {
-	var logger *slog.Logger
+func setupLogger(env, logFile string) (*slog.Logger, func() error, error) {
+	out := os.Stdout
 
-	switch env {
-	case localEnv:
-		prettyHandler := slogpretty.NewHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}) //nolint:exhaustruct //no need to set this params
-		logger = slog.New(prettyHandler)
-	case devEnv:
-		logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})) //nolint:exhaustruct //no need to set this params
-	case prodEnv:
-		logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})) //nolint:exhaustruct //no need to set this params
-	default:
-		logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})) //nolint:exhaustruct //no need to set this params
+	if logFile != "" {
+		var err error
+		out, err = os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, ownerWriteOthersRead)
+		if err != nil {
+			return nil, nil, fmt.Errorf("open log file: %w", err)
+		}
 	}
 
-	return logger
+	var logger *slog.Logger
+	switch env {
+	case localEnv:
+		prettyHandler := slogpretty.NewHandler(out, &slog.HandlerOptions{Level: slog.LevelDebug}) //nolint:exhaustruct //no need to set this params
+		logger = slog.New(prettyHandler)
+	case devEnv:
+		logger = slog.New(slog.NewJSONHandler(out, &slog.HandlerOptions{Level: slog.LevelDebug})) //nolint:exhaustruct //no need to set this params
+	case prodEnv:
+		logger = slog.New(slog.NewJSONHandler(out, &slog.HandlerOptions{Level: slog.LevelInfo})) //nolint:exhaustruct //no need to set this params
+	default:
+		logger = slog.New(slog.NewJSONHandler(out, &slog.HandlerOptions{Level: slog.LevelInfo})) //nolint:exhaustruct //no need to set this params
+	}
+
+	return logger, out.Close, nil
 }

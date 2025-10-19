@@ -6,15 +6,16 @@ import (
 
 	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/pkg/log"
+	"github.com/Dyleme/Notifier/pkg/utils/slice"
 )
 
 func (s *Service) CreateSingleTask(ctx context.Context, singleTask domain.SingleTask) error {
-	log.Ctx(ctx).Debug("creating sinbgle task", "single task", singleTask)
+	log.Ctx(ctx).Debug("creating single task", "single task", singleTask)
 
 	createdEvent := singleTask.NewEvent()
 
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
-		return s.addTask(ctx, singleTask.Task, createdEvent)
+		return s.addTask(ctx, singleTask.BuildTask(), createdEvent)
 	})
 	if err != nil {
 		return fmt.Errorf("tr: %w", err)
@@ -32,7 +33,7 @@ func (s *Service) GetSingleTask(ctx context.Context, userID, taskID int) (domain
 		return domain.SingleTask{}, fmt.Errorf("get basic task userID[%v], taskID[%v]: %w", userID, taskID, err)
 	}
 
-	return domain.SingleTask{Task: task}, nil
+	return domain.ParseSingleTask(task)
 }
 
 func (s *Service) ListSingleTasks(ctx context.Context, userID int, params ListParams) ([]domain.SingleTask, error) {
@@ -41,19 +42,14 @@ func (s *Service) ListSingleTasks(ctx context.Context, userID int, params ListPa
 		return nil, fmt.Errorf("list tasks userID[%v]: %w", userID, err)
 	}
 
-	singleTasks := make([]domain.SingleTask, 0, len(tasks))
-	for _, t := range tasks {
-		singleTasks = append(singleTasks, domain.SingleTask{Task: t})
-	}
-
-	return singleTasks, nil
+	return slice.DtoError(tasks, domain.ParseSingleTask)
 }
 
 func (s *Service) UpdateSingleTask(ctx context.Context, singleTask domain.SingleTask, userID int) error {
 	log.Ctx(ctx).Debug("updating single task", "task", singleTask, "userID", userID)
 	updatedEvent := singleTask.NewEvent()
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
-		err := s.updateTask(ctx, singleTask.Task, updatedEvent)
+		err := s.updateTask(ctx, singleTask.BuildTask(), updatedEvent)
 		if err != nil {
 			return fmt.Errorf("update task: %w", err)
 		}

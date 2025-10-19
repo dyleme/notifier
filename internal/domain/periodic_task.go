@@ -23,46 +23,75 @@ func (i InvalidPeriodTimeError) Error() string {
 }
 
 const (
-	smallestPeriodKey CreationParamKey = "smallest_period"
-	biggestPeriodKey  CreationParamKey = "biggest_period"
+	smallestPeriodKey TaskParamKey = "smallest_period"
+	biggestPeriodKey  TaskParamKey = "biggest_period"
 )
 
 type PeriodicTask struct {
-	Task
+	taskCore
+	SmallestPeriod time.Duration
+	BiggestPeriod  time.Duration
 }
 
-func (pt PeriodicTask) SmallestPeriod() time.Duration {
-	f := pt.EventCreationParams[smallestPeriodKey].(float64) //nolint:errcheck,forcetypeassert //hope nothing will broke
+func ParsePeriodicTask(t Task) (PeriodicTask, error) {
+	smallestPeriodAny, ok := t.Params[smallestPeriodKey]
+	if !ok {
+		return PeriodicTask{}, fmt.Errorf("missing smallest period : %w", apperr.ErrInternal)
+	}
 
-	return time.Duration(f)
+	smallestPeriodFloat, ok := smallestPeriodAny.(float64)
+	if !ok {
+		return PeriodicTask{}, fmt.Errorf("smallest period is not float [%v]: %w", smallestPeriodAny, apperr.ErrInternal)
+	}
+
+	biggestPeriodAny, ok := t.Params[biggestPeriodKey]
+	if !ok {
+		return PeriodicTask{}, fmt.Errorf("missing biggest period : %w", apperr.ErrInternal)
+	}
+
+	biggestPeriodFloat, ok := biggestPeriodAny.(float64)
+	if !ok {
+		return PeriodicTask{}, fmt.Errorf("biggest period is not float [%v]: %w", biggestPeriodAny, apperr.ErrInternal)
+	}
+
+	periodicTask := PeriodicTask{
+		taskCore:       t.core(),
+		SmallestPeriod: time.Duration(smallestPeriodFloat),
+		BiggestPeriod:  time.Duration(biggestPeriodFloat),
+	}
+
+	return periodicTask, nil
 }
 
-func (pt PeriodicTask) BiggestPeriod() time.Duration {
-	f := pt.EventCreationParams[biggestPeriodKey].(float64) //nolint:errcheck,forcetypeassert //hope nothing will broke
+func (pt PeriodicTask) BuildTask() Task {
+	params := map[TaskParamKey]any{
+		smallestPeriodKey: pt.SmallestPeriod,
+		biggestPeriodKey:  pt.BiggestPeriod,
+	}
 
-	return time.Duration(f)
+	t := pt.Task(params)
+
+	return t
 }
 
 func NewPeriodicTask(params TaskCreationParams, smallestPeriod, biggestPeriod time.Duration) PeriodicTask {
 	return PeriodicTask{
-		Task: Task{
+		taskCore: taskCore{
 			ID:          params.ID,
 			Text:        params.Text,
 			Description: params.Description,
 			UserID:      params.UserID,
 			Type:        Periodic,
 			Start:       params.Start,
-			EventCreationParams: map[CreationParamKey]any{
-				smallestPeriodKey: float64(smallestPeriod),
-				biggestPeriodKey:  float64(biggestPeriod),
-			},
 		},
+		SmallestPeriod: smallestPeriod,
+		BiggestPeriod:  biggestPeriod,
 	}
 }
 
-func (pt PeriodicTask) NewEvent(now time.Time) Sending {
-	minDays := int(pt.SmallestPeriod() / timeDay)
-	maxDays := int(pt.BiggestPeriod() / timeDay)
+func (pt PeriodicTask) NewSending(now time.Time) Sending {
+	minDays := int(pt.SmallestPeriod / timeDay)
+	maxDays := int(pt.BiggestPeriod / timeDay)
 	days := minDays
 	if diff := maxDays - minDays; diff > 0 {
 		days += rand.IntN(diff) //nolint:gosec // no need for security
@@ -78,26 +107,8 @@ func (pt PeriodicTask) NewEvent(now time.Time) Sending {
 	}
 }
 
-func (pt PeriodicTask) Validate() error {
-	minDays := int(pt.SmallestPeriod() / timeDay)
-	maxDays := int(pt.BiggestPeriod() / timeDay)
-	if maxDays < minDays {
-		return InvalidPeriodTimeError{smallest: pt.SmallestPeriod(), biggest: pt.BiggestPeriod()}
-	}
-
-	return nil
-}
-
-func (pt PeriodicTask) BelongsTo(userID int) error {
-	if pt.UserID == userID {
-		return nil
-	}
-
-	return apperr.NewNotBelongToUserError("periodic task", pt.ID, pt.UserID, userID)
-}
-
 func (pt PeriodicTask) TimeParamsHasChanged(updT PeriodicTask) bool {
-	return pt.SmallestPeriod() != updT.SmallestPeriod() ||
-		pt.BiggestPeriod() != updT.BiggestPeriod() ||
+	return pt.SmallestPeriod != updT.SmallestPeriod ||
+		pt.BiggestPeriod != updT.BiggestPeriod ||
 		pt.Start != updT.Start
 }

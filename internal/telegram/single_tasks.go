@@ -511,7 +511,7 @@ func (bt *SingleTask) HandleBtnTaskChosen(ctx context.Context, b *bot.Bot, msg *
 	}
 
 	bt.id = task.ID
-	bt.date = task.Date()
+	bt.date = task.Date
 	bt.time = time.Time{}.Add(task.Start)
 	bt.text = task.Text
 	bt.description = task.Description

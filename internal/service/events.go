@@ -32,7 +32,6 @@ type ListEventsFilterParams struct {
 }
 
 func (s *Service) ListEvents(ctx context.Context, userID int, params ListEventsFilterParams) ([]domain.Event, error) {
-	log.Ctx(ctx).Debug("in list events")
 	var events []domain.Event
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		var err error
@@ -134,22 +133,22 @@ func (s *Service) ReschedulSendingToTime(ctx context.Context, sendingID int, t t
 	return nil
 }
 
-func (s *Service) SetEventDoneStatus(ctx context.Context, sending, userID int, done bool) error {
-	log.Ctx(ctx).Debug("setting event status", "eventID", sending, "userID", userID, "status", done)
+func (s *Service) SetEventDoneStatus(ctx context.Context, sendingID, userID int, done bool) error {
+	log.Ctx(ctx).Debug("setting event status", "sendingID", sendingID, "userID", userID, "status", done)
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
-		event, err := s.repos.events.GetSending(ctx, sending)
+		sending, err := s.repos.events.GetSending(ctx, sendingID)
 		if err != nil {
 			return fmt.Errorf("get event: %w", err)
 		}
 
-		event.Done = done
+		sending.Done = done
 
-		err = s.repos.events.UpdateSending(ctx, event)
+		err = s.repos.events.UpdateSending(ctx, sending)
 		if err != nil {
 			return fmt.Errorf("update event: %w", err)
 		}
 
-		err = s.createNewEvent(ctx, event.TaskID, userID)
+		err = s.createNewSending(ctx, sending.TaskID, userID)
 		if err != nil {
 			return fmt.Errorf("create new event: %w", err)
 		}

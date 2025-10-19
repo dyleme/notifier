@@ -8,15 +8,16 @@ import (
 
 	"github.com/Dyleme/Notifier/internal/domain"
 	"github.com/Dyleme/Notifier/pkg/log"
+	"github.com/Dyleme/Notifier/pkg/utils/slice"
 )
 
 func (s *Service) CreatePeriodicTask(ctx context.Context, perTask domain.PeriodicTask) error {
 	log.Ctx(ctx).Debug("creating periodic task", slog.Any("periodic task", perTask))
 
-	createdEvent := perTask.NewEvent(time.Now())
+	createdEvent := perTask.NewSending(time.Now())
 
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
-		return s.addTask(ctx, perTask.Task, createdEvent)
+		return s.addTask(ctx, perTask.BuildTask(), createdEvent)
 	})
 	if err != nil {
 		return fmt.Errorf("tr: %w", err)
@@ -32,7 +33,7 @@ func (s *Service) GetPeriodicTask(ctx context.Context, taskID, userID int) (doma
 		return domain.PeriodicTask{}, fmt.Errorf("get[taskID=%v]: %w", taskID, err)
 	}
 
-	return domain.PeriodicTask{Task: task}, nil
+	return domain.ParsePeriodicTask(task)
 }
 
 func (s *Service) ListPeriodicTasks(ctx context.Context, userID int, params ListParams) ([]domain.PeriodicTask, error) {
@@ -41,18 +42,13 @@ func (s *Service) ListPeriodicTasks(ctx context.Context, userID int, params List
 		return nil, fmt.Errorf("list tasks userID[%v]: %w", userID, err)
 	}
 
-	periodicTasks := make([]domain.PeriodicTask, 0, len(tasks))
-	for _, t := range tasks {
-		periodicTasks = append(periodicTasks, domain.PeriodicTask{Task: t})
-	}
-
-	return periodicTasks, nil
+	return slice.DtoError(tasks, domain.ParsePeriodicTask)
 }
 
 func (s *Service) UpdatePeriodicTask(ctx context.Context, perTask domain.PeriodicTask) error {
-	updatedEvent := perTask.NewEvent(time.Now())
+	updatedEvent := perTask.NewSending(time.Now())
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
-		err := s.updateTask(ctx, perTask.Task, updatedEvent)
+		err := s.updateTask(ctx, perTask.BuildTask(), updatedEvent)
 		if err != nil {
 			return fmt.Errorf("update task: %w", err)
 		}

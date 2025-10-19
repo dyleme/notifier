@@ -7,6 +7,7 @@ import (
 
 type Config struct {
 	Env          string
+	LogFile      string
 	DatabaseFile string
 	NotifierJob  eventnotifier.Config
 	Telegram     telegram.Config
@@ -15,6 +16,7 @@ type Config struct {
 func mapConfig(cc *compositeConfig) Config {
 	return Config{
 		Env:          cc.Env,
+		LogFile:      cc.LogFile,
 		DatabaseFile: cc.DatabaseFile,
 		NotifierJob: eventnotifier.Config{
 			CheckTasksPeriod: cc.NotifierJob.CheckPeriod,

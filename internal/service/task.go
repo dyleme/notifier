@@ -91,25 +91,29 @@ func (s *Service) DeleteTask(ctx context.Context, userID, taskID int) error {
 	return nil
 }
 
-func (s *Service) createNewEvent(ctx context.Context, taskID, userID int) error {
+func (s *Service) createNewSending(ctx context.Context, taskID, userID int) error {
 	task, err := s.repos.tasks.Get(ctx, taskID, userID)
 	if err != nil {
 		return fmt.Errorf("get task: %w", err)
 	}
-
-	var event domain.Sending
+	var sending domain.Sending
 
 	switch task.Type {
 	case domain.Single:
 		return nil
 	case domain.Periodic:
-		pt := domain.PeriodicTask{Task: task}
-		event = pt.NewEvent(time.Now())
+		pt, err := domain.ParsePeriodicTask(task)
+		if err != nil {
+			return fmt.Errorf("parse periodic task: %w", err)
+		}
+		sending = pt.NewSending(time.Now())
 	default:
 		return fmt.Errorf("unknown task type: %v", task.Type)
 	}
 
-	err = s.repos.events.AddSending(ctx, event)
+	log.Ctx(ctx).Debug("new sending", "sending", sending, "task", task)
+
+	err = s.repos.events.AddSending(ctx, sending)
 	if err != nil {
 		return fmt.Errorf("add sending: %w", err)
 	}

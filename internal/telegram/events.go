@@ -46,7 +46,6 @@ func (le *ListEvents) listInline(ctx context.Context, b *bot.Bot, mes *models.Me
 		return fmt.Errorf("user from ctx: %w", err)
 	}
 
-	log.Ctx(ctx).Debug("before list events", slog.Int("user_id", user.ID))
 	events, err := le.th.serv.ListEvents(ctx, user.ID, service.ListEventsFilterParams{
 		TimeBorders: model.NewInfiniteUpper(time.Now()),
 		ListParams:  defaultListParams,

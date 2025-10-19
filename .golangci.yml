@@ -59,7 +59,6 @@ linters:
     - nlreturn
     - noctx
     - nolintlint
-    - nonamedreturns
     - nosprintfhostport
     - paralleltest
     - perfsprint
@@ -91,6 +90,7 @@ linters:
     - dupl
     - err113
     - gochecknoglobals
+    - nonamedreturns
     - ireturn
     - lll
     - testpackage
@@ -133,9 +133,11 @@ linters:
       - legacy
       - std-error-handling
     rules:
-      - linters:
+      - path: _test\.go
+        linters:
           - funlen
-        path: _test.go
+          - errcheck
+          - forcetypeassert
     paths:
       - cmd/playground
       - third_party$

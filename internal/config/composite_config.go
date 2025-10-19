@@ -10,19 +10,11 @@ import (
 )
 
 type compositeConfig struct {
-	Env          string `env:"ENV"     env-required:"true"`
-	DatabaseFile string `env:"DB_FILE" env-required:"true"`
-	Server       serverConfig
+	Env          string `env:"ENV"      env-required:"true"`
+	DatabaseFile string `env:"DB_FILE"  env-required:"true"`
+	LogFile      string `env:"LOG_FILE"`
 	NotifierJob  notifierJobConfig
 	Telegram     telegramConfig
-}
-
-type serverConfig struct {
-	Port                    int           `env:"APP_PORT"               env-required:"true"`
-	MaxHeaderBytes          int           `env:"MAX_HEADER"             env-required:"true"`
-	ReadTimeout             time.Duration `env:"READ_TIMEOUT"           env-required:"true"`
-	WriteTimeout            time.Duration `env:"WRITE_TIMEOUT"          env-required:"true"`
-	TimeForGracefulShutdown time.Duration `env:"GRACEFUL_SHUTDOWN_TIME" env-required:"true"`
 }
 
 type notifierJobConfig struct {

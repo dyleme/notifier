@@ -28,7 +28,7 @@ func NewTasksRepository(getter *txmanager.Getter) *TasksRepository {
 }
 
 func (r *TasksRepository) Add(ctx context.Context, task domain.Task) (domain.Task, error) {
-	eventCreationParams, err := json.Marshal(task.EventCreationParams)
+	eventCreationParams, err := json.Marshal(task.Params)
 	if err != nil {
 		return domain.Task{}, fmt.Errorf("marshal event creation params: %w", err)
 	}
@@ -79,7 +79,7 @@ func (r *TasksRepository) List(ctx context.Context, userID int, taskType domain.
 }
 
 func (r *TasksRepository) Update(ctx context.Context, task domain.Task) error {
-	eventCreationParams, err := json.Marshal(task.EventCreationParams)
+	eventCreationParams, err := json.Marshal(task.Params)
 	if err != nil {
 		return fmt.Errorf("marshal event creation params: %w", err)
 	}
@@ -112,20 +112,25 @@ func (r *TasksRepository) dto(t goqueries.Task) (domain.Task, error) {
 		return domain.Task{}, fmt.Errorf("parse time: %w", err)
 	}
 
-	var eventCreationParams map[domain.CreationParamKey]any
+	// Extract just the time-of-day duration from the parsed time
+	startDuration := time.Duration(startTime.Hour())*time.Hour +
+		time.Duration(startTime.Minute())*time.Minute +
+		time.Duration(startTime.Second())*time.Second
+
+	var eventCreationParams map[domain.TaskParamKey]any
 	err = json.Unmarshal([]byte(t.EventCreationParams), &eventCreationParams)
 	if err != nil {
 		return domain.Task{}, fmt.Errorf("unmarshal event creation params: %w", err)
 	}
 
 	return domain.Task{
-		ID:                  int(t.ID),
-		CreatedAt:           t.CreatedAt,
-		Text:                t.Text,
-		Description:         t.Description,
-		UserID:              int(t.UserID),
-		Type:                domain.TaskType(t.Type),
-		Start:               startTime.Sub(time.Time{}),
-		EventCreationParams: eventCreationParams,
+		ID:          int(t.ID),
+		CreatedAt:   t.CreatedAt,
+		Text:        t.Text,
+		Description: t.Description,
+		UserID:      int(t.UserID),
+		Type:        domain.TaskType(t.Type),
+		Start:       startDuration,
+		Params:      eventCreationParams,
 	}, nil
 }
