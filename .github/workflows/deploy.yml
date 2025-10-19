@@ -46,7 +46,12 @@ jobs:
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
-          sudo systemctl stop myapp || true
+          # Stop app without systemd
+          sudo pkill -f "myapp" || true
+          sleep 2
+          sudo pkill -9 -f "myapp" || true
+
+          # Create backup
           sudo mkdir -p /opt/myapp/{current,backup}
           sudo tar -czf /opt/myapp/backup/backup_$(date +%Y%m%d_%H%M%S).tar.gz /opt/myapp/current/ 2>/dev/null || true
           sudo rm -rf /opt/myapp/new
@@ -69,37 +74,28 @@ jobs:
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
+          # Switch deployment
+          sudo rm -rf /opt/myapp/current
           sudo mv /opt/myapp/new /opt/myapp/current
+          
+          # Set permissions
           sudo chmod +x /opt/myapp/current/bin/myapp
           sudo chmod +x /opt/myapp/current/scripts/run_migrations.sh
-          sudo mkdir -p /opt/myapp/current/data
-          sudo chown ${{ secrets.SSH_USER }}:${{ secrets.SSH_USER }} /opt/myapp/current/data
           
-          # Install goose and run migrations
+          # Run migrations
+          export PATH=$PATH:/home/${{ secrets.SSH_USER }}/go/bin
           cd /opt/myapp/current
           ./scripts/run_migrations.sh
           
-          # Create systemd service
-          sudo bash -c 'cat > /etc/systemd/system/myapp.service << EOF
-          [Unit]
-          Description=My Go Application
-          After=network.target
+          # Start application
+          cd /opt/myapp/current
+          nohup ./bin/myapp > /opt/myapp/logs/app.log 2> /opt/myapp/logs/error.log &
           
-          [Service]
-          Type=simple
-          User=${{ secrets.SSH_USER }}
-          WorkingDirectory=/opt/myapp/current
-          ExecStart=/opt/myapp/current/bin/myapp
-          Restart=always
-          RestartSec=10
-          Environment=PATH=/usr/local/go/bin:/home/${{ secrets.SSH_USER }}/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-          
-          [Install]
-          WantedBy=multi-user.target
-          EOF'
-          
-          sudo systemctl daemon-reload
-          sudo systemctl enable myapp
-          sudo systemctl start myapp
+          # Verify it's running
           sleep 3
-          sudo systemctl status myapp --no-pager
+          if pgrep -f "myapp" > /dev/null; then
+              echo "Application deployed and started successfully"
+          else
+              echo "Application may have failed to start. Check logs."
+              exit 1
+          fi
