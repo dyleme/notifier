@@ -8,8 +8,8 @@ import (
 	"os/signal"
 	"sync"
 
+	"github.com/Dyleme/timecache"
 	"github.com/benbjohnson/clock"
-	"github.com/dyleme/timecache"
 
 	"github.com/dyleme/Notifier/internal/config"
 	"github.com/dyleme/Notifier/internal/notifier/eventnotifier"
