@@ -5,7 +5,8 @@ LINTER=golangci-lint
 deploy: lint docker-compose.up migrate.up
 	@echo "----- deploy -----"
 
-DB_CONNECTION="host=$(DB_HOST) port=$(DB_PORT) user=$(POSTGRES_USER) password=$(POSTGRES_PASSWORD) dbname=$(POSTGRES_DB) sslmode=$(DB_SSL_MODE)"
+# DB_CONNECTION="host=$(DB_HOST) port=$(DB_PORT) user=$(POSTGRES_USER) password=$(POSTGRES_PASSWORD) dbname=$(POSTGRES_DB) sslmode=$(DB_SSL_MODE)"
+DB_CONNECTION="$(DB_FILE)"
 MIGRATIONS_FOLDER="migrations"
 SQLC_FOLDER="pkg/repository"
 
@@ -28,39 +29,38 @@ redeploy:
 .PHONY: migrate.up
 migrate.up:
 	@echo "----- running migrations up -----"
-	@cd $(MIGRATIONS_FOLDER);\
-	goose postgres ${DB_CONNECTION} up
+	goose -dir $(MIGRATIONS_FOLDER) sqlite3 ${DB_CONNECTION}  up
 
 
 .PHONY: migrate.down
 migrate.down:
-	@cd $(MIGRATIONS_FOLDER);\
-	goose postgres ${DB_CONNECTION} down
+	goose  -dir $(MIGRATIONS_FOLDER) sqlite3 ${DB_CONNECTION} down
 
 
 .PHONY: migrate.create
 migrate.create:
-	@cd $(MIGRATIONS_FOLDER);\
-	goose create $(name) sql
+	goose create $(name) -dir $(MIGRATIONS_FOLDER) sql
 
 .PHONY: migrate.reset
 migrate.reset:
-	@cd $(MIGRATIONS_FOLDER);\
-	goose postgres ${DB_CONNECTION} reset
+	goose  -dir $(MIGRATIONS_FOLDER) sqlite3 ${DB_CONNECTION} reset
+	
+.PHONY: migrate.version
+migrate.version:
+	goose  -dir $(MIGRATIONS_FOLDER) sqlite3 ${DB_CONNECTION} version
 
 .PHONY: gen
-gen: gen.sqlc gen.api gen.go
+gen: gen.sqlc gen.go
 
 .PHONY: gen.sqlc
 gen.sqlc:
 	@echo "----------- Generate sqlc ----------------"
 	@sqlc generate
 
-.PHONY: gen.api
-gen.api:
-	@echo "----------- Generate apis ----------------"
-	@oapi-codegen --config api/auth-config.yml api/openapi.yaml
-	@oapi-codegen --config api/timetable-config.yml api/openapi.yaml
+.PHONY: gen.sqlc.sqlite
+gen.sqlc.sqlite:
+	@echo "----------- Generate sqlc for SQLite ----------------"
+	@sqlc generate -f sqlc_sqlite.yaml
 
 .PHONY: gen.go
 gen.go:
@@ -92,9 +92,9 @@ test:
 .PHONY: format
 format:
 	@echo "----------- gci ----------------"
-	gci write cmd --skip-generated -s standard -s default -s prefix\(github.com/Dyleme/Notifier\) -s blank -s dot --custom-order
-	gci write internal --skip-generated -s standard -s default -s prefix\(github.com/Dyleme/Notifier\) -s blank -s dot --custom-order
-	gci write pkg --skip-generated -s standard -s default -s prefix\(github.com/Dyleme/Notifier\) -s blank -s dot --custom-order
+	gci write cmd --skip-generated -s standard -s default -s prefix\(github.com/dyleme/Notifier\) -s blank -s dot --custom-order
+	gci write internal --skip-generated -s standard -s default -s prefix\(github.com/dyleme/Notifier\) -s blank -s dot --custom-order
+	gci write pkg --skip-generated -s standard -s default -s prefix\(github.com/dyleme/Notifier\) -s blank -s dot --custom-order
 	@echo "----------- gofumpt ----------------"
 	gofumpt -w cmd
 	gofumpt -w internal
@@ -114,7 +114,7 @@ install: install.generators install.mocks install.linter install.tools
 	
 .PHONY: install.generators
 install.generators:
-	go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.26.0 
+	go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.28.0 
 	go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.3.0
 	
 .PHONY: install.tools

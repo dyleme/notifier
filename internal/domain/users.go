@@ -1,20 +1,27 @@
 package domain
 
-import "github.com/Dyleme/Notifier/internal/domain/apperr"
+import (
+	"time"
+
+	"github.com/dyleme/Notifier/internal/domain/apperr"
+)
 
 type User struct {
-	ID             int
-	TgNickname     string
-	PasswordHash   []byte
-	TGID           int
-	TimeZoneOffset int
-	IsTimeZoneDST  bool
+	ID                        int
+	TGID                      int
+	TimeZoneOffset            int
+	IsTimeZoneDST             bool
+	DefaultNotificationPeriod time.Duration
+}
+
+func (u User) Location() *time.Location {
+	return time.FixedZone("Temporary", u.TimeZoneOffset*int(time.Hour/time.Second))
 }
 
 type TimeZoneOffset int
 
 func (to TimeZoneOffset) Valid() error {
-	if -24 < to && to < 24 {
+	if to < -24 || to > 24 {
 		return apperr.InvalidOffsetError{Offset: int(to)}
 	}
 

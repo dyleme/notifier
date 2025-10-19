@@ -9,20 +9,20 @@ import (
 
 	"github.com/avito-tech/go-transaction-manager/trm"
 
-	"github.com/Dyleme/Notifier/internal/domain"
-	"github.com/Dyleme/Notifier/internal/domain/apperr"
-	"github.com/Dyleme/Notifier/pkg/log"
+	"github.com/dyleme/Notifier/internal/domain"
+	"github.com/dyleme/Notifier/internal/domain/apperr"
+	"github.com/dyleme/Notifier/pkg/log"
 )
 
 type Notifier interface {
-	Notify(ctx context.Context, notif domain.Notification) error
+	Notify(ctx context.Context, notif domain.Event) error
 }
 
 type Repository interface {
 	GetNextTime(ctx context.Context) (time.Time, error)
 	DailyNotificationsUsers(ctx context.Context, now time.Time) ([]domain.User, error)
-	ListDayEvents(ctx context.Context, userID, timeZoneOffset int) ([]domain.Event, error)
-	ListNotDoneEvents(ctx context.Context, userID int) ([]domain.Event, error)
+	ListDayEvents(ctx context.Context, userID, timeZoneOffset int) ([]domain.Sending, error)
+	ListNotDoneEvents(ctx context.Context, userID int) ([]domain.Sending, error)
 }
 
 type TxManager interface {
@@ -82,7 +82,7 @@ func (dn *DailyNotifier) Do(ctx context.Context, now time.Time) {
 
 			log.Ctx(ctx).Debug("user events", slog.Int("user_id", user.ID), slog.Any("events", events), slog.Any("not_done_events", notDoneEvents))
 
-			err = dn.notifier.Notify(ctx, domain.Notification{})
+			err = dn.notifier.Notify(ctx, domain.Event{})
 			if err != nil {
 				log.Ctx(ctx).Error("notify error", log.Err(err), slog.Time("run_time", now))
 			}

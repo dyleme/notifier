@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/benbjohnson/clock"
+
+	"github.com/dyleme/Notifier/pkg/log"
 )
 
 type JobInTime struct {
@@ -58,6 +60,7 @@ func (j *JobInTime) setNextEventTime(ctx context.Context) {
 
 	t := j.nearestCheckTime(ctx)
 	j.nextSendTime = t
+	log.Ctx(ctx).Debug("set next send time", "time", t)
 	j.timer.Reset(j.clock.Until(t))
 }
 

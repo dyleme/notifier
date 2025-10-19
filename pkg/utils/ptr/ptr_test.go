@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/Dyleme/Notifier/pkg/utils/ptr"
+	"github.com/dyleme/Notifier/pkg/utils/ptr"
 )
 
 func TestZeroIfNil(t *testing.T) {

@@ -7,27 +7,24 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/avito-tech/go-transaction-manager/trm"
-
-	"github.com/Dyleme/Notifier/internal/domain"
-	"github.com/Dyleme/Notifier/internal/domain/apperr"
-	"github.com/Dyleme/Notifier/pkg/log"
-	"github.com/Dyleme/Notifier/pkg/utils/slice"
+	"github.com/dyleme/Notifier/internal/domain"
+	"github.com/dyleme/Notifier/internal/domain/apperr"
+	"github.com/dyleme/Notifier/pkg/log"
+	"github.com/dyleme/Notifier/pkg/utils/slice"
 )
 
 type Notifier interface {
-	Notify(ctx context.Context, notif domain.Notification) error
+	Notify(ctx context.Context, event domain.Event) error
 }
 
-type Repository interface {
-	Update(ctx context.Context, event domain.Event) error
-	ListNotSended(ctx context.Context, till time.Time) ([]domain.Event, error)
+type Service interface {
+	ListNotSentEvents(ctx context.Context, till time.Time) ([]domain.Event, error)
+	RescheduleSending(ctx context.Context, event domain.Event) error
 	GetNearest(ctx context.Context) (time.Time, error)
 }
 
 type TxManager interface {
 	Do(ctx context.Context, fn func(ctx context.Context) error) (err error)
-	DoWithSettings(ctx context.Context, s trm.Settings, fn func(ctx context.Context) error) (err error)
 }
 
 type Config struct {
@@ -35,14 +32,14 @@ type Config struct {
 }
 
 type EventNotifier struct {
-	repo     Repository
+	serv     Service
 	notifier Notifier
 	tm       TxManager
 }
 
-func New(repo Repository, tr TxManager) *EventNotifier {
+func New(tr TxManager) *EventNotifier {
 	return &EventNotifier{
-		repo:     repo,
+		serv:     nil,
 		tm:       tr,
 		notifier: nil,
 	}
@@ -52,8 +49,12 @@ func (en *EventNotifier) SetNotifier(notifier Notifier) {
 	en.notifier = notifier
 }
 
+func (en *EventNotifier) SetService(serv Service) {
+	en.serv = serv
+}
+
 func (en *EventNotifier) GetNextTime(ctx context.Context) (time.Time, bool) {
-	t, err := en.repo.GetNearest(ctx)
+	t, err := en.serv.GetNearest(ctx)
 	if err != nil {
 		if errors.Is(err, apperr.ErrNotFound) {
 			log.Ctx(ctx).Debug("no events found")
@@ -69,32 +70,23 @@ func (en *EventNotifier) GetNextTime(ctx context.Context) (time.Time, bool) {
 
 func (en *EventNotifier) Do(ctx context.Context, now time.Time) {
 	err := en.tm.Do(ctx, func(ctx context.Context) error {
-		events, err := en.repo.ListNotSended(ctx, now)
+		events, err := en.serv.ListNotSentEvents(ctx, now)
 		if err != nil {
 			return fmt.Errorf("list not sended events: %w", err)
 		}
-		log.Ctx(ctx).Info("found not sended events", slog.Any("events", slice.Dto(events, func(n domain.Event) int { return n.ID })))
+		log.Ctx(ctx).Info("found not sended events", slog.Any("events", slice.Dto(events, func(e domain.Event) int { return e.SendingID })))
 
 		for _, ev := range events {
-			notification, err := ev.NewNotification()
-			if err != nil {
-				log.Ctx(ctx).Error("new sending event", log.Err(err))
-
-				continue
-			}
-			err = en.notifier.Notify(ctx, notification)
+			err = en.notifier.Notify(ctx, ev)
 			if err != nil {
 				log.Ctx(ctx).Error("notifier error", log.Err(err))
 
 				continue
 			}
 
-			ev = ev.Rescheule(now)
-
-			err = en.repo.Update(ctx, ev)
-			log.Ctx(ctx).Info("update event", slog.Any("event", ev))
+			err = en.serv.RescheduleSending(ctx, ev)
 			if err != nil {
-				log.Ctx(ctx).Error("update event", log.Err(err), slog.Any("event", ev))
+				log.Ctx(ctx).Error("reschedule error", log.Err(err))
 			}
 		}
 
