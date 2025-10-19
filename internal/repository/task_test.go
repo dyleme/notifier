@@ -11,9 +11,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Dyleme/Notifier/internal/domain"
-	"github.com/Dyleme/Notifier/pkg/database/sqldatabase"
-	"github.com/Dyleme/Notifier/pkg/database/txmanager"
+	"github.com/dyleme/Notifier/internal/domain"
+	"github.com/dyleme/Notifier/pkg/database/sqldatabase"
+	"github.com/dyleme/Notifier/pkg/database/txmanager"
 )
 
 func setupTestDB(t *testing.T) (db *sql.DB, cleanupFunc func()) {

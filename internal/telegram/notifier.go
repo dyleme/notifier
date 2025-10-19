@@ -11,9 +11,9 @@ import (
 	"github.com/go-telegram/bot/models"
 	inKbr "github.com/go-telegram/ui/keyboard/inline"
 
-	"github.com/Dyleme/Notifier/internal/domain"
-	serverrors "github.com/Dyleme/Notifier/internal/domain/apperr"
-	"github.com/Dyleme/Notifier/pkg/log"
+	"github.com/dyleme/Notifier/internal/domain"
+	serverrors "github.com/dyleme/Notifier/internal/domain/apperr"
+	"github.com/dyleme/Notifier/pkg/log"
 )
 
 type Notification struct {

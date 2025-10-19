@@ -7,10 +7,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Dyleme/Notifier/internal/domain/apperr"
-	"github.com/Dyleme/Notifier/internal/repository/queries/goqueries"
-	"github.com/Dyleme/Notifier/pkg/database/txmanager"
-	"github.com/Dyleme/Notifier/pkg/log"
+	"github.com/dyleme/Notifier/internal/domain/apperr"
+	"github.com/dyleme/Notifier/internal/repository/queries/goqueries"
+	"github.com/dyleme/Notifier/pkg/database/txmanager"
+	"github.com/dyleme/Notifier/pkg/log"
 )
 
 type KeyValueRepository struct {

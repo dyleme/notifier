@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Dyleme/Notifier/internal/domain"
-	"github.com/Dyleme/Notifier/pkg/log"
-	"github.com/Dyleme/Notifier/pkg/utils/slice"
+	"github.com/dyleme/Notifier/internal/domain"
+	"github.com/dyleme/Notifier/pkg/log"
+	"github.com/dyleme/Notifier/pkg/utils/slice"
 )
 
 func (s *Service) CreateSingleTask(ctx context.Context, singleTask domain.SingleTask) error {

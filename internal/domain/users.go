@@ -3,7 +3,7 @@ package domain
 import (
 	"time"
 
-	"github.com/Dyleme/Notifier/internal/domain/apperr"
+	"github.com/dyleme/Notifier/internal/domain/apperr"
 )
 
 type User struct {

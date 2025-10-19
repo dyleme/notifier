@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Dyleme/Notifier/internal/domain"
-	"github.com/Dyleme/Notifier/internal/repository/queries/goqueries"
-	"github.com/Dyleme/Notifier/internal/service"
-	"github.com/Dyleme/Notifier/pkg/database/sqlconv"
-	"github.com/Dyleme/Notifier/pkg/database/txmanager"
-	"github.com/Dyleme/Notifier/pkg/log"
-	"github.com/Dyleme/Notifier/pkg/utils/slice"
+	"github.com/dyleme/Notifier/internal/domain"
+	"github.com/dyleme/Notifier/internal/repository/queries/goqueries"
+	"github.com/dyleme/Notifier/internal/service"
+	"github.com/dyleme/Notifier/pkg/database/sqlconv"
+	"github.com/dyleme/Notifier/pkg/database/txmanager"
+	"github.com/dyleme/Notifier/pkg/log"
+	"github.com/dyleme/Notifier/pkg/utils/slice"
 )
 
 type TasksRepository struct {

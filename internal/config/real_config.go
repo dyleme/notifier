@@ -1,8 +1,8 @@
 package config
 
 import (
-	"github.com/Dyleme/Notifier/internal/notifier/eventnotifier"
-	"github.com/Dyleme/Notifier/internal/telegram"
+	"github.com/dyleme/Notifier/internal/notifier/eventnotifier"
+	"github.com/dyleme/Notifier/internal/telegram"
 )
 
 type Config struct {

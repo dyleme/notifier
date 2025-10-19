@@ -8,19 +8,19 @@ import (
 	"os/signal"
 	"sync"
 
-	"github.com/Dyleme/timecache"
 	"github.com/benbjohnson/clock"
+	"github.com/dyleme/timecache"
 
-	"github.com/Dyleme/Notifier/internal/config"
-	"github.com/Dyleme/Notifier/internal/notifier/eventnotifier"
-	"github.com/Dyleme/Notifier/internal/repository"
-	"github.com/Dyleme/Notifier/internal/service"
-	"github.com/Dyleme/Notifier/internal/telegram"
-	"github.com/Dyleme/Notifier/pkg/database/sqldatabase"
-	"github.com/Dyleme/Notifier/pkg/database/txmanager"
-	"github.com/Dyleme/Notifier/pkg/jobontime"
-	"github.com/Dyleme/Notifier/pkg/log"
-	"github.com/Dyleme/Notifier/pkg/log/slogpretty"
+	"github.com/dyleme/Notifier/internal/config"
+	"github.com/dyleme/Notifier/internal/notifier/eventnotifier"
+	"github.com/dyleme/Notifier/internal/repository"
+	"github.com/dyleme/Notifier/internal/service"
+	"github.com/dyleme/Notifier/internal/telegram"
+	"github.com/dyleme/Notifier/pkg/database/sqldatabase"
+	"github.com/dyleme/Notifier/pkg/database/txmanager"
+	"github.com/dyleme/Notifier/pkg/jobontime"
+	"github.com/dyleme/Notifier/pkg/log"
+	"github.com/dyleme/Notifier/pkg/log/slogpretty"
 )
 
 func main() { //nolint:funlen // main can be long

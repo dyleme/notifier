@@ -10,9 +10,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
-	"github.com/Dyleme/Notifier/pkg/jobontime"
-	"github.com/Dyleme/Notifier/pkg/log"
-	"github.com/Dyleme/Notifier/pkg/log/mocklogger"
+	"github.com/dyleme/Notifier/pkg/jobontime"
+	"github.com/dyleme/Notifier/pkg/log"
+	"github.com/dyleme/Notifier/pkg/log/mocklogger"
 )
 
 const testTimeout = 500 * time.Millisecond

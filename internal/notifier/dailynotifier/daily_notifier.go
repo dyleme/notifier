@@ -9,9 +9,9 @@ import (
 
 	"github.com/avito-tech/go-transaction-manager/trm"
 
-	"github.com/Dyleme/Notifier/internal/domain"
-	"github.com/Dyleme/Notifier/internal/domain/apperr"
-	"github.com/Dyleme/Notifier/pkg/log"
+	"github.com/dyleme/Notifier/internal/domain"
+	"github.com/dyleme/Notifier/internal/domain/apperr"
+	"github.com/dyleme/Notifier/pkg/log"
 )
 
 type Notifier interface {

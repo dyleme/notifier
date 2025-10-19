@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Dyleme/Notifier/internal/domain"
-	"github.com/Dyleme/Notifier/internal/domain/apperr"
+	"github.com/dyleme/Notifier/internal/domain"
+	"github.com/dyleme/Notifier/internal/domain/apperr"
 )
 
 // UserRepo is an interface which provides methods to implement with repository.

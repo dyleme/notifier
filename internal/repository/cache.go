@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/Dyleme/timecache"
+	"github.com/dyleme/timecache"
 )
 
 type UniversalCache struct {

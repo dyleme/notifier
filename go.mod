@@ -1,11 +1,11 @@
-module github.com/Dyleme/Notifier
+module github.com/dyleme/Notifier
 
 go 1.23.0
 
 toolchain go1.24.6
 
 require (
-	github.com/Dyleme/timecache v0.0.0-20230810134219-8fa9c1ec1435
+	github.com/dyleme/timecache v0.0.0-20230810134219-8fa9c1ec1435
 	github.com/avito-tech/go-transaction-manager v1.4.0
 	github.com/benbjohnson/clock v1.3.5
 	github.com/fatih/color v1.15.0

@@ -6,7 +6,7 @@ import (
 	"math/rand/v2"
 	"time"
 
-	"github.com/Dyleme/Notifier/internal/domain/apperr"
+	"github.com/dyleme/Notifier/internal/domain/apperr"
 )
 
 const timeDay = 24 * time.Hour

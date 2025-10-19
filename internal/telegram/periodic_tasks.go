@@ -11,7 +11,7 @@ import (
 	"github.com/go-telegram/bot/models"
 	inKbr "github.com/go-telegram/ui/keyboard/inline"
 
-	"github.com/Dyleme/Notifier/internal/domain"
+	"github.com/dyleme/Notifier/internal/domain"
 )
 
 func (th *Handler) PeriodicTasksMenuInline(ctx context.Context, b *bot.Bot, mes *models.Message, _ []byte) error {

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Dyleme/Notifier/internal/domain/apperr"
+	"github.com/dyleme/Notifier/internal/domain/apperr"
 )
 
 type SingleTask struct {

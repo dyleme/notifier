@@ -7,10 +7,10 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/Dyleme/Notifier/internal/domain"
-	"github.com/Dyleme/Notifier/internal/domain/apperr"
-	"github.com/Dyleme/Notifier/pkg/log"
-	"github.com/Dyleme/Notifier/pkg/model"
+	"github.com/dyleme/Notifier/internal/domain"
+	"github.com/dyleme/Notifier/internal/domain/apperr"
+	"github.com/dyleme/Notifier/pkg/log"
+	"github.com/dyleme/Notifier/pkg/model"
 )
 
 //go:generate mockgen -destination=mocks/events_mocks.go -package=mocks . EventsRepository

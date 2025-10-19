@@ -8,8 +8,8 @@ import (
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 
-	timetableService "github.com/Dyleme/Notifier/internal/service"
-	"github.com/Dyleme/Notifier/pkg/log"
+	timetableService "github.com/dyleme/Notifier/internal/service"
+	"github.com/dyleme/Notifier/pkg/log"
 )
 
 type Config struct {

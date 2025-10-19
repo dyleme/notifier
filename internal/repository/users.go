@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Dyleme/Notifier/internal/domain"
-	"github.com/Dyleme/Notifier/internal/domain/apperr"
-	"github.com/Dyleme/Notifier/internal/repository/queries/goqueries"
-	"github.com/Dyleme/Notifier/pkg/database/sqlconv"
-	"github.com/Dyleme/Notifier/pkg/database/txmanager"
+	"github.com/dyleme/Notifier/internal/domain"
+	"github.com/dyleme/Notifier/internal/domain/apperr"
+	"github.com/dyleme/Notifier/internal/repository/queries/goqueries"
+	"github.com/dyleme/Notifier/pkg/database/sqlconv"
+	"github.com/dyleme/Notifier/pkg/database/txmanager"
 )
 
 type UsersRepository struct {

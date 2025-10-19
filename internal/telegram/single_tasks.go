@@ -12,7 +12,7 @@ import (
 	"github.com/go-telegram/bot/models"
 	inKbr "github.com/go-telegram/ui/keyboard/inline"
 
-	"github.com/Dyleme/Notifier/internal/domain"
+	"github.com/dyleme/Notifier/internal/domain"
 )
 
 var ErrCantParseMessage = errors.New("cant parse message")

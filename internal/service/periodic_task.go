@@ -6,9 +6,9 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/Dyleme/Notifier/internal/domain"
-	"github.com/Dyleme/Notifier/pkg/log"
-	"github.com/Dyleme/Notifier/pkg/utils/slice"
+	"github.com/dyleme/Notifier/internal/domain"
+	"github.com/dyleme/Notifier/pkg/log"
+	"github.com/dyleme/Notifier/pkg/utils/slice"
 )
 
 func (s *Service) CreatePeriodicTask(ctx context.Context, perTask domain.PeriodicTask) error {

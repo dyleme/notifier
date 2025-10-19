@@ -12,9 +12,9 @@ import (
 	"github.com/go-telegram/bot/models"
 	inKbr "github.com/go-telegram/ui/keyboard/inline"
 
-	"github.com/Dyleme/Notifier/internal/service"
-	"github.com/Dyleme/Notifier/pkg/log"
-	model "github.com/Dyleme/Notifier/pkg/model"
+	"github.com/dyleme/Notifier/internal/service"
+	"github.com/dyleme/Notifier/pkg/log"
+	model "github.com/dyleme/Notifier/pkg/model"
 )
 
 func (th *Handler) EventsMenuInline(ctx context.Context, b *bot.Bot, mes *models.Message, _ []byte) error {
