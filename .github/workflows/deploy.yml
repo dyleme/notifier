@@ -46,23 +46,14 @@ jobs:
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
-          set +e  # Don't fail on errors for stopping the app
-          
-          # Stop application gracefully
-          echo "Stopping application..."
-          if sudo pkill -f "myapp"; then
-              echo "Waiting for graceful shutdown..."
-              sleep 5
-          fi
-          
-          # Check if still running and force stop if needed
+          # Stop app - expect and allow SIGTERM (status 143)
+          sudo pkill -f "myapp" 2>/dev/null || true
+          sleep 5
+          # Force kill only if still running after graceful period
           if pgrep -f "myapp" > /dev/null; then
-              echo "Force stopping application..."
-              sudo pkill -9 -f "myapp" || true
-              sleep 2
+            echo "Application did not stop gracefully, forcing..."
+            sudo pkill -9 -f "myapp" || true
           fi
-          
-          set -e  #
 
           # Create backup
           sudo mkdir -p /opt/myapp/{current,backup}
