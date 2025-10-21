@@ -67,6 +67,23 @@ jobs:
           
           echo "=== Done ==="
 
+    - name: Deploy to server
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          # Stop and disable old service
+          sudo systemctl stop myapp || true
+          sudo systemctl disable myapp || true
+          
+          # Create backup
+          sudo mkdir -p /opt/myapp/{current,backup}
+          sudo tar -czf /opt/myapp/backup/backup_$(date +%Y%m%d_%H%M%S).tar.gz /opt/myapp/current/ 2>/dev/null || true
+          sudo rm -rf /opt/myapp/new
+          sudo mkdir -p /opt/myapp/new
+          
     - name: Upload files
       uses: appleboy/scp-action@v0.1.7
       with:
@@ -77,7 +94,7 @@ jobs:
         target: "/opt/myapp/new"
         strip_components: 1
 
-    - name: Setup and start application
+    - name: Setup
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.SSH_HOST }}
@@ -92,20 +109,27 @@ jobs:
           sudo chmod +x /opt/myapp/current/bin/myapp
           sudo chmod +x /opt/myapp/current/scripts/run_migrations.sh
           
-          # Run migrations
-          export PATH=$PATH:/home/${{ secrets.SSH_USER }}/go/bin
-          cd /opt/myapp/current
-          ./scripts/run_migrations.sh
+          # Create systemd service file
+          sudo tee /etc/systemd/system/myapp.service > /dev/null << EOF
+          [Unit]
+          Description=My Go Application
+          After=network.target
           
-          # Start application
-          cd /opt/myapp/current
-          nohup ./bin/myapp > /opt/myapp/logs/app.log 2> /opt/myapp/logs/error.log &
+          [Service]
+          Type=simple
+          User=${{ secrets.SSH_USER }}
+          WorkingDirectory=/opt/myapp/current
+          ExecStart=/opt/myapp/current/bin/myapp
+          Restart=always
+          RestartSec=10
+          Environment=PATH=/usr/local/go/bin:/home/${{ secrets.SSH_USER }}/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
           
-          # Verify it's running
-          sleep 3
-          if pgrep -f "myapp" > /dev/null; then
-              echo "Application deployed and started successfully"
-          else
-              echo "Application may have failed to start. Check logs."
-              exit 1
-          fi
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+          
+          # Enable and start service
+          sudo systemctl daemon-reload
+          sudo systemctl enable myapp
+          sudo systemctl start myapp
+          sudo systemctl status myapp --no-pager
