@@ -45,34 +45,6 @@ jobs:
         host: ${{ secrets.SSH_HOST }}
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
-        timeout: 5m
-        proxy_timeout: 5m
-        script: |
-          echo "=== Testing sudo ==="
-          sudo -n echo "Sudo works!" || echo "Sudo requires password"
-          
-          echo "=== Stopping app ==="
-          pkill -f "myapp" 2>/dev/null && echo "Sent SIGTERM" || echo "App not running"
-          sleep 2
-          
-          echo "=== Creating directories ==="
-          mkdir -p /opt/myapp/{current,backup} 2>/dev/null || sudo mkdir -p /opt/myapp/{current,backup}
-          
-          echo "=== Creating backup ==="
-          tar -czf /opt/myapp/backup/backup_$(date +%Y%m%d_%H%M%S).tar.gz /opt/myapp/current/ 2>/dev/null || true
-          
-          echo "=== Preparing new deployment ==="
-          rm -rf /opt/myapp/new
-          mkdir -p /opt/myapp/new 2>/dev/null || sudo mkdir -p /opt/myapp/new
-          
-          echo "=== Done ==="
-
-    - name: Deploy to server
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.SSH_HOST }}
-        username: ${{ secrets.SSH_USER }}
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
           # Stop and disable old service
           sudo systemctl stop myapp || true
