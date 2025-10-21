@@ -45,6 +45,7 @@ jobs:
         host: ${{ secrets.SSH_HOST }}
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
+        timeout: 5m
         script: |
           # Stop app - expect and allow SIGTERM (status 143)
           sudo pkill -f "myapp" 2>/dev/null || true
