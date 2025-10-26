@@ -44,7 +44,7 @@ func (m *mockDB) PrepareContext(_ context.Context, _ string) (*sql.Stmt, error) 
 	return nil, m.prepareError
 }
 
-func TestTxManager_WithLogging(t *testing.T) { //nolint:gocognit,cyclop // tests
+func TestTxManager_WithLogging(t *testing.T) { //nolint:cyclop // tests
 	t.Parallel()
 	tests := []struct {
 		name          string
@@ -133,13 +133,12 @@ func TestTxManager_WithLogging(t *testing.T) { //nolint:gocognit,cyclop // tests
 					t.Error("expected error from ExecContext")
 				}
 			case "QueryContext":
-				_, err := loggedDB.QueryContext(context.Background(), "SELECT 1", "arg1")
+				_, err := loggedDB.QueryContext(context.Background(), "SELECT 1", "arg1") //nolint:sqlclosecheck,gocritic,rowserrcheck // okay in test
 				if mockDB.queryError != nil && err == nil {
 					t.Error("expected error from QueryContext")
-					break
 				}
 			case "PrepareContext":
-				_, err := loggedDB.PrepareContext(context.Background(), "SELECT 1")
+				_, err := loggedDB.PrepareContext(context.Background(), "SELECT 1") //nolint:sqlclosecheck // okay in test
 				if mockDB.prepareError != nil && err == nil {
 					t.Error("expected error from PrepareContext")
 				}
