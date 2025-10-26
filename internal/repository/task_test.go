@@ -56,7 +56,7 @@ func setupTaskRepo(t *testing.T) (repo *TasksRepository, cleanup func()) {
 
 	db, cleanup := setupTestDB(t)
 
-	txGetter := txmanager.NewGetter(db)
+	_, txGetter := txmanager.New(db)
 	repo = NewTasksRepository(txGetter)
 
 	return repo, cleanup

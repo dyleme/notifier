@@ -50,6 +50,7 @@ RETURNING *;
 -- name: GetLatestSending :one
 SELECT * FROM sendings
 WHERE task_id = @task_id
+  AND done = 0
 ORDER BY next_sending DESC
 LIMIT 1;
 

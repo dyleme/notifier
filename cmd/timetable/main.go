@@ -54,8 +54,7 @@ func main() { //nolint:funlen // main can be long
 	closeFuncs = append(closeFuncs, closeDB)
 
 	cache := repository.NewUniversalCache()
-	txManager := txmanager.New(db)
-	txGetter := txmanager.NewGetter(db)
+	txManager, txGetter := txmanager.New(db, txmanager.WithLogging(log.Ctx, slog.LevelDebug, slog.LevelError, []error{}))
 	nower := clock.New()
 	eventsNotifier := eventnotifier.New(txManager)
 	eventsNotifierJob := jobontime.New(

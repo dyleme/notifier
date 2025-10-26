@@ -11,7 +11,7 @@ import (
 	"github.com/dyleme/Notifier/pkg/log"
 )
 
-//go:generate mockgen -destination=mocks/basic_tasks_mocks.go -package=mocks . SingleTaskRepository
+//go:generate mockgen -destination=mocks/basic_tasks_mocks.go -package=mocks . TaskRepository
 type TaskRepository interface {
 	Add(ctx context.Context, task domain.Task) (domain.Task, error)
 	List(ctx context.Context, userID int, taskType domain.TaskType, params ListParams) ([]domain.Task, error)
