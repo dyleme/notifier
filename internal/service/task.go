@@ -60,17 +60,16 @@ func (s *Service) DeleteTask(ctx context.Context, userID, taskID int) error {
 	log.Ctx(ctx).Debug("delete task", "userID", userID, "taskID", taskID)
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
 		sending, err := s.repos.events.GetLatestSending(ctx, taskID)
-		if err != nil {
-			return fmt.Errorf("get latest event[taskID=%d]: %w", taskID, err)
+		if err == nil {
+			// delete existed event
+			err = s.repos.events.DeleteSending(ctx, sending.ID)
+			if err != nil {
+				return fmt.Errorf("delete event: %w", err)
+			}
 		}
 
-		err = s.repos.events.DeleteSending(ctx, sending.ID)
-		if err != nil {
-			if errors.Is(err, apperr.ErrNotFound) {
-				return apperr.NotFoundError{Object: "event"}
-			}
-
-			return fmt.Errorf("delete event: %w", err)
+		if !errors.Is(err, apperr.ErrNotFound) {
+			return fmt.Errorf("get latest event[taskID=%d]: %w", taskID, err)
 		}
 
 		err = s.repos.tasks.Delete(ctx, taskID, userID)
