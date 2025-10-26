@@ -39,7 +39,7 @@ jobs:
         EOF
         chmod +x deployment/scripts/run_migrations.sh
 
-    - name: Deploy to server
+    - name: Create backup
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.SSH_HOST }}
@@ -47,15 +47,6 @@ jobs:
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         timeout: 5m
         script: |
-          # Stop app - expect and allow SIGTERM (status 143)
-          sudo pkill -f "myapp" 2>/dev/null || true
-          sleep 5
-          # Force kill only if still running after graceful period
-          if pgrep -f "myapp" > /dev/null; then
-            echo "Application did not stop gracefully, forcing..."
-            sudo pkill -9 -f "myapp" || true
-          fi
-
           # Create backup
           sudo mkdir -p /opt/myapp/{current,backup}
           sudo tar -czf /opt/myapp/backup/backup_$(date +%Y%m%d_%H%M%S).tar.gz /opt/myapp/current/ 2>/dev/null || true
