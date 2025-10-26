@@ -116,6 +116,7 @@ func (q *Queries) GetEvent(ctx context.Context, db DBTX, arg GetEventParams) (Ev
 const getLatestSending = `-- name: GetLatestSending :one
 SELECT id, created_at, task_id, next_sending, original_sending, done FROM sendings
 WHERE task_id = ?1
+  AND done = 0
 ORDER BY next_sending DESC
 LIMIT 1
 `
