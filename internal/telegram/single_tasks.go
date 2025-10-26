@@ -140,17 +140,19 @@ func (bt *SingleTask) isCreation() bool {
 	return bt.id == notSettedID
 }
 
-func (bt *SingleTask) String() string {
+func (bt *SingleTask) Text(loc *time.Location) string {
 	var (
 		dateStr string
 		timeStr string
 	)
 
 	if !bt.date.IsZero() {
-		dateStr = bt.date.Format(dayPointWithYearFormat)
+		userDate := bt.date.In(loc)
+		dateStr = userDate.Format(dayPointWithYearFormat)
 	}
 	if !bt.time.IsZero() {
-		timeStr = bt.time.Format(timeDoublePointsFormat)
+		userTime := bt.time.In(loc)
+		timeStr = userTime.Format(timeDoublePointsFormat)
 	}
 
 	var taskStringBuilder strings.Builder
@@ -164,6 +166,11 @@ func (bt *SingleTask) String() string {
 
 func (bt *SingleTask) EditMenuMsg(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) error {
 	op := "SingleTask.EditMenuMsg: %w"
+	user, err := UserFromCtx(ctx)
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+
 	kbr := inKbr.New(b, inKbr.NoDeleteAfterClick()).
 		Row().
 		Button("Set text", nil, onSelectErrorHandling(bt.SetTextMsg)).
@@ -183,11 +190,11 @@ func (bt *SingleTask) EditMenuMsg(ctx context.Context, b *bot.Bot, relatedMsgID 
 	params := &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to fill
 		ChatID:      chatID,
 		MessageID:   relatedMsgID,
-		Caption:     bt.String(),
+		Caption:     bt.Text(user.Location()),
 		ReplyMarkup: kbr,
 	}
 
-	_, err := b.EditMessageCaption(ctx, params)
+	_, err = b.EditMessageCaption(ctx, params)
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}
@@ -242,7 +249,7 @@ func (bt *SingleTask) SetDateMsg(ctx context.Context, b *bot.Bot, relatedMsgID i
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}
-	caption := bt.String() + "\n\nEnter date (it can bt or one of provided, or you can type your own date)"
+	caption := bt.Text(user.Location()) + "\n\nEnter date (it can bt or one of provided, or you can type your own date)"
 	now := time.Now().In(user.Location())
 	nowStr := now.Format(dayPointFormat)
 	tomorrow := time.Now().Add(timeDay).In(user.Location())
@@ -318,13 +325,17 @@ func (bt *SingleTask) handleSetDate(ctx context.Context, b *bot.Bot, chatID int6
 
 func (bt *SingleTask) SetTimeMsg(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) error {
 	op := "SingleTask.SetTimeMsg: %w"
-	caption := bt.String() + "\n\nEnter time"
+	user, err := UserFromCtx(ctx)
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+	caption := bt.Text(user.Location()) + "\n\nEnter time"
 
 	bt.th.waitingActionsStore.StoreDefDur(chatID, TextMessageHandler{
 		handle:    bt.HandleMsgSetTime,
 		messageID: relatedMsgID,
 	})
-	_, err := b.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to fill
+	_, err = b.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to fill
 		ChatID:    chatID,
 		MessageID: relatedMsgID,
 		Caption:   caption,
@@ -369,13 +380,17 @@ func (bt *SingleTask) HandleMsgSetTime(ctx context.Context, b *bot.Bot, msg *mod
 
 func (bt *SingleTask) SetDescription(ctx context.Context, b *bot.Bot, relatedMsgID int, chatID int64) error {
 	op := "SingleTask.SetDescription: %w"
-	caption := bt.String() + "\n\nEnter description"
+	user, err := UserFromCtx(ctx)
+	if err != nil {
+		return fmt.Errorf(op, err)
+	}
+	caption := bt.Text(user.Location()) + "\n\nEnter description"
 
 	bt.th.waitingActionsStore.StoreDefDur(chatID, TextMessageHandler{
 		handle:    bt.HandleMsgSetDescription,
 		messageID: relatedMsgID,
 	})
-	_, err := b.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to fill
+	_, err = b.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to fill
 		ChatID:    chatID,
 		MessageID: relatedMsgID,
 		Caption:   caption,
@@ -435,7 +450,7 @@ func (bt *SingleTask) CreateInline(ctx context.Context, b *bot.Bot, msg *models.
 		return fmt.Errorf(op, err)
 	}
 
-	err = bt.th.MainMenuWithText(ctx, b, msg, "Service successfully created:\n"+bt.String())
+	err = bt.th.MainMenuWithText(ctx, b, msg, "Service successfully created:\n"+bt.Text(user.Location()))
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}
@@ -465,7 +480,7 @@ func (bt *SingleTask) UpdateInline(ctx context.Context, b *bot.Bot, msg *models.
 		return fmt.Errorf(op, err)
 	}
 
-	err = bt.th.MainMenuWithText(ctx, b, msg, "Service successfully updated:\n"+bt.String())
+	err = bt.th.MainMenuWithText(ctx, b, msg, "Service successfully updated:\n"+bt.Text(user.Location()))
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}
@@ -485,7 +500,7 @@ func (bt *SingleTask) DeleteInline(ctx context.Context, b *bot.Bot, msg *models.
 		return fmt.Errorf(op, err)
 	}
 
-	err = bt.th.MainMenuWithText(ctx, b, msg, "Service successfully deleted:\n"+bt.String())
+	err = bt.th.MainMenuWithText(ctx, b, msg, "Service successfully deleted:\n"+bt.Text(user.Location()))
 	if err != nil {
 		return fmt.Errorf(op, err)
 	}
@@ -525,7 +540,7 @@ func (bt *SingleTask) HandleBtnTaskChosen(ctx context.Context, b *bot.Bot, msg *
 	_, err = b.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{ //nolint:exhaustruct //no need to fill
 		ChatID:      msg.Chat.ID,
 		MessageID:   msg.ID,
-		Caption:     bt.String(),
+		Caption:     bt.Text(user.Location()),
 		ReplyMarkup: kbr,
 	})
 	if err != nil {
