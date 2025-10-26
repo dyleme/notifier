@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -70,6 +72,10 @@ func (r *EventsRepository) GetLatestSending(ctx context.Context, taskdID int) (d
 	tx := r.getter.GetTx(ctx)
 	event, err := r.q.GetLatestSending(ctx, tx, int64(taskdID))
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return domain.Sending{}, fmt.Errorf("get latest event[taskID=%d]: %w", taskdID, apperr.ErrNotFound)
+		}
+
 		return domain.Sending{}, fmt.Errorf("get latest event[taskID=%d]: %w", taskdID, err)
 	}
 
