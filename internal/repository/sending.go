@@ -72,10 +72,11 @@ func (r *EventsRepository) GetLatestSending(ctx context.Context, taskdID int) (d
 	tx := r.getter.GetTx(ctx)
 	event, err := r.q.GetLatestSending(ctx, tx, int64(taskdID))
 	if err != nil {
-		return domain.Sending{}, fmt.Errorf("get latest event[taskID=%d]: %w", taskdID, err)
 		if errors.Is(err, sql.ErrNoRows) {
 			return domain.Sending{}, fmt.Errorf("get latest event[taskID=%d]: %w", taskdID, apperr.ErrNotFound)
 		}
+
+		return domain.Sending{}, fmt.Errorf("get latest event[taskID=%d]: %w", taskdID, err)
 	}
 
 	return r.dtoSending(event), nil
