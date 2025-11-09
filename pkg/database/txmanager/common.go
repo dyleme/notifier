@@ -26,13 +26,13 @@ func New(db *sql.DB, opts ...Option) (*TxManager, *Getter) {
 	return m, g
 }
 
-// getTxFromContext retrieves transaction from context.
-func getTxFromContext(ctx context.Context) *sql.Tx {
-	if tx, ok := ctx.Value(txKey{}).(*sql.Tx); ok {
-		return tx
+// getFromContext retrieves transaction from context.
+func getFromContext(ctx context.Context) (DBTX, bool) {
+	if tx, ok := ctx.Value(txKey{}).(DBTX); ok {
+		return tx, true
 	}
 
-	return nil
+	return nil, false
 }
 
 func putInContext(ctx context.Context, tx DBTX) context.Context {

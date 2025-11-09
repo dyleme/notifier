@@ -44,7 +44,8 @@ func (j *JobInTime) Run(ctx context.Context) {
 	for {
 		select {
 		case <-j.timer.C:
-			j.job.Do(ctx, j.clock.Now())
+			jobCtx := log.WithCtx(ctx, log.RequestID())
+			j.job.Do(jobCtx, j.clock.Now())
 			j.setNextEventTime(ctx)
 		case <-ctx.Done():
 			j.timer.Stop()

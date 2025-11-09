@@ -51,15 +51,15 @@ func (s *Service) CreateUser(ctx context.Context, user domain.User) (domain.User
 
 var ErrInvalidOffset = errors.New("invalid offset")
 
-func (s *Service) UpdateUserTime(ctx context.Context, id int, tzOffset domain.TimeZoneOffset, isDst bool) error {
+func (s *Service) UpdateUserTime(ctx context.Context, tgID int, tzOffset domain.TimeZoneOffset, isDst bool) error {
 	if err := tzOffset.Valid(); err != nil {
 		return fmt.Errorf("invalid offset: %w", err)
 	}
 
 	err := s.tr.Do(ctx, func(ctx context.Context) error {
-		user, err := s.repos.users.Get(ctx, id)
+		user, err := s.repos.users.GetByTgID(ctx, tgID)
 		if err != nil {
-			return fmt.Errorf("get user id[%v]: %w", id, err)
+			return fmt.Errorf("get user id[%v]: %w", tgID, err)
 		}
 		user.IsTimeZoneDST = isDst
 		user.TimeZoneOffset = int(tzOffset)

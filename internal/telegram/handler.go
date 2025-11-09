@@ -33,6 +33,7 @@ func New(service *timetableService.Service, cfg Config, actionsStore WaitingActi
 	}
 	opts := []bot.Option{
 		bot.WithMiddlewares(
+			loggerMiddleware,
 			recoverPanicMiddleware,
 			// loggingMiddleware,
 			tgHandler.UserMiddleware,

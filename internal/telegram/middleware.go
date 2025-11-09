@@ -42,6 +42,13 @@ func recoverPanicMiddleware(next bot.HandlerFunc) bot.HandlerFunc {
 	}
 }
 
+func loggerMiddleware(next bot.HandlerFunc) bot.HandlerFunc {
+	return func(ctx context.Context, bot *bot.Bot, update *models.Update) {
+		ctx = log.WithCtx(ctx, log.RequestID())
+		next(ctx, bot, update)
+	}
+}
+
 const (
 	defaultNotificatinPeriod = 5 * time.Minute
 )
