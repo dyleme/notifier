@@ -18,7 +18,7 @@ type loggingDBTX struct {
 
 func WithLogging(extractFunc func(ctx context.Context) *slog.Logger, settings LoggingSetting) Option {
 	if extractFunc == nil {
-		extractFunc = func(ctx context.Context) *slog.Logger {
+		extractFunc = func(_ context.Context) *slog.Logger {
 			return slog.Default()
 		}
 	}
