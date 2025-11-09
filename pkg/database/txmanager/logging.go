@@ -1,6 +1,7 @@
 package txmanager
 
 import (
+	"cmp"
 	"context"
 	"database/sql"
 	"errors"
@@ -15,19 +16,33 @@ type loggingDBTX struct {
 	LogLevel      slog.Level
 }
 
-func WithLogging(extractFunc func(ctx context.Context) *slog.Logger, logLevel, errLevel slog.Level, ignoredErrors []error) Option {
+func WithLogging(extractFunc func(ctx context.Context) *slog.Logger, settings LoggingSetting) Option {
+	if extractFunc == nil {
+		extractFunc = func(_ context.Context) *slog.Logger {
+			return slog.Default()
+		}
+	}
+	settings.LogLevel = cmp.Or(settings.LogLevel, slog.LevelDebug)
+	settings.ErrorLevel = cmp.Or(settings.ErrorLevel, slog.LevelError)
+
 	return func(dbtx DBTX) DBTX {
 		return &loggingDBTX{
 			DBTX:          dbtx,
 			ExtractFunc:   extractFunc,
-			IgnoredErrors: ignoredErrors,
-			ErrorLevel:    errLevel,
-			LogLevel:      logLevel,
+			IgnoredErrors: settings.IgnoredErrors,
+			ErrorLevel:    settings.ErrorLevel,
+			LogLevel:      settings.LogLevel,
 		}
 	}
 }
 
-func (l *loggingDBTX) errorLog(ctx context.Context, err error, query string, args ...any) {
+type LoggingSetting struct {
+	LogLevel      slog.Level
+	ErrorLevel    slog.Level
+	IgnoredErrors []error
+}
+
+func (l *loggingDBTX) log(ctx context.Context, err error, query string, args ...any) {
 	logger := slog.Default()
 	if l.ExtractFunc != nil {
 		logger = l.ExtractFunc(ctx)
@@ -52,36 +67,28 @@ func (l *loggingDBTX) errorLog(ctx context.Context, err error, query string, arg
 
 func (l *loggingDBTX) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
 	res, err := l.DBTX.ExecContext(ctx, query, args...)
-	if err != nil {
-		l.errorLog(ctx, err, query, args...)
-	}
+	l.log(ctx, err, query, args...)
 
 	return res, err
 }
 
 func (l *loggingDBTX) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
 	rows, err := l.DBTX.QueryContext(ctx, query, args...)
-	if err != nil {
-		l.errorLog(ctx, err, query, args...)
-	}
+	l.log(ctx, err, query, args...)
 
 	return rows, err
 }
 
 func (l *loggingDBTX) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
 	row := l.DBTX.QueryRowContext(ctx, query, args...)
-	if err := row.Err(); err != nil {
-		l.errorLog(ctx, err, query, args...)
-	}
+	l.log(ctx, row.Err(), query, args...)
 
 	return row
 }
 
 func (l *loggingDBTX) PrepareContext(ctx context.Context, query string) (*sql.Stmt, error) {
 	stmt, err := l.DBTX.PrepareContext(ctx, query)
-	if err != nil {
-		l.errorLog(ctx, err, query)
-	}
+	l.log(ctx, err, query)
 
 	return stmt, err
 }

@@ -3,6 +3,8 @@ package log
 import (
 	"context"
 	"log/slog"
+
+	"github.com/google/uuid"
 )
 
 type key string
@@ -27,6 +29,13 @@ func WithCtx(ctx context.Context, args ...any) context.Context {
 	logger = logger.With(args...)
 
 	return InCtx(ctx, logger)
+}
+
+func RequestID() slog.Attr {
+	return slog.Attr{
+		Key:   "request_id",
+		Value: slog.StringValue(uuid.NewString()),
+	}
 }
 
 func Err(err error) slog.Attr {

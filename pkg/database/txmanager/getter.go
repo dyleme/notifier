@@ -24,10 +24,10 @@ func newGetter(db *sql.DB, opts []Option) *Getter {
 }
 
 func (tg *Getter) GetTx(ctx context.Context) DBTX {
-	tx := getTxFromContext(ctx)
-	if tx != nil {
-		return tx
+	tx, ok := getFromContext(ctx)
+	if !ok {
+		return tg.db
 	}
 
-	return tg.db
+	return tx
 }

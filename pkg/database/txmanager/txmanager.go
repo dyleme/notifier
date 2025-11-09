@@ -25,8 +25,8 @@ func (tm *TxManager) Do(ctx context.Context, fn func(context.Context) error) err
 
 // WithTransaction executes a function within a transaction.
 func (tm *TxManager) DoWithSettings(ctx context.Context, opts *sql.TxOptions, fn func(context.Context) error) error {
-	tx := getTxFromContext(ctx)
-	if tx != nil {
+	_, transactoinRunning := getFromContext(ctx)
+	if transactoinRunning {
 		return ErrTransactionInProgress
 	}
 
